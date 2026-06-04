@@ -324,6 +324,7 @@ Without this, the WebUI's Claude CLI tab won't be able to read or write your Cla
 
 This project is based on insights and code from:
 
+- [antigravity-claude-proxy](https://github.com/badrisnarayanan/antigravity-claude-proxy) - The original repository this project is copied and based on
 - [opencode-antigravity-auth](https://github.com/NoeFabris/opencode-antigravity-auth) - Antigravity OAuth plugin for OpenCode
 - [claude-code-proxy](https://github.com/1rgs/claude-code-proxy) - Anthropic API proxy using LiteLLM
 
