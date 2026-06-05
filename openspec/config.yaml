@@ -1,0 +1,53 @@
+# openspec/config.yaml
+# 由 /opsx:init 自动生成。可手动编辑以调整约束注入内容。
+# context 和 rules 在所有 OpenSpec artifact 生成步骤中作为约束条件注入，
+# 不是模板内容，不得直接复制到 artifact 输出文件中。
+
+schema: spec-driven
+
+context: |
+  Tech stack: Node.js 18+ (ESM), Express.js v4, SQLite (better-sqlite3), undici v7
+  Package manager: npm
+  Architecture: Stateless request pipeline — Anthropic Messages API format in, Google Cloud Code
+    API (v1internal:streamGenerateContent) out. Core modules:
+      server.js — entry point, routing, model auto-mapping
+      src/cloudcode/ — Cloud Code API client, SSE streaming, retry/failover logic
+      src/account-manager/ — multi-account pool, strategies (sticky/round-robin/hybrid),
+        health/token-bucket/quota trackers
+      src/format/ — Anthropic↔Google request/response conversion, thinking block handling,
+        schema sanitization
+      src/auth/ — Google OAuth 2.0 PKCE flow, SQLite token extraction
+      src/webui/ — web dashboard API routes
+      src/utils/ — logger, helpers, native-module rebuild
+  Source layout: src/ = backend ESM source; public/ = frontend (Alpine.js + Tailwind CSS v3 +
+    DaisyUI v4 + Chart.js); tests/ = CommonJS (.cjs) integration tests (require live server on :8080);
+    bin/ = CLI entry point (acc / antigravity-claude-proxy)
+  Test framework: Custom CJS test runners — no jest/mocha. Integration tests hit real server.
+  Target platform: Server-side Node.js, cross-platform (macOS/Linux/Windows)
+  Critical invariants:
+    - cache_control MUST be stripped via cleanCacheControl() in request-converter.js before any
+      Cloud Code API call (Gemini strict proto validation rejects unknown fields)
+    - sessionId MUST NOT be set for Gemini model family (request-builder.js)
+    - model field in Cloud Code payload MUST use post-auto-map name (requestedModel, not modelId)
+    - thinking block signatures require careful handling for Claude↔Gemini cross-model sessions
+      (thinking-utils.js + signature-cache.js)
+
+rules:
+  specs:
+    - Describe API behavior as WHEN/THEN scenarios with concrete request/response shapes (JSON snippets)
+    - Explicitly state which model family (claude / gemini / both) each requirement applies to
+    - For streaming specs, document the full SSE event sequence and error fallback path
+    - Call out backward-compatibility constraints — existing Claude Code CLI sessions must not break
+    - Reference the specific module/function responsible for each behavior
+  tasks:
+    - Each task must be independently verifiable via an existing npm test:* script or a curl command
+    - Tasks touching request/response conversion must name the exact file and function to modify
+    - Flag whether a change requires server restart or works under --watch hot-reload
+    - Tasks affecting account selection must note which strategy modes (sticky/round-robin/hybrid) are impacted
+    - Security-sensitive tasks (OAuth, token handling) must include a cleanup/rollback step
+  design:
+    - Preserve the stateless pipeline pattern — no per-request state outside the request lifecycle
+    - New model support MUST go through constants.js (getModelFamily, MODEL_MAP) — no scattered conditionals
+    - Error handling MUST follow the throw/catch + retry pattern in streaming-handler.js
+    - Do not add new top-level runtime dependencies without justification; prefer built-in Node.js APIs
+    - Frontend changes (public/) must remain compatible with Alpine.js reactive model; avoid jQuery patterns
