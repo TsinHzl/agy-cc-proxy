@@ -301,6 +301,60 @@ ExecStart=/usr/bin/node /path/to/antigravity-claude-proxy/src/index.js
 
 Without this, the WebUI's Claude CLI tab won't be able to read or write your Claude Code configuration.
 
+### Deploy with PM2 (Recommended for Remote Servers)
+
+When running on a remote server via cloned repository, use PM2 to keep the proxy alive after terminal disconnects and survive machine reboots.
+
+**Install PM2:**
+```bash
+npm install -g pm2
+```
+
+**Start and register auto-boot:**
+```bash
+pm2 start ecosystem.config.cjs
+pm2 save        # Save process list
+pm2 startup     # Register systemd auto-start (follow the printed command)
+```
+
+**Update to latest code:**
+```bash
+git pull
+pm2 restart agy-cc-proxy
+```
+
+| Command | Description |
+| :--- | :--- |
+| `pm2 status` | View running status |
+| `pm2 logs agy-cc-proxy` | Tail live logs |
+| `pm2 restart agy-cc-proxy` | Restart the proxy |
+| `pm2 stop agy-cc-proxy` | Stop the proxy |
+
+### Uninstall
+
+**Stop and remove the PM2 process:**
+```bash
+pm2 stop agy-cc-proxy
+pm2 delete agy-cc-proxy
+pm2 save --force
+```
+
+**Remove the auto-boot systemd service:**
+```bash
+pm2 unstartup systemd
+```
+
+**Uninstall PM2 globally:**
+```bash
+npm uninstall -g pm2
+```
+
+**Delete the repository and all project files:**
+```bash
+cd ..
+rm -rf antigravity-claude-proxy
+```
+
 ---
 
 ## Documentation
