@@ -296,7 +296,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                         // 400 errors are client errors - fail immediately, don't retry or switch accounts
                         // Examples: token limit exceeded, invalid schema, malformed request
                         if (response.status === 400) {
-                            logger.error(`[CloudCode] Invalid request (400): ${errorText.substring(0, 200)}`);
+                            logger.error(`[CloudCode] Invalid request (400): ${errorText}`);
                             throw new Error(`invalid_request_error: ${errorText}`);
                         }
 
