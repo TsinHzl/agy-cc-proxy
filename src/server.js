@@ -8,7 +8,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel } from './cloudcode/index.js';
+import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel, resolveModel } from './cloudcode/index.js';
 import { mountWebUI } from './webui/index.js';
 import { config } from './config.js';
 
@@ -734,15 +734,23 @@ app.post('/v1/messages', async (req, res) => {
 
         const modelId = requestedModel;
 
-        // Validate model ID before processing
+        // Validate and resolve model ID before processing.
+        // resolveModel auto-maps unknown Claude/Gemini model names (e.g. standard Anthropic
+        // client defaults like claude-opus-4-5) to the closest available Google Cloud Code model,
+        // preventing INVALID_ARGUMENT errors for remote clients that haven't configured model env vars.
         const { account: validationAccount } = accountManager.selectAccount();
         if (validationAccount) {
             const token = await accountManager.getTokenForAccount(validationAccount);
             const projectId = validationAccount.subscription?.projectId || null;
-            const valid = await isValidModel(modelId, token, projectId);
-
-            if (!valid) {
-                throw new Error(`invalid_request_error: Invalid model: ${modelId}. Use /v1/models to see available models.`);
+            const { resolved, autoMapped } = await resolveModel(modelId, token, projectId);
+            if (autoMapped) {
+                logger.info(`[Server] Auto-mapped model ${modelId} → ${resolved}`);
+                requestedModel = resolved;
+            } else {
+                const valid = await isValidModel(modelId, token, projectId);
+                if (!valid) {
+                    throw new Error(`invalid_request_error: Invalid model: ${modelId}. Use /v1/models to see available models.`);
+                }
             }
         }
 

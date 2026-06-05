@@ -339,3 +339,92 @@ export async function isValidModel(modelId, token, projectId = null) {
         return true;
     }
 }
+
+/**
+ * Find the best available model matching the requested model's tier.
+ * Used to auto-map standard Anthropic model names (e.g. claude-opus-4-5,
+ * claude-3-5-sonnet-20241022) to the closest available Google Cloud Code model.
+ *
+ * @param {string} modelId - Requested model ID
+ * @param {string} token - OAuth access token
+ * @param {string} [projectId] - Optional project ID
+ * @returns {Promise<string|null>} Best available model ID, or null if none found
+ */
+async function findBestAvailableModel(modelId, token, projectId = null) {
+    try {
+        await populateModelCache(token, projectId);
+        if (modelCache.validModels.size === 0) return null;
+
+        const lower = modelId.toLowerCase();
+        const family = getModelFamily(modelId);
+
+        if (family === 'claude') {
+            const claudeModels = Array.from(modelCache.validModels).filter(m => m.includes('claude'));
+            if (claudeModels.length === 0) return null;
+
+            if (lower.includes('opus')) {
+                return claudeModels.find(m => m.includes('opus')) || claudeModels[0];
+            }
+            if (lower.includes('haiku')) {
+                return claudeModels.find(m => m.includes('haiku'))
+                    || claudeModels.find(m => m.includes('sonnet'))
+                    || claudeModels[0];
+            }
+            // Default to sonnet tier
+            return claudeModels.find(m => m.includes('sonnet')) || claudeModels[0];
+        }
+
+        if (family === 'gemini') {
+            const geminiModels = Array.from(modelCache.validModels).filter(m => m.includes('gemini'));
+            if (geminiModels.length === 0) return null;
+            return geminiModels[0];
+        }
+
+        return null;
+    } catch (error) {
+        logger.debug(`[CloudCode] findBestAvailableModel error: ${error.message}`);
+        return null;
+    }
+}
+
+/**
+ * Resolve a model ID to a valid available model.
+ * If the requested model exists in the available list, returns it unchanged.
+ * Otherwise, auto-maps standard Anthropic model names to the closest available
+ * Google Cloud Code model (by family: opus/sonnet/haiku).
+ *
+ * This fixes the "INVALID_ARGUMENT" error that occurs when remote Claude Code
+ * clients (e.g. Mac) use built-in default model names that don't exist in the
+ * Google Cloud Code API, while Gemini models (explicitly configured) work fine.
+ *
+ * @param {string} modelId - Requested model ID
+ * @param {string} token - OAuth access token
+ * @param {string} [projectId] - Optional project ID
+ * @returns {Promise<{resolved: string, autoMapped: boolean}>}
+ */
+export async function resolveModel(modelId, token, projectId = null) {
+    try {
+        await populateModelCache(token, projectId);
+
+        // Model is directly valid — no remapping needed
+        if (modelCache.validModels.size > 0 && modelCache.validModels.has(modelId)) {
+            return { resolved: modelId, autoMapped: false };
+        }
+
+        // Cache empty — fail-open, skip remap so the API itself validates
+        if (modelCache.validModels.size === 0) {
+            return { resolved: modelId, autoMapped: false };
+        }
+
+        // Model not in cache — try to find the closest available alternative
+        const best = await findBestAvailableModel(modelId, token, projectId);
+        if (best) {
+            return { resolved: best, autoMapped: true };
+        }
+
+        return { resolved: modelId, autoMapped: false };
+    } catch (error) {
+        logger.debug(`[CloudCode] resolveModel error: ${error.message}`);
+        return { resolved: modelId, autoMapped: false };
+    }
+}
