@@ -142,18 +142,6 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         googleRequest.contents = filterUnsignedThinkingBlocks(googleRequest.contents);
     }
 
-    // Merge consecutive same-role messages (Gemini requires strict user/model alternation)
-    const mergedContents = [];
-    for (const content of googleRequest.contents) {
-        const last = mergedContents[mergedContents.length - 1];
-        if (last && last.role === content.role) {
-            last.parts.push(...content.parts);
-        } else {
-            mergedContents.push(content);
-        }
-    }
-    googleRequest.contents = mergedContents;
-
     // Generation config
     if (max_tokens) {
         googleRequest.generationConfig.maxOutputTokens = max_tokens;
@@ -245,18 +233,6 @@ export function convertAnthropicToGoogle(anthropicRequest) {
                 parameters
             };
         });
-
-        // Diagnostic: flag tools with empty descriptions or sanitized names (Gemini is strict)
-        const toolIssues = functionDeclarations.map((fd, i) => {
-            const issues = [];
-            if (!fd.description) issues.push('empty-desc');
-            const origName = String(tools[i]?.name || tools[i]?.function?.name || `tool-${i}`);
-            if (fd.name !== origName) issues.push(`name:${origName}→${fd.name}`);
-            return issues.length ? `${fd.name}:[${issues.join(',')}]` : null;
-        }).filter(Boolean);
-        if (toolIssues.length > 0) {
-            logger.warn(`[RequestConverter] Tool schema issues: ${toolIssues.join(' | ')}`);
-        }
 
         googleRequest.tools = [{ functionDeclarations }];
         logger.debug(`[RequestConverter] Tools: ${JSON.stringify(googleRequest.tools).substring(0, 300)}`);

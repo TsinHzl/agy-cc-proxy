@@ -237,8 +237,13 @@ export function isThinkingModel(modelName) {
     const lower = (modelName || '').toLowerCase();
     // Claude thinking models have "thinking" in the name
     if (lower.includes('claude') && lower.includes('thinking')) return true;
-    // Gemini thinking models: must have "thinking" in name
-    if (lower.includes('gemini') && lower.includes('thinking')) return true;
+    // Gemini thinking models: explicit "thinking" in name, OR gemini version 3+
+    if (lower.includes('gemini')) {
+        if (lower.includes('thinking')) return true;
+        // Check for gemini-3 or higher (e.g., gemini-3, gemini-3.5, gemini-4, etc.)
+        const versionMatch = lower.match(/gemini-(\d+)/);
+        if (versionMatch && parseInt(versionMatch[1], 10) >= 3) return true;
+    }
     return false;
 }
 

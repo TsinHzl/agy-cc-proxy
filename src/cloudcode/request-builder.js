@@ -26,13 +26,8 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
     const model = anthropicRequest.model;
     const googleRequest = convertAnthropicToGoogle(anthropicRequest);
 
-    // Only inject sessionId into the GenerateContentRequest body for Claude models.
-    // Gemini's proto has no session_id field — the Gemini backend rejects unknown
-    // fields with 400 INVALID_ARGUMENT under strict proto validation.
-    const modelFamily = getModelFamily(model);
-    if (modelFamily === 'claude') {
-        googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
-    }
+    // Use stable session ID derived from first user message for cache continuity
+    googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
 
     // Build system instruction parts array with [ignore] tags to prevent model from
     // identifying as "Antigravity" (fixes GitHub issue #76)
