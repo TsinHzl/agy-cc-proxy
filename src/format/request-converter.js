@@ -246,6 +246,18 @@ export function convertAnthropicToGoogle(anthropicRequest) {
             };
         });
 
+        // Diagnostic: flag tools with empty descriptions or sanitized names (Gemini is strict)
+        const toolIssues = functionDeclarations.map((fd, i) => {
+            const issues = [];
+            if (!fd.description) issues.push('empty-desc');
+            const origName = String(tools[i]?.name || tools[i]?.function?.name || `tool-${i}`);
+            if (fd.name !== origName) issues.push(`name:${origName}→${fd.name}`);
+            return issues.length ? `${fd.name}:[${issues.join(',')}]` : null;
+        }).filter(Boolean);
+        if (toolIssues.length > 0) {
+            logger.warn(`[RequestConverter] Tool schema issues: ${toolIssues.join(' | ')}`);
+        }
+
         googleRequest.tools = [{ functionDeclarations }];
         logger.debug(`[RequestConverter] Tools: ${JSON.stringify(googleRequest.tools).substring(0, 300)}`);
 
