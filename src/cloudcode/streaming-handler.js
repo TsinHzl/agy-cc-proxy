@@ -23,6 +23,7 @@ import { formatDuration, sleep, isNetworkError, throttledFetch } from '../utils/
 import { logger } from '../utils/logger.js';
 import { parseResetTime } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
+import { deriveSessionId } from './session-manager.js';
 import { streamSSEResponse } from './sse-streamer.js';
 import { getFallbackModel } from '../fallback-config.js';
 import {
@@ -141,6 +142,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
             const token = await accountManager.getTokenForAccount(account);
             const project = await accountManager.getProjectForAccount(account, token);
             const payload = buildCloudCodeRequest(anthropicRequest, project, account.email);
+            const requestSessionId = deriveSessionId(anthropicRequest, account.email);
 
             // Diagnostic log: summarise what's being sent to Google to help identify INVALID_ARGUMENT root cause
             {
@@ -175,7 +177,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
                     const response = await throttledFetch(url, {
                         method: 'POST',
-                        headers: buildHeaders(token, model, 'text/event-stream', payload.request.sessionId),
+                        headers: buildHeaders(token, model, 'text/event-stream', requestSessionId),
                         body: JSON.stringify(payload)
                     });
 
@@ -364,7 +366,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                             // Refetch the response
                             currentResponse = await throttledFetch(url, {
                                 method: 'POST',
-                                headers: buildHeaders(token, model, 'text/event-stream', payload.request.sessionId),
+                                headers: buildHeaders(token, model, 'text/event-stream', requestSessionId),
                                 body: JSON.stringify(payload)
                             });
 
