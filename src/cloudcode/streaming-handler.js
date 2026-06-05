@@ -142,6 +142,21 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
             const project = await accountManager.getProjectForAccount(account, token);
             const payload = buildCloudCodeRequest(anthropicRequest, project, account.email);
 
+            // Diagnostic log: summarise what's being sent to Google to help identify INVALID_ARGUMENT root cause
+            {
+                const genCfg = payload.request.generationConfig || {};
+                const contentSummary = (payload.request.contents || []).map(c => ({
+                    role: c.role,
+                    parts: (c.parts || []).map(p =>
+                        p.thought ? 'thinking' :
+                        p.functionCall ? 'functionCall' :
+                        p.functionResponse ? 'functionResponse' :
+                        p.inlineData ? 'inlineData' : 'text'
+                    )
+                }));
+                logger.info(`[CloudCode] Request → model=${payload.model}, maxTokens=${genCfg.maxOutputTokens}, thinkingCfg=${JSON.stringify(genCfg.thinkingConfig) ?? 'none'}, tools=${payload.request.tools ? 'yes' : 'no'}, contents=${JSON.stringify(contentSummary)}`);
+            }
+
             logger.debug(`[CloudCode] Starting stream for model: ${model}`);
 
             // Try each endpoint with index-based loop for capacity retry support
