@@ -201,8 +201,9 @@ export const STRATEGY_LABELS = {
     'hybrid': 'Hybrid (Smart Distribution)'
 };
 
-// Gemini-specific limits
+// Model-specific output token limits
 export const GEMINI_MAX_OUTPUT_TOKENS = 16384;
+export const CLAUDE_MAX_OUTPUT_TOKENS = 64000;
 
 // Gemini signature handling
 // Sentinel value to skip thought signature validation when Claude Code strips the field
@@ -510,6 +511,7 @@ export default {
     CAPACITY_JITTER_MAX_MS,
     MIN_SIGNATURE_LENGTH,
     GEMINI_MAX_OUTPUT_TOKENS,
+    CLAUDE_MAX_OUTPUT_TOKENS,
     GEMINI_SKIP_SIGNATURE,
     GEMINI_SIGNATURE_CACHE_TTL_MS,
     MODEL_VALIDATION_CACHE_TTL_MS,

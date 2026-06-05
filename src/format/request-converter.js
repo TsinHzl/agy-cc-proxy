@@ -5,6 +5,7 @@
 
 import {
     GEMINI_MAX_OUTPUT_TOKENS,
+    CLAUDE_MAX_OUTPUT_TOKENS,
     getModelFamily,
     isThinkingModel
 } from '../constants.js';
@@ -251,6 +252,12 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     if (isGeminiModel && googleRequest.generationConfig.maxOutputTokens > GEMINI_MAX_OUTPUT_TOKENS) {
         logger.debug(`[RequestConverter] Capping Gemini max_tokens from ${googleRequest.generationConfig.maxOutputTokens} to ${GEMINI_MAX_OUTPUT_TOKENS}`);
         googleRequest.generationConfig.maxOutputTokens = GEMINI_MAX_OUTPUT_TOKENS;
+    }
+
+    // Cap max tokens for Claude models — Cloud Code API rejects requests > 64K for Claude
+    if (isClaudeModel && googleRequest.generationConfig.maxOutputTokens > CLAUDE_MAX_OUTPUT_TOKENS) {
+        logger.debug(`[RequestConverter] Capping Claude max_tokens from ${googleRequest.generationConfig.maxOutputTokens} to ${CLAUDE_MAX_OUTPUT_TOKENS}`);
+        googleRequest.generationConfig.maxOutputTokens = CLAUDE_MAX_OUTPUT_TOKENS;
     }
 
     return googleRequest;
