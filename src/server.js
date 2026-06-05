@@ -779,7 +779,7 @@ app.post('/v1/messages', async (req, res) => {
 
         // Build the request object
         const request = {
-            model: modelId,
+            model: requestedModel,
             messages,
             max_tokens: max_tokens || 4096,
             stream,
