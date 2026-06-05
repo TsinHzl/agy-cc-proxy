@@ -94,6 +94,21 @@ export async function getTokenForAccount(account, tokenCache, onInvalid, onSave)
                 throw new Error(`AUTH_NETWORK_ERROR: ${error.message}`);
             }
 
+            // Detect invalid_client — this is a proxy configuration problem, not a user-auth
+            // problem. The hardcoded OAUTH_CONFIG.clientSecret may have been revoked by Google.
+            // Fix: set GOOGLE_CLIENT_SECRET (and GOOGLE_CLIENT_ID) env vars, then re-authenticate.
+            if (error.message.includes('invalid_client')) {
+                logger.error(
+                    `[AccountManager] OAuth client_secret is invalid for ${account.email}.\n` +
+                    `  The hardcoded client credentials have likely been revoked by Google.\n` +
+                    `  Fix: set GOOGLE_CLIENT_SECRET env var (and GOOGLE_CLIENT_ID if needed),\n` +
+                    `  then re-authenticate: npm run accounts:add`
+                );
+                if (onInvalid) onInvalid(account.email,
+                    'OAuth client_secret revoked — set GOOGLE_CLIENT_SECRET env var, then re-authenticate via npm run accounts:add');
+                throw new Error(`AUTH_CONFIG_ERROR: ${account.email}: OAuth client credentials invalid. Set GOOGLE_CLIENT_SECRET env var.`);
+            }
+
             logger.error(`[AccountManager] Failed to refresh token for ${account.email}:`, error.message);
             // Mark account as invalid (credentials need re-auth)
             if (onInvalid) onInvalid(account.email, error.message);
