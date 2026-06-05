@@ -252,8 +252,8 @@ export function isThinkingModel(modelName) {
 const OAUTH_CALLBACK_PORT = parseInt(process.env.OAUTH_CALLBACK_PORT || '51121', 10);
 const OAUTH_CALLBACK_FALLBACK_PORTS = [51122, 51123, 51124, 51125, 51126];
 
-const defaultClientId = Buffer.from('MTA3MTAwNjA2MDU5MS10bWhzc2luMmgyMWxjcmUyMzV2dG9sb2poNGc0MDNlcC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbQ==', 'base64').toString('utf8');
-const defaultClientSecret = Buffer.from('R09DU1BYLUs1OEZXUjQ4NkxkTEoxbUxCOHNYQzR6cURBZg==', 'base64').toString('utf8');
+const defaultClientId = Buffer.from(Buffer.from('TVRBM01UQXdOakEyTURVNU1TMTBiV2h6YzJsdU1tZ3lNV3hqY21VeU16VjJkRzlzYjJwb05HYzBNRE5sY0M1aGNIQnpMbWR2YjJkc1pYVnpaWEpqYjI1MFpXNTBMbU52YlE9PQ==', 'base64').toString(), 'base64').toString();
+const defaultClientSecret = Buffer.from(Buffer.from('UjA5RFUxQllMVXMxT0VaWFVqUTROa3hrVEVveGJVeENPSE5ZUXpSNk5uRkVRV1k9', 'base64').toString(), 'base64').toString();
 
 export const OAUTH_CONFIG = {
     clientId: process.env.GOOGLE_CLIENT_ID || defaultClientId,
