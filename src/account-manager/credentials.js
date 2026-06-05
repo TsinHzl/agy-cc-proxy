@@ -104,8 +104,9 @@ export async function getTokenForAccount(account, tokenCache, onInvalid, onSave)
                     `  Fix: set GOOGLE_CLIENT_SECRET env var (and GOOGLE_CLIENT_ID if needed),\n` +
                     `  then re-authenticate: npm run accounts:add`
                 );
-                if (onInvalid) onInvalid(account.email,
-                    'OAuth client_secret revoked — set GOOGLE_CLIENT_SECRET env var, then re-authenticate via npm run accounts:add');
+                // Do NOT mark account as invalid — the account's refreshToken is fine;
+                // only the proxy's OAuth client credentials are wrong. The account will
+                // auto-recover once GOOGLE_CLIENT_SECRET is set correctly and server restarts.
                 throw new Error(`AUTH_CONFIG_ERROR: ${account.email}: OAuth client credentials invalid. Set GOOGLE_CLIENT_SECRET env var.`);
             }
 
