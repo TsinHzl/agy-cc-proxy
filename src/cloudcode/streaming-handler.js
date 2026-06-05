@@ -154,7 +154,11 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                         p.inlineData ? 'inlineData' : 'text'
                     )
                 }));
-                logger.info(`[CloudCode] Request → model=${payload.model}, maxTokens=${genCfg.maxOutputTokens}, thinkingCfg=${JSON.stringify(genCfg.thinkingConfig) ?? 'none'}, tools=${payload.request.tools ? 'yes' : 'no'}, contents=${JSON.stringify(contentSummary)}`);
+                const toolSummary = (payload.request.tools?.[0]?.functionDeclarations || []).map(f => f.name);
+                logger.info(`[CloudCode] Request → model=${payload.model}, maxTokens=${genCfg.maxOutputTokens}, thinkingCfg=${JSON.stringify(genCfg.thinkingConfig) ?? 'none'}, tools=[${toolSummary.join(',')}], contents=${JSON.stringify(contentSummary)}`);
+                if (genCfg.maxOutputTokens > 65536) {
+                    logger.warn(`[CloudCode] maxOutputTokens=${genCfg.maxOutputTokens} may exceed Cloud Code API limit for Claude models`);
+                }
             }
 
             logger.debug(`[CloudCode] Starting stream for model: ${model}`);
