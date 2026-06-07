@@ -26,8 +26,13 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
     const model = anthropicRequest.model;
     const googleRequest = convertAnthropicToGoogle(anthropicRequest);
 
-    // Use stable session ID derived from first user message for cache continuity
-    googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
+    // Derive session ID for header use (cache continuity)
+    // Claude: also include in request body for cache continuity
+    // Gemini: body-level sessionId causes INVALID_ARGUMENT on strict validators
+    const sessionId = deriveSessionId(anthropicRequest, accountEmail);
+    if (getModelFamily(model) === 'claude') {
+        googleRequest.sessionId = sessionId;
+    }
 
     // Build system instruction parts array with [ignore] tags to prevent model from
     // identifying as "Antigravity" (fixes GitHub issue #76)
@@ -50,6 +55,7 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
         project: projectId,
         model: model,
         request: googleRequest,
+        sessionId,          // kept here for handler header use
         userAgent: 'antigravity',
         requestType: 'agent',  // CLIProxyAPI v6.6.89 compatibility
         requestId: 'agent-' + crypto.randomUUID()

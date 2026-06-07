@@ -175,7 +175,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
                     const response = await throttledFetch(url, {
                         method: 'POST',
-                        headers: buildHeaders(token, model, 'text/event-stream', payload.request.sessionId),
+                        headers: buildHeaders(token, model, 'text/event-stream', payload.sessionId),
                         body: JSON.stringify(payload)
                     });
 
@@ -364,7 +364,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                             // Refetch the response
                             currentResponse = await throttledFetch(url, {
                                 method: 'POST',
-                                headers: buildHeaders(token, model, 'text/event-stream', payload.request.sessionId),
+                                headers: buildHeaders(token, model, 'text/event-stream', payload.sessionId),
                                 body: JSON.stringify(payload)
                             });
 
