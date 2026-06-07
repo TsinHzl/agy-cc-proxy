@@ -63,11 +63,11 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
     // but excluded from JSON.stringify so it never reaches the API body
     Object.defineProperty(payload, 'sessionId', { value: sessionId, enumerable: false, configurable: true });
 
-    // Inject systemInstruction with role: "user" at the top level (CLIProxyAPI v6.6.89 behavior)
-    payload.request.systemInstruction = {
-        role: 'user',
-        parts: systemParts
-    };
+    // Claude: CLIProxyAPI v6.6.89 requires role: "user" on systemInstruction
+    // Gemini: role field is not valid on systemInstruction for Pro models
+    payload.request.systemInstruction = getModelFamily(model) === 'claude'
+        ? { role: 'user', parts: systemParts }
+        : { parts: systemParts };
 
     return payload;
 }
