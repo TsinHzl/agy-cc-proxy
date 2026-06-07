@@ -237,7 +237,8 @@ export function isThinkingModel(modelName) {
     const lower = (modelName || '').toLowerCase();
     if (lower.includes('claude') && lower.includes('thinking')) return true;
     // Gemini thinking models: "thinking" in name, OR "-high" suffix (high thinking budget tier)
-    // "-high" models (e.g. gemini-3.1-pro-high) require thinkingConfig — without it → 400 INVALID_ARGUMENT
+    // "-high" models are flagged here for response-side thought block processing.
+    // Whether to send explicit thinkingConfig is controlled by needsExplicitThinkingConfig().
     if (lower.includes('gemini') && (lower.includes('thinking') || lower.endsWith('-high'))) return true;
     return false;
 }

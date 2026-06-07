@@ -21,7 +21,8 @@ import {
     needsThinkingRecovery,
     closeToolLoopForThinking,
     cleanCacheControl,
-    clampGeminiThinkingBudget
+    clampGeminiThinkingBudget,
+    needsExplicitThinkingConfig
 } from './thinking-utils.js';
 import { logger } from '../utils/logger.js';
 
@@ -201,16 +202,17 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
             googleRequest.generationConfig.thinkingConfig = thinkingConfig;
         } else if (isGeminiModel) {
-            // Gemini thinking config (uses camelCase)
-            // Clamp budget to model-specific max (e.g., Gemini 2.5 Flash max is 24,576)
-            const thinkingConfig = {
-                includeThoughts: true,
-                thinkingBudget: clampGeminiThinkingBudget(modelName, thinking?.budget_tokens)
-            };
-            logger.debug(`[RequestConverter] Gemini thinking enabled with budget: ${thinkingConfig.thinkingBudget}`);
-
-
-            googleRequest.generationConfig.thinkingConfig = thinkingConfig;
+            // Gemini 3.x models handle thinking implicitly — explicit thinkingConfig causes 400
+            if (needsExplicitThinkingConfig(modelName)) {
+                const thinkingConfig = {
+                    includeThoughts: true,
+                    thinkingBudget: clampGeminiThinkingBudget(modelName, thinking?.budget_tokens)
+                };
+                logger.debug(`[RequestConverter] Gemini thinking config: budget=${thinkingConfig.thinkingBudget}`);
+                googleRequest.generationConfig.thinkingConfig = thinkingConfig;
+            } else {
+                logger.debug(`[RequestConverter] ${modelName} uses implicit thinking — skipping thinkingConfig`);
+            }
         }
     }
 
