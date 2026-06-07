@@ -294,10 +294,15 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                             throw new Error(`CAPACITY_EXHAUSTED: ${errorText}`);
                         }
 
-                        // 400 errors are client errors - fail immediately, don't retry or switch accounts
-                        // Examples: token limit exceeded, invalid schema, malformed request
+                        // 400 errors: try next endpoint before giving up (some models, e.g. gemini-3.1-pro-high,
+                        // are listed by the daily endpoint but only served by prod)
                         if (response.status === 400) {
                             logger.error(`[CloudCode] Invalid request (400): ${errorText.substring(0, 200)}`);
+                            endpointIndex++;
+                            if (endpointIndex < ANTIGRAVITY_ENDPOINT_FALLBACKS.length) {
+                                logger.info(`[CloudCode] 400 on ${endpoint}, retrying on next endpoint...`);
+                                continue;
+                            }
                             throw new Error(`invalid_request_error: ${errorText}`);
                         }
 
@@ -422,8 +427,8 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                     if (isAccountForbiddenError(endpointError)) {
                         throw endpointError;
                     }
-                    // 400 errors are client errors - re-throw immediately, don't retry
-                    if (endpointError.message?.includes('400')) {
+                    // 400 errors after all endpoints tried - re-throw
+                    if (endpointError.message?.startsWith('invalid_request_error')) {
                         throw endpointError;
                     }
                     logger.warn(`[CloudCode] Stream error at ${endpoint}:`, endpointError.message);
