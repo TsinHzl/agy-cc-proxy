@@ -235,10 +235,10 @@ export function getModelFamily(modelName) {
  */
 export function isThinkingModel(modelName) {
     const lower = (modelName || '').toLowerCase();
-    // Claude thinking models have "thinking" in the name
     if (lower.includes('claude') && lower.includes('thinking')) return true;
-    // Gemini thinking models: must have "thinking" in name (same pattern as Claude)
-    if (lower.includes('gemini') && lower.includes('thinking')) return true;
+    // Gemini thinking models: "thinking" in name, OR "-high" suffix (high thinking budget tier)
+    // "-high" models (e.g. gemini-3.1-pro-high) require thinkingConfig — without it → 400 INVALID_ARGUMENT
+    if (lower.includes('gemini') && (lower.includes('thinking') || lower.endsWith('-high'))) return true;
     return false;
 }
 
