@@ -277,6 +277,19 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         googleRequest.generationConfig.maxOutputTokens = GEMINI_MAX_OUTPUT_TOKENS;
     }
 
+    // For Gemini thinking models: ensure maxOutputTokens has adequate headroom above thinkingBudget.
+    // Mirrors Claude thinking adjustment (lines 191-200). Placed after cap to override
+    // GEMINI_MAX_OUTPUT_TOKENS when necessary — thinking requires budget + margin.
+    if (isGeminiModel && isThinking && googleRequest.generationConfig.thinkingConfig) {
+        const budget = googleRequest.generationConfig.thinkingConfig.thinkingBudget;
+        const currentMax = googleRequest.generationConfig.maxOutputTokens;
+        if (currentMax !== undefined && budget !== undefined && currentMax - budget < 1000) {
+            const adjustedMax = budget + 8192;
+            logger.warn(`[RequestConverter] Gemini maxOutputTokens (${currentMax}) too close to thinkingBudget (${budget}). Adjusting to ${adjustedMax}`);
+            googleRequest.generationConfig.maxOutputTokens = adjustedMax;
+        }
+    }
+
     // Cap max tokens for Claude models — Cloud Code API rejects requests > 64K for Claude
     if (isClaudeModel && googleRequest.generationConfig.maxOutputTokens > CLAUDE_MAX_OUTPUT_TOKENS) {
         logger.debug(`[RequestConverter] Capping Claude max_tokens from ${googleRequest.generationConfig.maxOutputTokens} to ${CLAUDE_MAX_OUTPUT_TOKENS}`);
