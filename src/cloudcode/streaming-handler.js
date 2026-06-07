@@ -173,6 +173,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                 try {
                     const url = `${endpoint}/v1internal:streamGenerateContent?alt=sse`;
 
+                    logger.info(`[CloudCode] Full payload (diagnostic): ${JSON.stringify(payload)}`);
                     const response = await throttledFetch(url, {
                         method: 'POST',
                         headers: buildHeaders(token, model, 'text/event-stream', payload.sessionId),
