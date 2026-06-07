@@ -55,11 +55,13 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
         project: projectId,
         model: model,
         request: googleRequest,
-        sessionId,          // kept here for handler header use
         userAgent: 'antigravity',
         requestType: 'agent',  // CLIProxyAPI v6.6.89 compatibility
         requestId: 'agent-' + crypto.randomUUID()
     };
+    // Non-enumerable: accessible as payload.sessionId for header building,
+    // but excluded from JSON.stringify so it never reaches the API body
+    Object.defineProperty(payload, 'sessionId', { value: sessionId, enumerable: false, configurable: true });
 
     // Inject systemInstruction with role: "user" at the top level (CLIProxyAPI v6.6.89 behavior)
     payload.request.systemInstruction = {
