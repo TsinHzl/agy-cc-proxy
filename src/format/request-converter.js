@@ -142,6 +142,19 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         googleRequest.contents = filterUnsignedThinkingBlocks(googleRequest.contents);
     }
 
+    // Gemini requires strictly alternating roles; merge any consecutive same-role messages
+    if (isGeminiModel && googleRequest.contents.length > 1) {
+        googleRequest.contents = googleRequest.contents.reduce((merged, content) => {
+            const last = merged[merged.length - 1];
+            if (last && last.role === content.role) {
+                last.parts = [...last.parts, ...content.parts];
+            } else {
+                merged.push({ role: content.role, parts: [...content.parts] });
+            }
+            return merged;
+        }, []);
+    }
+
     // Generation config
     if (max_tokens) {
         googleRequest.generationConfig.maxOutputTokens = max_tokens;
