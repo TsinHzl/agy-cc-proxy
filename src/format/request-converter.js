@@ -21,8 +21,7 @@ import {
     needsThinkingRecovery,
     closeToolLoopForThinking,
     cleanCacheControl,
-    clampGeminiThinkingBudget,
-    needsExplicitThinkingConfig
+    clampGeminiThinkingBudget
 } from './thinking-utils.js';
 import { logger } from '../utils/logger.js';
 
@@ -143,19 +142,6 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         googleRequest.contents = filterUnsignedThinkingBlocks(googleRequest.contents);
     }
 
-    // Gemini requires strictly alternating roles; merge any consecutive same-role messages
-    if (isGeminiModel && googleRequest.contents.length > 1) {
-        googleRequest.contents = googleRequest.contents.reduce((merged, content) => {
-            const last = merged[merged.length - 1];
-            if (last && last.role === content.role) {
-                last.parts = [...last.parts, ...content.parts];
-            } else {
-                merged.push({ role: content.role, parts: [...content.parts] });
-            }
-            return merged;
-        }, []);
-    }
-
     // Generation config
     if (max_tokens) {
         googleRequest.generationConfig.maxOutputTokens = max_tokens;
@@ -202,17 +188,16 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
             googleRequest.generationConfig.thinkingConfig = thinkingConfig;
         } else if (isGeminiModel) {
-            // Gemini 3.x models handle thinking implicitly — explicit thinkingConfig causes 400
-            if (needsExplicitThinkingConfig(modelName)) {
-                const thinkingConfig = {
-                    includeThoughts: true,
-                    thinkingBudget: clampGeminiThinkingBudget(modelName, thinking?.budget_tokens)
-                };
-                logger.debug(`[RequestConverter] Gemini thinking config: budget=${thinkingConfig.thinkingBudget}`);
-                googleRequest.generationConfig.thinkingConfig = thinkingConfig;
-            } else {
-                logger.debug(`[RequestConverter] ${modelName} uses implicit thinking — skipping thinkingConfig`);
-            }
+            // Gemini thinking config (uses camelCase)
+            // Clamp budget to model-specific max (e.g., Gemini 2.5 Flash max is 24,576)
+            const thinkingConfig = {
+                includeThoughts: true,
+                thinkingBudget: clampGeminiThinkingBudget(modelName, thinking?.budget_tokens)
+            };
+            logger.debug(`[RequestConverter] Gemini thinking enabled with budget: ${thinkingConfig.thinkingBudget}`);
+
+
+            googleRequest.generationConfig.thinkingConfig = thinkingConfig;
         }
     }
 
@@ -261,34 +246,12 @@ export function convertAnthropicToGoogle(anthropicRequest) {
                 }
             };
         }
-
-        // For Gemini models, set functionCallingConfig.mode = "AUTO"
-        // Pro models (e.g. gemini-3.1-pro-high) require explicit toolConfig when tools are present
-        if (isGeminiModel) {
-            googleRequest.toolConfig = {
-                functionCallingConfig: {
-                    mode: 'AUTO'
-                }
-            };
-        }
     }
 
     // Cap max tokens for Gemini models
     if (isGeminiModel && googleRequest.generationConfig.maxOutputTokens > GEMINI_MAX_OUTPUT_TOKENS) {
         logger.debug(`[RequestConverter] Capping Gemini max_tokens from ${googleRequest.generationConfig.maxOutputTokens} to ${GEMINI_MAX_OUTPUT_TOKENS}`);
         googleRequest.generationConfig.maxOutputTokens = GEMINI_MAX_OUTPUT_TOKENS;
-    }
-
-    // For Gemini thinking models: reduce thinkingBudget if it leaves inadequate headroom in maxOutputTokens.
-    // Reduces budget rather than increasing maxOutputTokens to stay within model-specific output limits.
-    if (isGeminiModel && isThinking && googleRequest.generationConfig.thinkingConfig) {
-        const budget = googleRequest.generationConfig.thinkingConfig.thinkingBudget;
-        const currentMax = googleRequest.generationConfig.maxOutputTokens;
-        if (currentMax !== undefined && budget !== undefined && currentMax - budget < 1000) {
-            const adjustedBudget = Math.max(0, currentMax - 8192);
-            logger.warn(`[RequestConverter] Gemini thinkingBudget (${budget}) too close to maxOutputTokens (${currentMax}). Reducing budget to ${adjustedBudget}`);
-            googleRequest.generationConfig.thinkingConfig.thinkingBudget = adjustedBudget;
-        }
     }
 
     // Cap max tokens for Claude models — Cloud Code API rejects requests > 64K for Claude

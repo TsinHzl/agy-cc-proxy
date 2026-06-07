@@ -58,28 +58,6 @@ export function clampGeminiThinkingBudget(modelName, budget) {
 }
 
 // ============================================================================
-// Gemini Explicit Thinking Config Guard
-// ============================================================================
-
-// Gemini model major versions where thinking is handled implicitly (server-side).
-// Sending explicit thinkingConfig to these versions causes INVALID_ARGUMENT 400 errors.
-const GEMINI_IMPLICIT_THINKING_MAJOR_VERSIONS = new Set(['3']);
-
-/**
- * Returns true if the model requires explicit thinkingConfig in the request body.
- * Gemini 3.x models handle thinking implicitly — sending thinkingConfig causes 400.
- *
- * @param {string} modelName - The Gemini model name
- * @returns {boolean}
- */
-export function needsExplicitThinkingConfig(modelName) {
-    const lower = (modelName || '').toLowerCase();
-    const versionMatch = lower.match(/gemini-(\d+)/);
-    if (!versionMatch) return true;
-    return !GEMINI_IMPLICIT_THINKING_MAJOR_VERSIONS.has(versionMatch[1]);
-}
-
-// ============================================================================
 // Cache Control Cleaning (Issue #189)
 // ============================================================================
 

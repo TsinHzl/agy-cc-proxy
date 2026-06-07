@@ -26,13 +26,8 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
     const model = anthropicRequest.model;
     const googleRequest = convertAnthropicToGoogle(anthropicRequest);
 
-    // Derive session ID for header use (cache continuity)
-    // Claude: also include in request body for cache continuity
-    // Gemini: body-level sessionId causes INVALID_ARGUMENT on strict validators
-    const sessionId = deriveSessionId(anthropicRequest, accountEmail);
-    if (getModelFamily(model) === 'claude') {
-        googleRequest.sessionId = sessionId;
-    }
+    // Use stable session ID derived from first user message for cache continuity
+    googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
 
     // Build system instruction parts array with [ignore] tags to prevent model from
     // identifying as "Antigravity" (fixes GitHub issue #76)
@@ -59,15 +54,12 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
         requestType: 'agent',  // CLIProxyAPI v6.6.89 compatibility
         requestId: 'agent-' + crypto.randomUUID()
     };
-    // Non-enumerable: accessible as payload.sessionId for header building,
-    // but excluded from JSON.stringify so it never reaches the API body
-    Object.defineProperty(payload, 'sessionId', { value: sessionId, enumerable: false, configurable: true });
 
-    // Claude: CLIProxyAPI v6.6.89 requires role: "user" on systemInstruction
-    // Gemini: role field is not valid on systemInstruction for Pro models
-    payload.request.systemInstruction = getModelFamily(model) === 'claude'
-        ? { role: 'user', parts: systemParts }
-        : { parts: systemParts };
+    // Inject systemInstruction with role: "user" at the top level (CLIProxyAPI v6.6.89 behavior)
+    payload.request.systemInstruction = {
+        role: 'user',
+        parts: systemParts
+    };
 
     return payload;
 }
