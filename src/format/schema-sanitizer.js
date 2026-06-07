@@ -502,6 +502,38 @@ export function sanitizeSchema(schema) {
         };
     }
 
+    // Handle anyOf/oneOf before the allowlist: Gemini doesn't support unions,
+    // so we must flatten to a single type. For all-string branches (the common
+    // case, e.g. TaskUpdate.status), merge enum/const values into one STRING enum.
+    for (const unionKey of ['anyOf', 'oneOf']) {
+        if (!Array.isArray(schema[unionKey]) || schema[unionKey].length === 0) continue;
+        const branches = schema[unionKey];
+        const allString = branches.every(b => b && (b.type === 'string' || 'const' in b));
+        if (allString) {
+            const enums = [];
+            for (const b of branches) {
+                if (Array.isArray(b.enum)) enums.push(...b.enum);
+                if ('const' in b) enums.push(b.const);
+            }
+            const merged = { type: 'string' };
+            if (schema.description) merged.description = schema.description;
+            if (enums.length > 0) merged.enum = enums;
+            return merged;
+        }
+        // Non-all-string anyOf: pick best branch (object > array > string > null)
+        const score = s => (s.properties || s.type === 'object') ? 2 : (s.items || s.type === 'array') ? 1 : 0;
+        const best = branches
+            .filter(b => b && b.type !== 'null')
+            .sort((a, b) => score(b) - score(a))[0];
+        if (best) {
+            return sanitizeSchema(Object.assign(
+                {}, best,
+                schema.description ? { description: schema.description } : {}
+            ));
+        }
+        break;
+    }
+
     // Allowlist of permitted JSON Schema fields
     const ALLOWED_FIELDS = new Set([
         'type',
