@@ -259,6 +259,16 @@ export function convertAnthropicToGoogle(anthropicRequest) {
                 }
             };
         }
+
+        // For Gemini models, set functionCallingConfig.mode = "AUTO"
+        // Pro models (e.g. gemini-3.1-pro-high) require explicit toolConfig when tools are present
+        if (isGeminiModel) {
+            googleRequest.toolConfig = {
+                functionCallingConfig: {
+                    mode: 'AUTO'
+                }
+            };
+        }
     }
 
     // Cap max tokens for Gemini models
