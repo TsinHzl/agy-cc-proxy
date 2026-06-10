@@ -289,11 +289,13 @@ export const ANTIGRAVITY_SYSTEM_INSTRUCTION = `You are Antigravity, a powerful a
 // Model fallback mapping - maps primary model to fallback when quota exhausted
 // Model alias mapping - directly maps requested model to an actual model
 export const MODEL_MAP = {
-    "gemini-3.1-pro-high": "gemini-pro-agent"
+    "gemini-3.1-pro-high": "gemini-pro-agent",
+    "gemini-3.1-pro-preview": "gemini-pro-agent"
 };
 
 export const MODEL_FALLBACK_MAP = {
     'gemini-3.1-pro-high': 'claude-opus-4-6-thinking',
+    'gemini-3.1-pro-preview': 'claude-opus-4-6-thinking',
     'gemini-pro-agent': 'claude-opus-4-6-thinking',
     'gemini-3.1-pro-low': 'claude-sonnet-4-6',
     'gemini-3-flash': 'claude-sonnet-4-6',
