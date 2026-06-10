@@ -15,7 +15,11 @@
             <!-- Right: Stats & Controls -->
             <div class="flex items-center gap-4 shrink-0">
                 <div class="text-[10px] font-mono text-gray-600">
-                    <span x-text="$store.global.t('totalRecords', { count: records.length })"></span>
+                    <div class="flex gap-4 items-center">
+                        <span x-text="$store.global.t('totalRecords', { count: records.length })"></span>
+                        <div class="h-3 w-px bg-space-border/50 hidden sm:block"></div>
+                        <span class="text-neon-green" x-text="'Total Credits: ' + totalCredits.toFixed(4)"></span>
+                    </div>
                 </div>
                 <button class="btn-action-ghost-square" @click="copyAll" :title="copied ? $store.global.t('copied') : $store.global.t('copyAll')" :disabled="records.length === 0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

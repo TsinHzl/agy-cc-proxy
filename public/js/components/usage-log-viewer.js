@@ -7,6 +7,9 @@ window.Components = window.Components || {};
 
 window.Components.usageLogViewer = () => ({
     records: [],
+    get totalCredits() {
+        return this.records.reduce((sum, r) => sum + Number(r.credits || 0), 0);
+    },
     loading: false,
     copied: false,
     refreshTimer: null,
