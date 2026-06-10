@@ -31,6 +31,42 @@ window.Components.usageLogViewer = () => ({
         }
     },
 
+    async copyAll() {
+        const records = this.records;
+        if (!records.length) return;
+
+        // Build TSV: header + one row per record
+        const t = Alpine.store('global');
+        const header = [
+            t.t('time'), t.t('model'), t.t('apiKey'),
+            t.t('inputTokens'), t.t('outputTokens'), t.t('cacheRead'), t.t('totalTokens'),
+            t.t('requestLatency'), t.t('firstToken'),
+            t.t('cost'),
+        ].join('\t');
+
+        const rows = records.map(r => [
+            this.formatTime(r.timestamp),
+            r.model + (r.streaming ? ` (${t.t('streaming')})` : ''),
+            r.apiKey,
+            r.inputTokens,
+            r.outputTokens,
+            r.cacheReadTokens,
+            r.totalTokens,
+            this.formatDuration(r.totalDuration),
+            r.timeToFirstToken != null ? this.formatFirstToken(r.timeToFirstToken) : '-',
+            this.formatCredits(r.credits),
+        ].join('\t'));
+
+        const tsv = [header, ...rows].join('\n');
+
+        try {
+            await navigator.clipboard.writeText(tsv);
+            if (window.UILogger) window.UILogger.info('Usage log copied to clipboard');
+        } catch (e) {
+            if (window.UILogger) window.UILogger.error('Copy failed:', e.message);
+        }
+    },
+
     async refreshData() {
         this.loading = true;
         try {
