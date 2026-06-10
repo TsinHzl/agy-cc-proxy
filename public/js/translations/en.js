@@ -476,6 +476,7 @@ window.translations.en = {
     noUsageRecords: "No usage records",
     totalRecords: "{count} records",
     copyAll: "Copy All Records",
+    copied: "Copied!",
     packageDeduction: "Package Deduction",
     defaultKey: "Default Key",
     inputTokens: "Input Tokens",

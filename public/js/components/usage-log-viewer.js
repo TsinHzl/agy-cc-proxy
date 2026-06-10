@@ -8,6 +8,7 @@ window.Components = window.Components || {};
 window.Components.usageLogViewer = () => ({
     records: [],
     loading: false,
+    copied: false,
     refreshTimer: null,
 
     init() {
@@ -31,7 +32,7 @@ window.Components.usageLogViewer = () => ({
         }
     },
 
-    async copyAll() {
+    copyAll() {
         const records = this.records;
         if (!records.length) return;
 
@@ -59,11 +60,23 @@ window.Components.usageLogViewer = () => ({
 
         const tsv = [header, ...rows].join('\n');
 
+        // Use textarea fallback — navigator.clipboard requires secure context (HTTPS/localhost)
+        const ta = document.createElement('textarea');
+        ta.value = tsv;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
         try {
-            await navigator.clipboard.writeText(tsv);
-            if (window.UILogger) window.UILogger.info('Usage log copied to clipboard');
+            document.execCommand('copy');
+            this.copied = true;
+            setTimeout(() => { this.copied = false; }, 2000);
         } catch (e) {
             if (window.UILogger) window.UILogger.error('Copy failed:', e.message);
+        } finally {
+            document.body.removeChild(ta);
         }
     },
 
