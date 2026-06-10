@@ -82,6 +82,8 @@ npm start
 
 ### 1. 启动代理服务器
 
+#### 本地开发
+
 ```bash
 # 全局安装后
 acc start
@@ -94,7 +96,7 @@ npx antigravity-claude-proxy@latest start
 npm start
 ```
 
-服务器默认以**后台进程**方式运行在 `http://localhost:8080`，关闭终端后仍继续运行。
+服务器默认运行在 `http://localhost:8080`。
 
 | 命令 | 说明 |
 | :--- | :--- |
@@ -104,6 +106,50 @@ npm start
 | `acc status` | 查看代理状态和 PID |
 | `acc ui` | 打开 Web 控制台 |
 | `acc start --log` | 前台运行并显示日志 |
+
+#### 服务器部署（PM2）
+
+生产服务器、远程机器或任何需要终端断开后保持运行、重启后自动启动的场景，使用 **PM2** 作为进程管理器：
+
+```bash
+# 全局安装 PM2
+npm install -g pm2
+
+# 启动代理
+pm2 start ecosystem.config.cjs
+
+# 注册开机自启
+pm2 save
+pm2 startup    # 按输出提示执行对应命令，启用 systemd/launchd 服务
+```
+
+> **说明：** `pm2 startup` 会生成 systemd（Linux）或 launchd（macOS）服务，确保机器重启后代理自动启动。
+
+| 命令 | 说明 |
+| :--- | :--- |
+| `pm2 status` | 查看运行状态 |
+| `pm2 logs agy-cc-proxy` | 实时查看日志 |
+| `pm2 restart agy-cc-proxy` | 重启代理 |
+| `pm2 stop agy-cc-proxy` | 停止代理 |
+| `pm2 delete agy-cc-proxy` | 从 PM2 中移除 |
+
+**更新到最新代码：**
+
+```bash
+git pull
+npm install        # 如有依赖变更
+pm2 restart agy-cc-proxy
+```
+
+**卸载 PM2 服务：**
+
+```bash
+pm2 stop agy-cc-proxy
+pm2 delete agy-cc-proxy
+pm2 save --force
+pm2 unstartup       # 移除开机自启服务
+npm uninstall -g pm2
+```
 
 ### 2. 关联账号
 
@@ -285,72 +331,25 @@ function claude-antigravity {
 
 然后用 `claude` 使用官方 API，用 `claude-antigravity` 使用此代理。
 
-### 以系统服务运行（systemd）
+### 以系统用户运行（systemd）
 
-以 systemd 服务运行时，代理在不同用户（如 `root`）下运行，无法找到 `~/.claude/settings.json`。设置 `CLAUDE_CONFIG_PATH` 指向真实用户的 `.claude` 目录：
+当 PM2 以不同用户（如 `root` 通过 systemd）启动代理时，无法找到 `~/.claude/settings.json`。在 `ecosystem.config.cjs` 中设置 `CLAUDE_CONFIG_PATH` 指向真实用户的 `.claude` 目录：
 
-```ini
-# /etc/systemd/system/antigravity-proxy.service
-[Service]
-Environment=CLAUDE_CONFIG_PATH=/home/youruser/.claude
-ExecStart=/usr/bin/node /path/to/antigravity-claude-proxy/src/index.js
+```js
+// ecosystem.config.cjs
+module.exports = {
+  apps: [{
+    name: 'agy-cc-proxy',
+    script: './src/index.js',
+    env: {
+      CLAUDE_CONFIG_PATH: '/home/youruser/.claude',
+      PORT: 8080
+    }
+  }]
+};
 ```
 
 不设置此项，WebUI 的 Claude CLI 标签页将无法读写你的 Claude Code 配置。
-
-### 使用 PM2 部署（推荐用于远程服务器）
-
-在通过克隆仓库方式部署的远程服务器上，使用 PM2 可在断开终端连接后保持代理持续运行，并在服务器重启后自动拉起。
-
-**安装 PM2：**
-```bash
-npm install -g pm2
-```
-
-**启动并注册开机自启：**
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save        # 保存进程列表
-pm2 startup     # 注册 systemd 自启（按输出提示执行对应命令）
-```
-
-**更新到最新代码：**
-```bash
-git pull
-pm2 restart agy-cc-proxy
-```
-
-| 命令 | 说明 |
-| :--- | :--- |
-| `pm2 status` | 查看运行状态 |
-| `pm2 logs agy-cc-proxy` | 实时查看日志 |
-| `pm2 restart agy-cc-proxy` | 重启代理 |
-| `pm2 stop agy-cc-proxy` | 停止代理 |
-
-### 卸载
-
-**停止并移除 PM2 进程：**
-```bash
-pm2 stop agy-cc-proxy
-pm2 delete agy-cc-proxy
-pm2 save --force
-```
-
-**移除开机自启 systemd 服务：**
-```bash
-pm2 unstartup systemd
-```
-
-**全局卸载 PM2：**
-```bash
-npm uninstall -g pm2
-```
-
-**删除仓库及所有项目文件：**
-```bash
-cd ..
-rm -rf antigravity-claude-proxy
-```
 
 ---
 
