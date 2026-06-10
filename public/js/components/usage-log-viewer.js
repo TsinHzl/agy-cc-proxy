@@ -13,6 +13,11 @@ window.Components.usageLogViewer = () => ({
     init() {
         this.refreshData();
 
+        // Refresh data whenever this tab becomes active
+        this.$watch('$store.global.activeTab', (val) => {
+            if (val === 'usageLog') this.refreshData();
+        });
+
         // Follow global polling interval
         this.$watch('$store.settings.refreshInterval', () => this.startAutoRefresh());
         this.startAutoRefresh();
