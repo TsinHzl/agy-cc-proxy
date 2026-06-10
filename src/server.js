@@ -21,6 +21,7 @@ import { clearThinkingSignatureCache } from './format/signature-cache.js';
 import { formatDuration } from './utils/helpers.js';
 import { logger } from './utils/logger.js';
 import usageStats from './modules/usage-stats.js';
+import usageLog from './modules/usage-log.js';
 
 // Parse fallback flag directly from command line args to avoid circular dependency
 const args = process.argv.slice(2);
@@ -112,6 +113,9 @@ app.use('/v1', (req, res, next) => {
 
 // Setup usage statistics middleware
 usageStats.setupMiddleware(app);
+
+// Initialize usage log module
+usageLog.init();
 
 /**
  * Silent handler for Claude Code CLI root POST requests
@@ -810,12 +814,19 @@ app.post('/v1/messages', async (req, res) => {
             // Do NOT flush headers immediately. We need to wait for the first chunk
             // to ensure we don't send a 200 OK if the upstream fails immediately (e.g. 429/503).
 
+            // Usage tracking
+            const streamStartTime = Date.now();
+            let usageInputTokens = 0;
+            let usageOutputTokens = 0;
+            let usageCacheReadTokens = 0;
+            let usageTimeToFirstToken = null;
+
             try {
                 // Initialize the generator
                 const generator = sendMessageStream(request, accountManager, FALLBACK_ENABLED);
-                
+
                 // BUFFERING STRATEGY:
-                // Pull the first event *before* sending headers. 
+                // Pull the first event *before* sending headers.
                 // If this throws, we can safely send a 4xx/5xx error JSON.
                 const firstResult = await generator.next();
 
@@ -827,6 +838,23 @@ app.post('/v1/messages', async (req, res) => {
                 res.setHeader('X-Accel-Buffering', 'no');
                 res.flushHeaders();
 
+                // Helper to extract usage from events
+                const captureUsage = (event) => {
+                    if (event.type === 'message_start' && event.message?.usage) {
+                        usageInputTokens = event.message.usage.input_tokens || 0;
+                        usageCacheReadTokens = event.message.usage.cache_read_input_tokens || 0;
+                    }
+                    if (event.type === 'content_block_delta' && usageTimeToFirstToken === null) {
+                        usageTimeToFirstToken = (Date.now() - streamStartTime) / 1000;
+                    }
+                    if (event.type === 'message_delta' && event.usage) {
+                        usageOutputTokens = event.usage.output_tokens || 0;
+                    }
+                };
+
+                // Capture usage from first event
+                captureUsage(firstResult.value);
+
                 // If the generator isn't done, send the first chunk
                 if (!firstResult.done) {
                     res.write(`event: ${firstResult.value.type}\ndata: ${JSON.stringify(firstResult.value)}\n\n`);
@@ -835,11 +863,26 @@ app.post('/v1/messages', async (req, res) => {
 
                 // Continue with the rest of the stream
                 for await (const event of generator) {
+                    captureUsage(event);
                     res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
                     if (res.flush) res.flush();
                 }
-                
+
                 res.end();
+
+                // Record usage log entry on successful stream completion
+                const totalDuration = (Date.now() - streamStartTime) / 1000;
+                usageLog.record({
+                    timestamp: new Date(streamStartTime).toISOString(),
+                    model: modelId,
+                    apiKey: validationAccount?.email || '-',
+                    inputTokens: usageInputTokens,
+                    outputTokens: usageOutputTokens,
+                    cacheReadTokens: usageCacheReadTokens,
+                    totalDuration,
+                    timeToFirstToken: usageTimeToFirstToken,
+                    streaming: true,
+                });
 
             } catch (error) {
                 // If we haven't sent headers yet, we can send a proper error status
@@ -870,8 +913,23 @@ app.post('/v1/messages', async (req, res) => {
 
         } else {
             // Handle non-streaming response
+            const nonStreamStartTime = Date.now();
             const response = await sendMessage(request, accountManager, FALLBACK_ENABLED);
             res.json(response);
+
+            // Record usage for non-streaming request
+            const u = response?.usage || {};
+            usageLog.record({
+                timestamp: new Date(nonStreamStartTime).toISOString(),
+                model: modelId,
+                apiKey: validationAccount?.email || '-',
+                inputTokens: u.input_tokens || 0,
+                outputTokens: u.output_tokens || 0,
+                cacheReadTokens: u.cache_read_input_tokens || 0,
+                totalDuration: (Date.now() - nonStreamStartTime) / 1000,
+                timeToFirstToken: null,
+                streaming: false,
+            });
         }
 
     } catch (error) {
@@ -918,6 +976,8 @@ app.post('/v1/messages', async (req, res) => {
  * Catch-all for unsupported endpoints
  */
 usageStats.setupRoutes(app);
+
+usageLog.setupRoutes(app);
 
 app.use('*', (req, res) => {
     // Log 404s (use originalUrl since wildcard strips req.path)

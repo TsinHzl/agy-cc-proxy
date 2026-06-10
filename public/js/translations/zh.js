@@ -471,4 +471,21 @@ window.translations.zh = {
     weightLru: "LRU 权重",
     // 模型下拉菜单
     clearSelection: "清除选择",
+    // 使用日志
+    usageLog: "使用日志",
+    time: "时间",
+    apiKey: "API 密钥",
+    modelUsage: "模型用量",
+    requestLatency: "请求耗时",
+    cost: "消费金额",
+    noUsageRecords: "暂无使用记录",
+    totalRecords: "{count} 条记录",
+    packageDeduction: "套餐抵扣",
+    defaultKey: "默认密钥",
+    inputTokens: "输入 Tokens",
+    outputTokens: "输出 Tokens",
+    cacheRead: "缓存读取",
+    totalTokens: "总计",
+    firstToken: "首 Token",
+    streaming: "流式",
 };

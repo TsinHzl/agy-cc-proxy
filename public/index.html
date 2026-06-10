@@ -193,6 +193,15 @@
                 <nav class="flex flex-col gap-1">
                     <button
                         class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        :class="{'active': $store.global.activeTab === 'usageLog'}" @click="$store.global.activeTab = 'usageLog'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span x-text="$store.global.t('usageLog')">使用日志</span>
+                    </button>
+                    <button
+                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
                         :class="{'active': $store.global.activeTab === 'logs'}" @click="$store.global.activeTab = 'logs'">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -242,6 +251,11 @@
             <div x-show="$store.global.activeTab === 'models'" x-load-view="'models'"
                 x-transition:enter="fade-enter-active" x-transition:enter-start="fade-enter-from"
                 class="w-full"></div>
+
+            <!-- Usage Log -->
+            <div x-show="$store.global.activeTab === 'usageLog'" x-load-view="'usage-log'"
+                x-transition:enter="fade-enter-active" x-transition:enter-start="fade-enter-from"
+                class="w-full h-full"></div>
 
             <!-- Logs -->
             <div x-show="$store.global.activeTab === 'logs'" x-load-view="'logs'" x-transition:enter="fade-enter-active"
@@ -424,6 +438,7 @@
     <script src="js/components/account-manager.js"></script>
     <script src="js/components/claude-config.js"></script>
     <script src="js/components/model-dropdown.js"></script>
+    <script src="js/components/usage-log-viewer.js"></script>
     <script src="js/components/logs-viewer.js"></script>
     <script src="js/components/server-config.js"></script>
     <script src="js/components/add-account-modal.js"></script>

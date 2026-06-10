@@ -466,4 +466,21 @@ window.translations.en = {
     weightLru: "LRU Weight",
     // Model Dropdown
     clearSelection: "Clear selection",
+    // Usage Log
+    usageLog: "Usage Log",
+    time: "Time",
+    apiKey: "API Key",
+    modelUsage: "Model Usage",
+    requestLatency: "Latency",
+    cost: "Cost",
+    noUsageRecords: "No usage records",
+    totalRecords: "{count} records",
+    packageDeduction: "Package Deduction",
+    defaultKey: "Default Key",
+    inputTokens: "Input Tokens",
+    outputTokens: "Output Tokens",
+    cacheRead: "Cache Read",
+    totalTokens: "Total",
+    firstToken: "First Token",
+    streaming: "Streaming",
 };

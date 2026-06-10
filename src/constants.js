@@ -143,6 +143,12 @@ export const USAGE_HISTORY_PATH = join(
     '.config/antigravity-proxy/usage-history.json'
 );
 
+// Usage log persistence path (per-request detail records)
+export const USAGE_LOG_PATH = join(
+    homedir(),
+    '.config/antigravity-proxy/usage-log.json'
+);
+
 // Antigravity app database path (for legacy single-account token extraction)
 // Uses platform-specific path detection
 export const ANTIGRAVITY_DB_PATH = getAntigravityDbPath();
