@@ -1,6 +1,6 @@
 # 任务清单：add-usage-log
 
-## 状态：DONE
+## 状态：ARCHIVED
 
 ## 任务
 - [x] T1: 创建 `src/modules/usage-log.js` — 用量日志模块核心（数据结构、环形缓冲区、`record()`、`getRecords()`、定价表、Credits 计算）
