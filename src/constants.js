@@ -249,6 +249,7 @@ export function isThinkingModel(modelName) {
         // Check for gemini-3 or higher (e.g., gemini-3, gemini-3.5, gemini-4, etc.)
         const versionMatch = lower.match(/gemini-(\d+)/);
         if (versionMatch && parseInt(versionMatch[1], 10) >= 3) return true;
+        if (lower.includes('agent')) return true;
     }
     return false;
 }
