@@ -15,7 +15,7 @@ import { config } from './config.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { forceRefresh } from './auth/token-extractor.js';
-import { REQUEST_BODY_LIMIT } from './constants.js';
+import { REQUEST_BODY_LIMIT, MODEL_MAP } from './constants.js';
 import { AccountManager } from './account-manager/index.js';
 import { clearThinkingSignatureCache } from './format/signature-cache.js';
 import { formatDuration } from './utils/helpers.js';
@@ -729,6 +729,12 @@ app.post('/v1/messages', async (req, res) => {
 
         // Resolve model mapping if configured
         let requestedModel = model || 'claude-3-5-sonnet-20241022';
+        // Apply hardcoded aliases/mapping first
+        if (MODEL_MAP[requestedModel]) {
+            logger.info(`[Server] Alias mapping ${requestedModel} -> ${MODEL_MAP[requestedModel]}`);
+            requestedModel = MODEL_MAP[requestedModel];
+        }
+
         const modelMapping = config.modelMapping || {};
         if (modelMapping[requestedModel] && modelMapping[requestedModel].mapping) {
             const targetModel = modelMapping[requestedModel].mapping;

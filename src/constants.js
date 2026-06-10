@@ -249,6 +249,7 @@ export function isThinkingModel(modelName) {
         // Check for gemini-3 or higher (e.g., gemini-3, gemini-3.5, gemini-4, etc.)
         const versionMatch = lower.match(/gemini-(\d+)/);
         if (versionMatch && parseInt(versionMatch[1], 10) >= 3) return true;
+        if (lower.includes("agent")) return true;
     }
     return false;
 }
@@ -286,11 +287,17 @@ export const OAUTH_REDIRECT_URI = `http://localhost:${OAUTH_CONFIG.callbackPort}
 export const ANTIGRAVITY_SYSTEM_INSTRUCTION = `You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.**Absolute paths only****Proactiveness**`;
 
 // Model fallback mapping - maps primary model to fallback when quota exhausted
+// Model alias mapping - directly maps requested model to an actual model
+export const MODEL_MAP = {
+    "gemini-3.1-pro-high": "gemini-pro-agent"
+};
+
 export const MODEL_FALLBACK_MAP = {
     'gemini-3.1-pro-high': 'claude-opus-4-6-thinking',
+    'gemini-pro-agent': 'claude-opus-4-6-thinking',
     'gemini-3.1-pro-low': 'claude-sonnet-4-6',
     'gemini-3-flash': 'claude-sonnet-4-6',
-    'claude-opus-4-6-thinking': 'gemini-3.1-pro-high',
+    'claude-opus-4-6-thinking': 'gemini-pro-agent',
     'claude-sonnet-4-6': 'gemini-3-flash'
 };
 
@@ -526,6 +533,7 @@ export default {
     OAUTH_CONFIG,
     OAUTH_REDIRECT_URI,
     STRATEGY_LABELS,
+    MODEL_MAP,
     MODEL_FALLBACK_MAP,
     TEST_MODELS,
     DEFAULT_PRESETS,
