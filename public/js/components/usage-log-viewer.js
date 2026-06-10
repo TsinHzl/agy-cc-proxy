@@ -72,6 +72,10 @@ window.Components.usageLogViewer = () => ({
         try {
             document.execCommand('copy');
             this.copied = true;
+            Alpine.store('global').showToast(
+                t.t('copied') + ' (' + records.length + ')',
+                'success'
+            );
             setTimeout(() => { this.copied = false; }, 2000);
         } catch (e) {
             if (window.UILogger) window.UILogger.error('Copy failed:', e.message);
