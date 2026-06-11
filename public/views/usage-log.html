@@ -5,16 +5,16 @@
             <!-- Left: Decor & Title -->
             <div class="flex items-center gap-3 shrink-0">
                 <div class="flex gap-2">
-                    <div class="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                    <div class="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                    <div class="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-red-500 border border-red-600"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500 border border-green-600"></div>
                 </div>
-                <span class="text-xs font-mono text-gray-500 hidden sm:inline-block">~/usage-log</span>
+                <span class="text-xs font-mono text-gray-300 hidden sm:inline-block">~/usage-log</span>
             </div>
 
             <!-- Right: Stats & Controls -->
             <div class="flex items-center gap-4 shrink-0">
-                <div class="text-[10px] font-mono text-gray-600">
+                <div class="text-[10px] font-mono text-gray-400">
                     <div class="flex gap-4 items-center">
                         <span x-text="$store.global.t('totalRecords', { count: records.length })"></span>
                         <div class="h-3 w-px bg-space-border/50 hidden sm:block"></div>
@@ -39,7 +39,7 @@
         <div class="flex-1 overflow-auto bg-space-950 custom-scrollbar">
             <table class="w-full text-[11px] font-mono">
                 <thead class="sticky top-0 z-10">
-                    <tr class="bg-space-900 text-gray-500 uppercase tracking-wider text-[10px]">
+                    <tr class="bg-space-900 text-gray-300 uppercase tracking-wider text-[10px]">
                         <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('time')">时间</th>
                         <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('model')">模型</th>
                         <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('apiKey')">API 密钥</th>
@@ -51,7 +51,7 @@
                 <tbody>
                     <template x-if="records.length === 0 && !loading">
                         <tr>
-                            <td colspan="6" class="text-center py-16 text-gray-600 italic">
+                            <td colspan="6" class="text-center py-16 text-gray-400 italic">
                                 <span x-text="$store.global.t('noUsageRecords')">暂无使用记录</span>
                             </td>
                         </tr>
@@ -71,13 +71,13 @@
                             <!-- Model -->
                             <td class="px-3 py-2 whitespace-nowrap">
                                 <span class="text-neon-purple" x-text="rec.model"></span>
-                                <span class="text-gray-600 ml-1" x-show="rec.streaming"
+                                <span class="text-gray-400 ml-1" x-show="rec.streaming"
                                     x-text="'(' + $store.global.t('streaming') + ')'"></span>
                             </td>
 
                             <!-- API Key -->
                             <td class="px-3 py-2">
-                                <div class="text-gray-500 text-[10px]" x-text="$store.global.t('defaultKey')">默认密钥</div>
+                                <div class="text-gray-300 text-[10px]" x-text="$store.global.t('defaultKey')">默认密钥</div>
                                 <div class="text-gray-300" x-text="rec.apiKey"></div>
                             </td>
 
@@ -85,14 +85,14 @@
                             <td class="px-3 py-2">
                                 <div class="text-gray-400" x-text="formatTokens('input', rec.inputTokens)"></div>
                                 <div class="text-gray-400" x-text="formatTokens('output', rec.outputTokens)"></div>
-                                <div class="text-gray-500" x-text="formatTokens('cache', rec.cacheReadTokens)"></div>
+                                <div class="text-gray-300" x-text="formatTokens('cache', rec.cacheReadTokens)"></div>
                                 <div class="text-gray-300 font-bold pt-0.5" x-text="formatTokens('total', rec.totalTokens)"></div>
                             </td>
 
                             <!-- Latency -->
                             <td class="px-3 py-2 text-gray-400 whitespace-nowrap">
                                 <div x-text="formatDuration(rec.totalDuration)"></div>
-                                <div class="text-gray-500" x-show="rec.timeToFirstToken != null"
+                                <div class="text-gray-300" x-show="rec.timeToFirstToken != null"
                                     x-text="formatFirstToken(rec.timeToFirstToken)"></div>
                             </td>
 
