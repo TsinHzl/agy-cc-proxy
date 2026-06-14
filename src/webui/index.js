@@ -157,7 +157,7 @@ async function addAccount(accountData) {
 
 // Paths that never require a session, even when a password is set.
 const EXEMPT_PATHS = new Set(['/login.html', '/api/auth/login', '/api/auth/logout', '/api/auth/url', '/api/auth/complete']);
-const EXEMPT_PREFIXES = ['/js/', '/css/', '/favicon'];
+const EXEMPT_PREFIXES = ['/js/', '/css/', '/favicon', '/v1/'];
 
 function cookieSecureAttr(req) {
     return (req.secure || req.headers['x-forwarded-proto'] === 'https') ? '; Secure' : '';
@@ -167,6 +167,7 @@ function isExempt(req) {
     if (EXEMPT_PATHS.has(req.path)) return true;
     if (EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) return true;
     if (req.path === '/api/config' && req.method === 'GET') return true;
+    if (req.path === '/health') return true;
     return false;
 }
 
