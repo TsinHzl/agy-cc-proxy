@@ -121,10 +121,8 @@ window.Components.claudeConfig = () => ({
     },
 
     async fetchConfig() {
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/claude/config', {}, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            const { response } = await window.utils.request('/api/claude/config');
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
@@ -156,14 +154,12 @@ window.Components.claudeConfig = () => ({
 
     async saveClaudeConfig() {
         this.loading = true;
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/claude/config', {
+            const { response } = await window.utils.request('/api/claude/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(this.config)
-            }, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            });
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             Alpine.store('global').showToast(Alpine.store('global').t('claudeConfigSaved'), 'success');
@@ -180,13 +176,11 @@ window.Components.claudeConfig = () => ({
 
     async executeRestore() {
         this.restoring = true;
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/claude/config/restore', {
+            const { response } = await window.utils.request('/api/claude/config/restore', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
-            }, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            });
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             Alpine.store('global').showToast(Alpine.store('global').t('claudeConfigRestored'), 'success');
@@ -211,10 +205,8 @@ window.Components.claudeConfig = () => ({
      * Fetch all saved presets from the server
      */
     async fetchPresets() {
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/claude/presets', {}, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            const { response } = await window.utils.request('/api/claude/presets');
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
@@ -343,7 +335,6 @@ window.Components.claudeConfig = () => ({
         }
 
         this.savingPreset = true;
-        const password = Alpine.store('global').webuiPassword;
 
         try {
             // Save only relevant env vars
@@ -364,12 +355,11 @@ window.Components.claudeConfig = () => ({
                 }
             });
 
-            const { response, newPassword } = await window.utils.request('/api/claude/presets', {
+            const { response } = await window.utils.request('/api/claude/presets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name.trim(), config: presetConfig })
-            }, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            });
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
@@ -408,15 +398,13 @@ window.Components.claudeConfig = () => ({
         }
 
         this.deletingPreset = true;
-        const password = Alpine.store('global').webuiPassword;
 
         try {
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/claude/presets/${encodeURIComponent(this.selectedPresetName)}`,
                 { method: 'DELETE' },
                 password
             );
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
@@ -446,10 +434,8 @@ window.Components.claudeConfig = () => ({
      * Fetch current mode from server
      */
     async fetchMode() {
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/claude/mode', {}, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            const { response } = await window.utils.request('/api/claude/mode');
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
@@ -469,15 +455,13 @@ window.Components.claudeConfig = () => ({
         if (this.modeLoading || newMode === this.currentMode) return;
 
         this.modeLoading = true;
-        const password = Alpine.store('global').webuiPassword;
 
         try {
-            const { response, newPassword } = await window.utils.request('/api/claude/mode', {
+            const { response } = await window.utils.request('/api/claude/mode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ mode: newMode })
-            }, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            });
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();

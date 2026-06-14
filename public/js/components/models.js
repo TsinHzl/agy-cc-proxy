@@ -203,16 +203,14 @@ window.Components.models = () => ({
         const quotaThreshold = account.quotaThreshold !== undefined ? account.quotaThreshold : null;
 
         try {
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/accounts/${encodeURIComponent(email)}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ quotaThreshold, modelQuotaThresholds: existingModelThresholds })
-                },
-                store.webuiPassword
+                }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {

@@ -1,7 +1,45 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
 import { logger } from './utils/logger.js';
+
+const scryptAsync = promisify(scrypt);
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 };
+const SCRYPT_KEYLEN = 32;
+
+/** Hash a plaintext password. Returns "scrypt:<saltBase64>:<hashBase64>". */
+export async function hashPassword(plain) {
+    const salt = randomBytes(16);
+    const hash = await scryptAsync(plain, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS);
+    return `scrypt:${salt.toString('base64')}:${hash.toString('base64')}`;
+}
+
+/** Verify a plaintext password against a stored hash string. */
+export async function verifyPassword(plain, stored) {
+    if (!stored) return false;
+    if (!stored.startsWith('scrypt:')) {
+        // Timing-safe legacy comparison: hash both sides with a fixed salt to get equal-length buffers
+        const fixedSalt = Buffer.alloc(16);
+        const [inputHash, storedHash] = await Promise.all([
+            scryptAsync(plain, fixedSalt, SCRYPT_KEYLEN, SCRYPT_PARAMS),
+            scryptAsync(stored, fixedSalt, SCRYPT_KEYLEN, SCRYPT_PARAMS),
+        ]);
+        return timingSafeEqual(inputHash, storedHash);
+    }
+    const parts = stored.split(':');
+    if (parts.length !== 3) return false;
+    const salt = Buffer.from(parts[1], 'base64');
+    const expected = Buffer.from(parts[2], 'base64');
+    const actual = await scryptAsync(plain, salt, SCRYPT_KEYLEN, SCRYPT_PARAMS);
+    return timingSafeEqual(actual, expected);
+}
+
+/** Return true if the stored password value is a legacy plaintext (not hashed). */
+export function isLegacyPassword(stored) {
+    return !!stored && !stored.startsWith('scrypt:');
+}
 
 function isObject(item) {
     return (item && typeof item === 'object' && !Array.isArray(item));
@@ -129,6 +167,11 @@ function loadConfig() {
 
         // Backward compat: debug implies devMode
         if (config.debug && !config.devMode) config.devMode = true;
+
+        // Warn if WebUI password is still stored as plaintext (legacy)
+        if (config.webuiPassword && !config.webuiPassword.startsWith('scrypt:')) {
+            logger.warn('[Config] WebUI password is stored as plaintext. Please update it via the WebUI Settings to enable secure hashed storage.');
+        }
 
     } catch (error) {
         logger.error('[Config] Error loading config:', error);

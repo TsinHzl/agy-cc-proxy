@@ -76,7 +76,6 @@ document.addEventListener('alpine:init', () => {
         version: '1.0.0',
         activeTab: 'dashboard',
         settingsTab: 'ui',
-        webuiPassword: localStorage.getItem('antigravity_webui_password') || '',
 
         // i18n
         lang: localStorage.getItem('app_lang') || 'en',
