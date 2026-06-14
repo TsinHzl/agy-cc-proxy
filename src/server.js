@@ -82,8 +82,8 @@ app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 
 // API Key authentication middleware for /v1/* endpoints
 app.use('/v1', (req, res, next) => {
-    // Skip validation if apiKey is not configured
-    if (!config.apiKey) {
+    // Skip validation if neither apiKey nor apiKeys are configured
+    if (!config.apiKey && (!config.apiKeys || config.apiKeys.length === 0)) {
         return next();
     }
 
@@ -97,7 +97,11 @@ app.use('/v1', (req, res, next) => {
         providedKey = xApiKey;
     }
 
-    if (!providedKey || providedKey !== config.apiKey) {
+    const validKey = providedKey && (
+        providedKey === config.apiKey ||
+        (Array.isArray(config.apiKeys) && config.apiKeys.some(k => k.key === providedKey))
+    );
+    if (!validKey) {
         logger.warn(`[API] Unauthorized request from ${req.ip}, invalid API key`);
         return res.status(401).json({
             type: 'error',

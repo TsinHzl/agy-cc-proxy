@@ -55,6 +55,16 @@
                     </svg>
                     <span x-text="$store.global.t('tabServer')">Server</span>
                 </button>
+                <button @click="$store.global.settingsTab = 'access'"
+                    class="pb-3 border-b-2 transition-colors font-medium text-sm flex items-center gap-2 whitespace-nowrap"
+                    :class="$store.global.settingsTab === 'access' ? 'border-neon-purple text-white' : 'border-transparent text-gray-500 hover:text-gray-300'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    <span>Access</span>
+                </button>
             </div>
         </div>
 
@@ -1983,6 +1993,133 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Tab 5: Access (API Keys) -->
+            <div x-show="$store.global.settingsTab === 'access'" x-data="apiKeys" class="space-y-6 animate-fade-in">
+
+                <!-- Header row -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="text-base font-semibold text-white">API Keys</h4>
+                        <p class="text-xs text-gray-500 mt-0.5">Keys grant access to /v1/* endpoints. Each key is shown only once on creation.</p>
+                    </div>
+                    <button @click="openCreateModal()"
+                        class="btn btn-sm bg-neon-purple hover:bg-purple-600 border-none text-white gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Key
+                    </button>
+                </div>
+
+                <!-- Keys table -->
+                <div class="overflow-x-auto rounded-lg border border-space-border/50">
+                    <template x-if="loading">
+                        <div class="flex items-center justify-center py-10 text-gray-500 text-sm">Loading...</div>
+                    </template>
+                    <template x-if="!loading && apiKeys.length === 0">
+                        <div class="flex flex-col items-center justify-center py-10 gap-2 text-gray-500">
+                            <svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            </svg>
+                            <span class="text-sm">No API keys yet</span>
+                        </div>
+                    </template>
+                    <table x-show="!loading && apiKeys.length > 0" class="table table-sm w-full">
+                        <thead>
+                            <tr class="border-b border-space-border/50 text-gray-400 text-xs">
+                                <th class="bg-space-900/30 font-medium">Name</th>
+                                <th class="bg-space-900/30 font-medium">Key</th>
+                                <th class="bg-space-900/30 font-medium">Created</th>
+                                <th class="bg-space-900/30 font-medium w-20"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="k in apiKeys" :key="k.id">
+                                <tr class="border-b border-space-border/30 hover:bg-space-800/30">
+                                    <td class="text-gray-300 text-sm" x-text="k.name || '—'"></td>
+                                    <td>
+                                        <code class="text-xs text-gray-400 bg-space-800 px-2 py-0.5 rounded" x-text="k.key"></code>
+                                    </td>
+                                    <td class="text-gray-400 text-xs" x-text="formatDate(k.createdAt)"></td>
+                                    <td>
+                                        <template x-if="deletingId !== k.id">
+                                            <button @click="confirmDelete(k.id)"
+                                                class="btn btn-xs btn-ghost text-red-400 hover:text-red-300 hover:bg-red-900/20">
+                                                Delete
+                                            </button>
+                                        </template>
+                                        <template x-if="deletingId === k.id">
+                                            <div class="flex gap-1">
+                                                <button @click="deleteKey(k.id)"
+                                                    class="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white">Confirm</button>
+                                                <button @click="cancelDelete()"
+                                                    class="btn btn-xs btn-ghost text-gray-400">Cancel</button>
+                                            </div>
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Create Key Modal -->
+                <div x-show="showCreateModal" x-cloak
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                    @keydown.escape.window="closeCreateModal()">
+                    <div class="bg-space-900 border border-space-border rounded-xl p-6 w-full max-w-md shadow-xl mx-4"
+                        @click.stop>
+
+                        <h4 class="text-base font-semibold text-white mb-4">Create API Key</h4>
+
+                        <!-- Before creation: name input -->
+                        <template x-if="!createdKey">
+                            <div class="space-y-4">
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text text-gray-400 text-sm">Name <span class="text-gray-600">(optional)</span></span>
+                                    </label>
+                                    <input type="text" x-model="newKeyName" placeholder="e.g. My App"
+                                        class="input input-sm input-bordered w-full bg-space-800 border-space-border/50 text-gray-200 focus:border-neon-purple"
+                                        @keydown.enter="createKey()" />
+                                </div>
+                                <div class="flex justify-end gap-2">
+                                    <button @click="closeCreateModal()" class="btn btn-sm btn-ghost text-gray-400">Cancel</button>
+                                    <button @click="createKey()" :disabled="creating"
+                                        class="btn btn-sm bg-neon-purple hover:bg-purple-600 border-none text-white">
+                                        <span x-show="!creating">Create</span>
+                                        <span x-show="creating" class="loading loading-spinner loading-xs"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- After creation: show full key once -->
+                        <template x-if="createdKey">
+                            <div class="space-y-4">
+                                <div class="bg-yellow-900/20 border border-yellow-700/40 rounded-lg p-3 text-yellow-300 text-xs">
+                                    Copy this key now. It will not be shown again.
+                                </div>
+                                <div class="flex items-center gap-2 bg-space-800 border border-space-border/50 rounded-lg px-3 py-2">
+                                    <code class="flex-1 text-sm text-gray-200 break-all" x-text="createdKey"></code>
+                                    <button @click="copyCreatedKey()" class="btn btn-xs btn-ghost text-gray-400 hover:text-white shrink-0">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button @click="closeCreateModal()" class="btn btn-sm bg-neon-purple hover:bg-purple-600 border-none text-white">Done</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
             </div>
 
         </div>
