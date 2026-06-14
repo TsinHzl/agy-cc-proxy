@@ -31,7 +31,6 @@ function deepMerge(target, source) {
 // Default config
 const DEFAULT_CONFIG = {
     apiKey: '',
-    apiKeys: [],
     webuiPassword: '',
     debug: false,
     devMode: false,
@@ -146,9 +145,6 @@ export function getPublicConfig() {
     // Redact sensitive values
     if (publicConfig.webuiPassword) publicConfig.webuiPassword = '********';
     if (publicConfig.apiKey) publicConfig.apiKey = '********';
-    if (Array.isArray(publicConfig.apiKeys)) {
-        publicConfig.apiKeys = publicConfig.apiKeys.map(k => ({ ...k, key: 'agy-****' }));
-    }
 
     return publicConfig;
 }

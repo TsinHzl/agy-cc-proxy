@@ -8,7 +8,7 @@ document.addEventListener('alpine:init', () => {
         init() {
             // Hash-based routing
             const validTabs = ['dashboard', 'models', 'accounts', 'usageLog', 'logs', 'settings'];
-            const validSettingsTabs = ['ui', 'claude', 'models', 'server', 'access'];
+            const validSettingsTabs = ['ui', 'claude', 'models', 'server'];
             const getHash = () => window.location.hash.substring(1);
 
             const parseHash = (hash) => {

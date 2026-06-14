@@ -14,7 +14,6 @@
 
 import path from 'path';
 import express from 'express';
-import crypto from 'crypto';
 import { getPublicConfig, saveConfig, config } from '../config.js';
 import { DEFAULT_PORT, ACCOUNT_CONFIG_PATH, MAX_ACCOUNTS, DEFAULT_PRESETS, DEFAULT_SERVER_PRESETS } from '../constants.js';
 import { readClaudeConfig, updateClaudeConfig, replaceClaudeConfig, getClaudeConfigPath, readPresets, savePreset, deletePreset } from '../utils/claude-config.js';
@@ -558,44 +557,6 @@ export function mountWebUI(app, dirname, accountManager) {
     // ==========================================
     // Configuration API
     // ==========================================
-
-    /**
-     * GET /api/api-keys - List API keys (key field masked)
-     */
-    app.get('/api/api-keys', (req, res) => {
-        const keys = Array.isArray(config.apiKeys) ? config.apiKeys : [];
-        res.json({
-            status: 'ok',
-            apiKeys: keys.map(k => ({ ...k, key: 'agy-****' }))
-        });
-    });
-
-    /**
-     * POST /api/api-keys - Create a new API key (full key returned once)
-     */
-    app.post('/api/api-keys', (req, res) => {
-        const { name = '' } = req.body || {};
-        const id = crypto.randomUUID();
-        const key = `agy-${crypto.randomBytes(16).toString('hex')}`;
-        const entry = { id, name, key, createdAt: new Date().toISOString() };
-        const current = Array.isArray(config.apiKeys) ? config.apiKeys : [];
-        saveConfig({ apiKeys: [...current, entry] });
-        res.json({ status: 'ok', apiKey: entry });
-    });
-
-    /**
-     * DELETE /api/api-keys/:id - Delete an API key by id
-     */
-    app.delete('/api/api-keys/:id', (req, res) => {
-        const { id } = req.params;
-        const current = Array.isArray(config.apiKeys) ? config.apiKeys : [];
-        const filtered = current.filter(k => k.id !== id);
-        if (filtered.length === current.length) {
-            return res.status(404).json({ status: 'error', message: 'API key not found' });
-        }
-        saveConfig({ apiKeys: filtered });
-        res.json({ status: 'ok' });
-    });
 
     /**
      * GET /api/config - Get server configuration
