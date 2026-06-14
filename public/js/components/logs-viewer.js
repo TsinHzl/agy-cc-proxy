@@ -67,12 +67,7 @@ window.Components.logsViewer = () => ({
     startLogStream() {
         if (this.eventSource) this.eventSource.close();
 
-        const password = Alpine.store('global').webuiPassword;
-        const url = password
-            ? `/api/logs/stream?history=true&password=${encodeURIComponent(password)}`
-            : '/api/logs/stream?history=true';
-
-        this.eventSource = new EventSource(url);
+        this.eventSource = new EventSource('/api/logs/stream?history=true');
         this.eventSource.onmessage = (event) => {
             try {
                 const log = JSON.parse(event.data);

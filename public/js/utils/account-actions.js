@@ -11,27 +11,18 @@ window.AccountActions = window.AccountActions || {};
  * @returns {Promise<{success: boolean, data?: object, error?: string}>}
  */
 window.AccountActions.refreshAccount = async function(email) {
-    const store = Alpine.store('global');
-
     try {
-        const { response, newPassword } = await window.utils.request(
+        const { response } = await window.utils.request(
             `/api/accounts/${encodeURIComponent(email)}/refresh`,
-            { method: 'POST' },
-            store.webuiPassword
+            { method: 'POST' }
         );
-
-        if (newPassword) {
-            store.webuiPassword = newPassword;
-        }
 
         const data = await response.json();
         if (data.status !== 'ok') {
             return { success: false, error: data.error || Alpine.store('global').t('refreshFailed') };
         }
 
-        // 触发数据刷新
         await Alpine.store('data').fetchData();
-
         return { success: true, data };
     } catch (error) {
         return { success: false, error: error.message };
@@ -45,10 +36,8 @@ window.AccountActions.refreshAccount = async function(email) {
  * @returns {Promise<{success: boolean, rolledBack?: boolean, data?: object, error?: string}>}
  */
 window.AccountActions.toggleAccount = async function(email, enabled) {
-    const store = Alpine.store('global');
     const dataStore = Alpine.store('data');
 
-    // 乐观更新：立即修改 UI
     const account = dataStore.accounts.find(a => a.email === email);
     const previousState = account ? account.enabled : !enabled;
 
@@ -57,31 +46,24 @@ window.AccountActions.toggleAccount = async function(email, enabled) {
     }
 
     try {
-        const { response, newPassword } = await window.utils.request(
+        const { response } = await window.utils.request(
             `/api/accounts/${encodeURIComponent(email)}/toggle`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled })
-            },
-            store.webuiPassword
+            }
         );
-
-        if (newPassword) {
-            store.webuiPassword = newPassword;
-        }
 
         const data = await response.json();
         if (data.status !== 'ok') {
             throw new Error(data.error || Alpine.store('global').t('toggleFailed'));
         }
 
-        // 确认服务器状态
         await dataStore.fetchData();
         return { success: true, data };
 
     } catch (error) {
-        // 错误回滚：恢复原状态
         if (account) {
             account.enabled = previousState;
         }
@@ -96,25 +78,17 @@ window.AccountActions.toggleAccount = async function(email, enabled) {
  * @returns {Promise<{success: boolean, data?: object, error?: string}>}
  */
 window.AccountActions.deleteAccount = async function(email) {
-    const store = Alpine.store('global');
-
     try {
-        const { response, newPassword } = await window.utils.request(
+        const { response } = await window.utils.request(
             `/api/accounts/${encodeURIComponent(email)}`,
-            { method: 'DELETE' },
-            store.webuiPassword
+            { method: 'DELETE' }
         );
-
-        if (newPassword) {
-            store.webuiPassword = newPassword;
-        }
 
         const data = await response.json();
         if (data.status !== 'ok') {
             return { success: false, error: data.error || Alpine.store('global').t('deleteFailed') };
         }
 
-        // 触发数据刷新
         await Alpine.store('data').fetchData();
         return { success: true, data };
 
@@ -130,19 +104,10 @@ window.AccountActions.deleteAccount = async function(email) {
  * @returns {Promise<{success: boolean, url?: string, error?: string}>}
  */
 window.AccountActions.getFixAccountUrl = async function(email) {
-    const store = Alpine.store('global');
-
     try {
-        const urlPath = `/api/auth/url?email=${encodeURIComponent(email)}`;
-        const { response, newPassword } = await window.utils.request(
-            urlPath,
-            {},
-            store.webuiPassword
+        const { response } = await window.utils.request(
+            `/api/auth/url?email=${encodeURIComponent(email)}`
         );
-
-        if (newPassword) {
-            store.webuiPassword = newPassword;
-        }
 
         const data = await response.json();
         if (data.status !== 'ok') {
@@ -161,25 +126,17 @@ window.AccountActions.getFixAccountUrl = async function(email) {
  * @returns {Promise<{success: boolean, data?: object, error?: string}>}
  */
 window.AccountActions.reloadAccounts = async function() {
-    const store = Alpine.store('global');
-
     try {
-        const { response, newPassword } = await window.utils.request(
+        const { response } = await window.utils.request(
             '/api/accounts/reload',
-            { method: 'POST' },
-            store.webuiPassword
+            { method: 'POST' }
         );
-
-        if (newPassword) {
-            store.webuiPassword = newPassword;
-        }
 
         const data = await response.json();
         if (data.status !== 'ok') {
             return { success: false, error: data.error || Alpine.store('global').t('reloadFailed') };
         }
 
-        // 触发数据刷新
         await Alpine.store('data').fetchData();
         return { success: true, data };
 

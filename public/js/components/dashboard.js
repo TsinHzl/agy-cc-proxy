@@ -256,11 +256,10 @@ window.Components.dashboard = () => ({
         if (this.claudeConfigStatus.checked && now - this.claudeConfigStatus.lastCheckedAt < 30000) return;
 
         try {
-            const password = Alpine.store('global').webuiPassword;
 
             const [configRes, presetsRes] = await Promise.all([
-                window.utils.request('/api/claude/config', {}, password),
-                window.utils.request('/api/claude/presets', {}, password)
+                window.utils.request('/api/claude/config'),
+                window.utils.request('/api/claude/presets')
             ]);
 
             if (!configRes.response.ok || !presetsRes.response.ok) {

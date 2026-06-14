@@ -56,12 +56,10 @@ window.Components.accountManager = () => ({
             const store = Alpine.store('global');
             store.showToast(store.t('refreshingAccount', { email: Redact.email(email) }), 'info');
 
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/accounts/${encodeURIComponent(email)}/refresh`,
-                { method: 'POST' },
-                store.webuiPassword
+                { method: 'POST' }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -75,7 +73,6 @@ window.Components.accountManager = () => ({
 
     async toggleAccount(email, enabled) {
         const store = Alpine.store('global');
-        const password = store.webuiPassword;
 
         // Optimistic update: immediately update UI
         const dataStore = Alpine.store('data');
@@ -85,12 +82,11 @@ window.Components.accountManager = () => ({
         }
 
         try {
-            const { response, newPassword } = await window.utils.request(`/api/accounts/${encodeURIComponent(email)}/toggle`, {
+            const { response } = await window.utils.request(`/api/accounts/${encodeURIComponent(email)}/toggle`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled })
-            }, password);
-            if (newPassword) store.webuiPassword = newPassword;
+            });
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -128,11 +124,9 @@ window.Components.accountManager = () => ({
         }
         // Otherwise fall back to OAuth re-auth
         store.showToast(store.t('reauthenticating', { email: Redact.email(email) }), 'info');
-        const password = store.webuiPassword;
         try {
             const urlPath = `/api/auth/url?email=${encodeURIComponent(email)}`;
-            const { response, newPassword } = await window.utils.request(urlPath, {}, password);
-            if (newPassword) store.webuiPassword = newPassword;
+            const { response } = await window.utils.request(urlPath, {});
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -155,12 +149,10 @@ window.Components.accountManager = () => ({
         return await window.ErrorHandler.withLoading(async () => {
             const store = Alpine.store('global');
 
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/accounts/${encodeURIComponent(email)}`,
-                { method: 'DELETE' },
-                store.webuiPassword
+                { method: 'DELETE' }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -178,12 +170,10 @@ window.Components.accountManager = () => ({
         return await window.ErrorHandler.withLoading(async () => {
             const store = Alpine.store('global');
 
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 '/api/accounts/reload',
-                { method: 'POST' },
-                store.webuiPassword
+                { method: 'POST' }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -244,16 +234,14 @@ window.Components.accountManager = () => ({
                 modelQuotaThresholds[modelId] = parseFloat(pct) / 100;
             }
 
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/accounts/${encodeURIComponent(this.thresholdDialog.email)}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ quotaThreshold, modelQuotaThresholds })
-                },
-                store.webuiPassword
+                }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -392,12 +380,10 @@ window.Components.accountManager = () => ({
         this.healthLoading = true;
         try {
             const store = Alpine.store('global');
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 '/api/strategy/health',
-                {},
-                store.webuiPassword
+                {}
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -421,12 +407,10 @@ window.Components.accountManager = () => ({
     async exportAccounts() {
         const store = Alpine.store('global');
         try {
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 '/api/accounts/export',
-                {},
-                store.webuiPassword
+                {}
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             // API returns plain array directly
@@ -469,16 +453,14 @@ window.Components.accountManager = () => ({
                 throw new Error('Invalid file format: expected accounts array');
             }
 
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 '/api/accounts/import',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(accounts)
-                },
-                store.webuiPassword
+                }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {

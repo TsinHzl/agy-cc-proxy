@@ -53,10 +53,8 @@ window.Components.serverConfig = () => ({
     },
 
     async fetchServerConfig() {
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/config', {}, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            const { response } = await window.utils.request('/api/config');
 
             if (!response.ok) throw new Error('Failed to fetch config');
             const data = await response.json();
@@ -112,7 +110,7 @@ window.Components.serverConfig = () => ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ oldPassword, newPassword })
-            }, store.webuiPassword);
+            });
 
             if (!response.ok) {
                 const data = await response.json();
@@ -120,7 +118,6 @@ window.Components.serverConfig = () => ({
             }
 
             // Update stored password
-            store.webuiPassword = newPassword;
             store.showToast(store.t('passwordChangedSuccess'), 'success');
             this.hidePasswordDialog();
         } catch (e) {
@@ -139,13 +136,12 @@ window.Components.serverConfig = () => ({
         this.serverConfig.debug = enabled;
 
         try {
-            const { response, newPassword } = await window.utils.request('/api/config', {
+            const { response } = await window.utils.request('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ devMode: enabled })
-            }, store.webuiPassword);
+            });
 
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -174,13 +170,12 @@ window.Components.serverConfig = () => ({
         this.serverConfig.persistTokenCache = enabled;
 
         try {
-            const { response, newPassword } = await window.utils.request('/api/config', {
+            const { response } = await window.utils.request('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ persistTokenCache: enabled })
-            }, store.webuiPassword);
+            });
 
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -229,13 +224,12 @@ window.Components.serverConfig = () => ({
                 const payload = {};
                 payload[fieldName] = value;
 
-                const { response, newPassword } = await window.utils.request('/api/config', {
+                const { response } = await window.utils.request('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                }, store.webuiPassword);
+                });
 
-                if (newPassword) store.webuiPassword = newPassword;
 
                 const data = await response.json();
                 if (data.status === 'ok') {
@@ -301,13 +295,12 @@ window.Components.serverConfig = () => ({
 
         this.debounceTimers['globalQuotaThreshold'] = setTimeout(async () => {
             try {
-                const { response, newPassword } = await window.utils.request('/api/config', {
+                const { response } = await window.utils.request('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ globalQuotaThreshold: fraction })
-                }, store.webuiPassword);
+                });
 
-                if (newPassword) store.webuiPassword = newPassword;
 
                 const data = await response.json();
                 if (data.status === 'ok') {
@@ -329,13 +322,12 @@ window.Components.serverConfig = () => ({
         this.serverConfig.requestThrottlingEnabled = enabled;
 
         try {
-            const { response, newPassword } = await window.utils.request('/api/config', {
+            const { response } = await window.utils.request('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ requestThrottlingEnabled: enabled })
-            }, store.webuiPassword);
+            });
 
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -403,13 +395,12 @@ window.Components.serverConfig = () => ({
         this.serverConfig.accountSelection.strategy = strategy;
 
         try {
-            const { response, newPassword } = await window.utils.request('/api/config', {
+            const { response } = await window.utils.request('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ accountSelection: { strategy } })
-            }, store.webuiPassword);
+            });
 
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -457,10 +448,8 @@ window.Components.serverConfig = () => ({
     // ==========================================
 
     async fetchServerPresets() {
-        const password = Alpine.store('global').webuiPassword;
         try {
-            const { response, newPassword } = await window.utils.request('/api/server/presets', {}, password);
-            if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+            const { response } = await window.utils.request('/api/server/presets');
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
@@ -486,13 +475,12 @@ window.Components.serverConfig = () => ({
         const store = Alpine.store('global');
 
         try {
-            const { response, newPassword } = await window.utils.request('/api/config', {
+            const { response } = await window.utils.request('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(preset.config)
-            }, store.webuiPassword);
+            });
 
-            if (newPassword) store.webuiPassword = newPassword;
 
             const data = await response.json();
             if (data.status === 'ok') {
@@ -549,16 +537,14 @@ window.Components.serverConfig = () => ({
         try {
             const payload = { name, description: this.newServerPresetDescription.trim() || '' };
 
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/server/presets/${encodeURIComponent(this.editingPresetOriginalName)}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                },
-                store.webuiPassword
+                }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             if (!response.ok) {
                 const errData = await response.json();
@@ -592,7 +578,6 @@ window.Components.serverConfig = () => ({
 
         this.savingServerPreset = true;
         const store = Alpine.store('global');
-        const password = store.webuiPassword;
 
         try {
             // Extract relevant config fields (exclude sensitive/non-tunable)
@@ -615,12 +600,11 @@ window.Components.serverConfig = () => ({
                 payload.description = this.newServerPresetDescription.trim();
             }
 
-            const { response, newPassword } = await window.utils.request('/api/server/presets', {
+            const { response } = await window.utils.request('/api/server/presets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            }, password);
-            if (newPassword) store.webuiPassword = newPassword;
+            });
 
             if (!response.ok) {
                 const errData = await response.json();
@@ -662,12 +646,10 @@ window.Components.serverConfig = () => ({
         this.deletingServerPreset = true;
 
         try {
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/server/presets/${encodeURIComponent(this.selectedServerPreset)}`,
-                { method: 'DELETE' },
-                store.webuiPassword
+                { method: 'DELETE' }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             if (!response.ok) {
                 const errData = await response.json();
@@ -1166,16 +1148,14 @@ window.Components.serverConfig = () => ({
 
         this.savingPresetConfig = true;
         try {
-            const { response, newPassword } = await window.utils.request(
+            const { response } = await window.utils.request(
                 `/api/server/presets/${encodeURIComponent(presetName)}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ config: configPayload })
-                },
-                store.webuiPassword
+                }
             );
-            if (newPassword) store.webuiPassword = newPassword;
 
             if (!response.ok) {
                 const errData = await response.json();

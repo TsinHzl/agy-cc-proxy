@@ -34,12 +34,10 @@ window.Components.addAccountModal = () => ({
     async initManualAuth(event) {
         if (event.target.open && !this.authUrl) {
             try {
-                const password = Alpine.store('global').webuiPassword;
                 const {
                     response,
                     newPassword
-                } = await window.utils.request('/api/auth/url', {}, password);
-                if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+                } = await window.utils.request('/api/auth/url');
                 const data = await response.json();
                 if (data.status === 'ok') {
                     this.authUrl = data.url;
@@ -56,10 +54,7 @@ window.Components.addAccountModal = () => ({
         this.submitting = true;
         try {
             const store = Alpine.store('global');
-            const {
-                response,
-                newPassword
-            } = await window.utils.request('/api/auth/complete', {
+            const { response } = await window.utils.request('/api/auth/complete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -68,8 +63,7 @@ window.Components.addAccountModal = () => ({
                     callbackInput: this.callbackInput,
                     state: this.authState
                 })
-            }, store.webuiPassword);
-            if (newPassword) store.webuiPassword = newPassword;
+            });
             const data = await response.json();
             if (data.status === 'ok') {
                 store.showToast(store.t('accountAddedSuccess'), 'success');

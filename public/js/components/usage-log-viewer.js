@@ -90,11 +90,7 @@ window.Components.usageLogViewer = () => ({
     async refreshData() {
         this.loading = true;
         try {
-            const password = Alpine.store('global').webuiPassword;
-            const url = password
-                ? `/api/usage-log?password=${encodeURIComponent(password)}`
-                : '/api/usage-log';
-            const resp = await fetch(url);
+            const resp = await fetch('/api/usage-log', { credentials: 'same-origin' });
             if (resp.ok) {
                 const data = await resp.json();
                 if (data.status === 'ok') {

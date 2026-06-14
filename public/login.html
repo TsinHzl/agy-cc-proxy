@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="antigravity" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Antigravity Console</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    </style>
+</head>
+<body class="bg-space-950 text-gray-300 font-sans antialiased">
+    <div class="w-full max-w-sm px-6">
+        <div class="card bg-base-200 shadow-xl">
+            <div class="card-body gap-4">
+                <h1 class="card-title text-lg justify-center">Antigravity Console</h1>
+                <p class="text-sm text-center text-gray-400">Enter your WebUI password to continue</p>
+
+                <div id="error" class="hidden alert alert-error text-sm py-2"></div>
+
+                <form id="loginForm" class="flex flex-col gap-3" onsubmit="handleLogin(event)">
+                    <input
+                        id="password"
+                        type="password"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                        class="input input-bordered w-full"
+                        required
+                    />
+                    <button type="submit" id="submitBtn" class="btn btn-primary w-full">
+                        Sign in
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('submitBtn');
+            const errorEl = document.getElementById('error');
+
+            btn.disabled = true;
+            btn.textContent = 'Signing in…';
+            errorEl.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+                if (res.ok) {
+                    const raw = new URLSearchParams(location.search).get('redirect') || '/';
+                    const redirect = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+                    location.href = redirect;
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    errorEl.textContent = data.error || 'Invalid password';
+                    errorEl.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.textContent = 'Sign in';
+                }
+            } catch {
+                errorEl.textContent = 'Network error — please try again';
+                errorEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = 'Sign in';
+            }
+        }
+    </script>
+</body>
+</html>

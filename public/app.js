@@ -128,14 +128,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async addAccountWeb(reAuthEmail = null) {
-            const password = Alpine.store('global').webuiPassword;
             try {
                 const urlPath = reAuthEmail
                     ? `/api/auth/url?email=${encodeURIComponent(reAuthEmail)}`
                     : '/api/auth/url';
 
-                const { response, newPassword } = await window.utils.request(urlPath, {}, password);
-                if (newPassword) Alpine.store('global').webuiPassword = newPassword;
+                const { response } = await window.utils.request(urlPath);
 
                 const data = await response.json();
 

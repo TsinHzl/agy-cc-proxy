@@ -12,9 +12,10 @@
  *   mountWebUI(app, __dirname, accountManager);
  */
 
+import { randomBytes } from 'crypto';
 import path from 'path';
 import express from 'express';
-import { getPublicConfig, saveConfig, config } from '../config.js';
+import { getPublicConfig, saveConfig, config, hashPassword, verifyPassword } from '../config.js';
 import { DEFAULT_PORT, ACCOUNT_CONFIG_PATH, MAX_ACCOUNTS, DEFAULT_PRESETS, DEFAULT_SERVER_PRESETS } from '../constants.js';
 import { readClaudeConfig, updateClaudeConfig, replaceClaudeConfig, getClaudeConfigPath, readPresets, savePreset, deletePreset } from '../utils/claude-config.js';
 import { readServerPresets, saveServerPreset, updateServerPreset, deleteServerPreset } from '../utils/server-presets.js';
@@ -29,6 +30,53 @@ const packageVersion = getPackageVersion();
 // OAuth state storage (state -> { server, verifier, state, timestamp })
 // Maps state ID to active OAuth flow data
 const pendingOAuthFlows = new Map();
+
+// Session storage: token -> { expiresAt: number }
+// Tokens are 32-byte random hex strings, cleared on server restart.
+const sessions = new Map();
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Prune expired sessions every 30 minutes to avoid unbounded memory growth.
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, data] of sessions) {
+        if (data.expiresAt <= now) sessions.delete(token);
+    }
+}, 30 * 60 * 1000).unref();
+
+/** Parse the Cookie header into a plain object. No external dependency needed. */
+function parseCookies(req) {
+    const header = req.headers.cookie;
+    if (!header) return {};
+    return Object.fromEntries(
+        header.split(';').map(pair => {
+            const idx = pair.indexOf('=');
+            return idx === -1
+                ? [pair.trim(), '']
+                : [pair.slice(0, idx).trim(), decodeURIComponent(pair.slice(idx + 1).trim())];
+        })
+    );
+}
+
+/** Validate a session token from the request cookie. Returns true if valid. */
+function isSessionValid(req) {
+    const token = parseCookies(req).webui_session;
+    if (!token) return false;
+    const entry = sessions.get(token);
+    if (!entry) return false;
+    if (entry.expiresAt <= Date.now()) {
+        sessions.delete(token);
+        return false;
+    }
+    return true;
+}
+
+/** Create a new session token and return it. Each call generates a fresh token (session fixation prevention). */
+function createSession() {
+    const token = randomBytes(32).toString('hex');
+    sessions.set(token, { expiresAt: Date.now() + SESSION_TTL_MS });
+    return token;
+}
 
 /**
  * WebUI Helper Functions - Direct account manipulation
@@ -107,26 +155,36 @@ async function addAccount(accountData) {
     await saveAccounts(ACCOUNT_CONFIG_PATH, accounts, settings, activeIndex);
 }
 
+// Paths that never require a session, even when a password is set.
+const EXEMPT_PATHS = new Set(['/login.html', '/api/auth/login', '/api/auth/logout', '/api/auth/url', '/api/auth/complete']);
+const EXEMPT_PREFIXES = ['/js/', '/css/', '/favicon'];
+
+function cookieSecureAttr(req) {
+    return (req.secure || req.headers['x-forwarded-proto'] === 'https') ? '; Secure' : '';
+}
+
+function isExempt(req) {
+    if (EXEMPT_PATHS.has(req.path)) return true;
+    if (EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) return true;
+    if (req.path === '/api/config' && req.method === 'GET') return true;
+    return false;
+}
+
 /**
- * Auth Middleware - Optional password protection for WebUI
- * Password can be set via WEBUI_PASSWORD env var or config.json
+ * Auth Middleware — session-cookie protection for WebUI.
+ * No-ops when webuiPassword is not configured.
+ * Must be mounted BEFORE express.static so page requests can be intercepted.
  */
 function createAuthMiddleware() {
     return (req, res, next) => {
-        const password = config.webuiPassword;
-        if (!password) return next();
+        if (!config.webuiPassword) return next();
+        if (isExempt(req)) return next();
 
-        // Determine if this path should be protected
-        const isApiRoute = req.path.startsWith('/api/');
-        const isAuthUrl = req.path === '/api/auth/url';
-        const isConfigGet = req.path === '/api/config' && req.method === 'GET';
-        const isProtected = (isApiRoute && !isAuthUrl && !isConfigGet) || req.path === '/account-limits' || req.path === '/health';
-
-        if (isProtected) {
-            const providedPassword = req.headers['x-webui-password'] || req.query.password;
-            if (providedPassword !== password) {
-                return res.status(401).json({ status: 'error', error: 'Unauthorized: Password required' });
+        if (!isSessionValid(req)) {
+            if (req.path.startsWith('/api/') || req.path.startsWith('/v1/') || req.path === '/account-limits' || req.path === '/health') {
+                return res.status(401).json({ status: 'error', error: 'Unauthorized' });
             }
+            return res.redirect(302, '/login.html');
         }
         next();
     };
@@ -258,6 +316,42 @@ export function mountWebUI(app, dirname, accountManager) {
 
     // Serve static files from public directory
     app.use(express.static(path.join(dirname, '../public')));
+
+    // ==========================================
+    // Auth API
+    // ==========================================
+
+    /**
+     * POST /api/auth/login — Verify password and issue session cookie.
+     */
+    app.post('/api/auth/login', async (req, res) => {
+        try {
+            const { password } = req.body || {};
+            if (!config.webuiPassword) {
+                return res.status(400).json({ status: 'error', error: 'No password configured' });
+            }
+            const ok = await verifyPassword(password || '', config.webuiPassword);
+            if (!ok) {
+                return res.status(401).json({ status: 'error', error: 'Invalid password' });
+            }
+            const token = createSession();
+            res.setHeader('Set-Cookie', `webui_session=${token}; HttpOnly; SameSite=Strict; Path=/${cookieSecureAttr(req)}; Max-Age=${SESSION_TTL_MS / 1000}`);
+            res.json({ status: 'ok' });
+        } catch (error) {
+            logger.error('[WebUI] Login error:', error);
+            res.status(500).json({ status: 'error', error: 'Internal error' });
+        }
+    });
+
+    /**
+     * POST /api/auth/logout — Invalidate current session cookie.
+     */
+    app.post('/api/auth/logout', (req, res) => {
+        const token = parseCookies(req).webui_session;
+        if (token) sessions.delete(token);
+        res.setHeader('Set-Cookie', `webui_session=; HttpOnly; SameSite=Strict; Path=/${cookieSecureAttr(req)}; Max-Age=0`);
+        res.json({ status: 'ok' });
+    });
 
     // ==========================================
     // Account Management API
@@ -646,39 +740,32 @@ export function mountWebUI(app, dirname, accountManager) {
     /**
      * POST /api/config/password - Change WebUI password
      */
-    app.post('/api/config/password', (req, res) => {
+    app.post('/api/config/password', async (req, res) => {
         try {
             const { oldPassword, newPassword } = req.body;
 
-            // Validate input
             if (!newPassword || typeof newPassword !== 'string') {
-                return res.status(400).json({
-                    status: 'error',
-                    error: 'New password is required'
-                });
+                return res.status(400).json({ status: 'error', error: 'New password is required' });
             }
 
-            // If current password exists, verify old password
-            if (config.webuiPassword && config.webuiPassword !== oldPassword) {
-                return res.status(403).json({
-                    status: 'error',
-                    error: 'Invalid current password'
-                });
+            // Verify current password if one is set
+            if (config.webuiPassword) {
+                const ok = await verifyPassword(oldPassword || '', config.webuiPassword);
+                if (!ok) {
+                    return res.status(403).json({ status: 'error', error: 'Invalid current password' });
+                }
             }
 
-            // Save new password
-            const success = saveConfig({ webuiPassword: newPassword });
+            const hashed = await hashPassword(newPassword);
+            const success = saveConfig({ webuiPassword: hashed });
 
-            if (success) {
-                // Update in-memory config
-                config.webuiPassword = newPassword;
-                res.json({
-                    status: 'ok',
-                    message: 'Password changed successfully'
-                });
-            } else {
-                throw new Error('Failed to save password to config file');
-            }
+            if (!success) throw new Error('Failed to save password to config file');
+
+            config.webuiPassword = hashed;
+            // Invalidate all existing sessions so users must re-login with the new password.
+            sessions.clear();
+
+            res.json({ status: 'ok', message: 'Password changed successfully' });
         } catch (error) {
             logger.error('[WebUI] Error changing password:', error);
             res.status(500).json({ status: 'error', error: error.message });

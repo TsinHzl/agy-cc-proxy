@@ -115,13 +115,11 @@ document.addEventListener('alpine:init', () => {
             }
             try {
                 // Get password from global store
-                const password = Alpine.store('global').webuiPassword;
 
                 // Include history for dashboard (single API call optimization)
                 const url = '/account-limits?includeHistory=true';
-                const { response, newPassword } = await window.utils.request(url, {}, password);
+                const { response } = await window.utils.request(url);
 
-                if (newPassword) Alpine.store('global').webuiPassword = newPassword;
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -172,12 +170,10 @@ document.addEventListener('alpine:init', () => {
         async performHealthCheck() {
             try {
                 // Get password from global store
-                const password = Alpine.store('global').webuiPassword;
 
                 // Use lightweight endpoint (no quota fetching)
-                const { response, newPassword } = await window.utils.request('/api/config', {}, password);
+                const { response } = await window.utils.request('/api/config');
 
-                if (newPassword) Alpine.store('global').webuiPassword = newPassword;
 
                 if (response.ok) {
                     this.connectionStatus = 'connected';
