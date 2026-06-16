@@ -239,7 +239,8 @@
                                             $store.settings.compact ? 'h-1' : 'h-1.5',
                                             row.avgQuota > 50 ? 'progress-gradient-success' : (row.avgQuota > 0 ? 'progress-gradient-warning' : 'progress-gradient-error')
                                         ]"
-                                        :value="row.avgQuota" max="100"></progress>
+                                        x-effect="$el.setAttribute('value', row.avgQuota ?? 0)"
+                                        max="100"></progress>
                                     <!-- Per-account draggable quota threshold markers -->
                                     <template x-for="(q, qIdx) in row.quotaInfo.filter(q => q.thresholdPct > 0 || isDragging(q, row))" :key="q.fullEmail + '-threshold'">
                                         <div class="absolute -top-1 -bottom-1 group/marker"
