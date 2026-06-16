@@ -4,10 +4,30 @@
  */
 window.Components = window.Components || {};
 
+// Module-level pointer to the current active instance.
+// A single document listener updates this pointer on every init() so listeners never accumulate.
+let _activeLogsViewer = null;
+document.addEventListener('visibilitychange', () => {
+    if (!_activeLogsViewer) return;
+    if (document.hidden) {
+        if (_activeLogsViewer.eventSource) {
+            _activeLogsViewer.eventSource.close();
+            _activeLogsViewer.eventSource = null;
+        }
+        if (_activeLogsViewer._reconnectTimer) {
+            clearTimeout(_activeLogsViewer._reconnectTimer);
+            _activeLogsViewer._reconnectTimer = null;
+        }
+    } else {
+        _activeLogsViewer.startLogStream();
+    }
+});
+
 window.Components.logsViewer = () => ({
     logs: [],
     isAutoScroll: true,
     eventSource: null,
+    _reconnectTimer: null,
     searchQuery: '',
     filters: {
         INFO: true,
@@ -44,6 +64,7 @@ window.Components.logsViewer = () => ({
     },
 
     init() {
+        _activeLogsViewer = this;
         this.startLogStream();
 
         // Sync DEBUG filter with debugLogging sub-toggle
@@ -65,6 +86,7 @@ window.Components.logsViewer = () => ({
     },
 
     startLogStream() {
+        if (this._reconnectTimer) { clearTimeout(this._reconnectTimer); this._reconnectTimer = null; }
         if (this.eventSource) this.eventSource.close();
 
         this.eventSource = new EventSource('/api/logs/stream?history=true');
@@ -88,8 +110,12 @@ window.Components.logsViewer = () => ({
         };
 
         this.eventSource.onerror = () => {
+            if (this._reconnectTimer) return;
             if (window.UILogger) window.UILogger.debug('Log stream disconnected, reconnecting...');
-            setTimeout(() => this.startLogStream(), 3000);
+            this._reconnectTimer = setTimeout(() => {
+                this._reconnectTimer = null;
+                this.startLogStream();
+            }, 3000);
         };
     },
 
