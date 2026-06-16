@@ -119,7 +119,11 @@ document.addEventListener('alpine:init', () => {
             if (this.refreshTimer) clearInterval(this.refreshTimer);
             const interval = parseInt(Alpine.store('settings')?.refreshInterval || 60);
             if (interval > 0) {
-                this.refreshTimer = setInterval(() => Alpine.store('data').fetchData(), interval * 1000);
+                this.refreshTimer = setInterval(() => {
+                    if (Alpine.store('global').activeTab !== 'models') {
+                        Alpine.store('data').fetchData();
+                    }
+                }, interval * 1000);
             }
         },
 

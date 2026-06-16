@@ -273,19 +273,9 @@ window.Components.models = () => ({
         // Ensure data is fetched when this tab becomes active (skip initial trigger)
         this.$watch('$store.global.activeTab', (val, oldVal) => {
             if (val === 'models' && oldVal !== undefined) {
-                // Trigger recompute to ensure filters are applied
-                this.$nextTick(() => {
-                    Alpine.store('data').computeQuotaRows();
-                });
+                Alpine.store('data').fetchData();
             }
         });
-
-        // Initial compute if already on models tab
-        if (this.$store.global.activeTab === 'models') {
-            this.$nextTick(() => {
-                Alpine.store('data').computeQuotaRows();
-            });
-        }
     },
 
     /**

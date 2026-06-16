@@ -109,6 +109,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async fetchData() {
+            if (this._fetching) return;
+            this._fetching = true;
             // Only show skeleton on initial load if we didn't restore from cache
             if (this.initialLoad) {
                 this.loading = true;
@@ -162,6 +164,7 @@ document.addEventListener('alpine:init', () => {
                 const store = Alpine.store('global');
                 store.showToast(store.t('connectionLost'), 'error');
             } finally {
+                this._fetching = false;
                 this.loading = false;
                 this.initialLoad = false; // Mark initial load as complete
             }
