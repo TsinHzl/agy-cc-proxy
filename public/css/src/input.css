@@ -152,6 +152,11 @@
   );
 }
 
+.progress-gradient-error:indeterminate,
+.progress-gradient-error:indeterminate::-moz-progress-bar {
+  animation: none;
+}
+
 /* Dashboard Grid */
 .stats-grid {
   display: grid;
