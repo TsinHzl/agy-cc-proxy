@@ -154,7 +154,8 @@
 
 .progress-gradient-error:indeterminate,
 .progress-gradient-error:indeterminate::-moz-progress-bar {
-  animation: none;
+  animation: none !important;
+  background-image: none !important;
 }
 
 /* Dashboard Grid */
