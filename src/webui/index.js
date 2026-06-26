@@ -1244,7 +1244,9 @@ export function mountWebUI(app, dirname, accountManager) {
             }
 
             // Generate OAuth URL using default redirect URI (localhost:51121)
-            const { url, verifier, state } = getAuthorizationUrl();
+            // Pass login_hint if re-authenticating a known account (enables Chrome password auto-fill)
+            const loginHint = req.query.email || undefined;
+            const { url, verifier, state } = getAuthorizationUrl({ loginHint });
 
             // Start callback server on port 51121 (same as CLI)
             const { promise: serverPromise, abort: abortServer } = startCallbackServer(state, 120000); // 2 min timeout

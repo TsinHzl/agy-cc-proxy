@@ -63,16 +63,22 @@ function generatePKCE() {
  * Generate authorization URL for Google OAuth
  * Returns the URL and the PKCE verifier (needed for token exchange)
  *
- * @param {string} [customRedirectUri] - Optional custom redirect URI (e.g. for WebUI)
+ * @param {object} [options] - Options object
+ * @param {string} [options.redirectUri] - Custom redirect URI (e.g. for WebUI)
+ * @param {string} [options.loginHint] - Email to pre-select in Google sign-in (enables Chrome password auto-fill)
  * @returns {{url: string, verifier: string, state: string}} Auth URL and PKCE data
  */
-export function getAuthorizationUrl(customRedirectUri = null) {
+export function getAuthorizationUrl(options = {}) {
+    const { redirectUri, loginHint } = typeof options === 'string'
+        ? { redirectUri: options, loginHint: undefined }
+        : options;
+
     const { verifier, challenge } = generatePKCE();
     const state = crypto.randomBytes(16).toString('hex');
 
     const params = new URLSearchParams({
         client_id: OAUTH_CONFIG.clientId,
-        redirect_uri: customRedirectUri || OAUTH_REDIRECT_URI,
+        redirect_uri: redirectUri || OAUTH_REDIRECT_URI,
         response_type: 'code',
         scope: OAUTH_CONFIG.scopes.join(' '),
         access_type: 'offline',
@@ -81,6 +87,10 @@ export function getAuthorizationUrl(customRedirectUri = null) {
         code_challenge_method: 'S256',
         state: state
     });
+
+    if (loginHint) {
+        params.set('login_hint', loginHint);
+    }
 
     return {
         url: `${OAUTH_CONFIG.authUrl}?${params.toString()}`,
