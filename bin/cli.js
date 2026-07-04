@@ -95,7 +95,7 @@ function cleanupPidFile() {
  * Get current port from environment or default
  */
 function getPort() {
-  return process.env.PORT || 8080;
+  return process.env.PORT || 12345;
 }
 
 /**

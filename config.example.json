@@ -17,7 +17,7 @@
   "webuiPassword": "",
   "_webuiPassword_comment": "Optional password to protect WebUI. Can also use WEBUI_PASSWORD env var.",
 
-  "port": 8080,
+  "port": 12345,
   "debug": false,
   "logLevel": "info",
 

@@ -110,7 +110,7 @@ const server = app.listen(PORT, HOST, () => {
     }
 
     const environmentSection = `║  Environment Variables:                                      ║
-║    PORT                Server port (default: 8080)           ║
+║    PORT                Server port (default: 12345)          ║
 ║    HOST                Bind address (default: 0.0.0.0)       ║
 ║    HTTP_PROXY          Route requests through a proxy        ║
 ║    CLAUDE_CONFIG_PATH  Path to .claude dir (for systemd)     ║

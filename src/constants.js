@@ -129,7 +129,7 @@ export const DEFAULT_PROJECT_ID = 'rising-fact-p41fc';
 export const TOKEN_REFRESH_INTERVAL_MS = config?.tokenCacheTtlMs || (5 * 60 * 1000); // From config or 5 minutes
 export const REQUEST_BODY_LIMIT = config?.requestBodyLimit || '50mb';
 export const ANTIGRAVITY_AUTH_PORT = 9092;
-export const DEFAULT_PORT = config?.port || 8080;
+export const DEFAULT_PORT = config?.port || 12345;
 
 // Multi-account configuration
 export const ACCOUNT_CONFIG_PATH = config?.accountConfigPath || join(
@@ -315,7 +315,7 @@ export const DEFAULT_PRESETS = [
         name: 'Claude Thinking',
         config: {
             ANTHROPIC_AUTH_TOKEN: 'test',
-            ANTHROPIC_BASE_URL: 'http://localhost:8080',
+            ANTHROPIC_BASE_URL: 'http://localhost:12345',
             ANTHROPIC_MODEL: 'claude-opus-4-6-thinking',
             ANTHROPIC_DEFAULT_OPUS_MODEL: 'claude-opus-4-6-thinking',
             ANTHROPIC_DEFAULT_SONNET_MODEL: 'claude-sonnet-4-6',
@@ -328,7 +328,7 @@ export const DEFAULT_PRESETS = [
         name: 'Gemini 1M',
         config: {
             ANTHROPIC_AUTH_TOKEN: 'test',
-            ANTHROPIC_BASE_URL: 'http://localhost:8080',
+            ANTHROPIC_BASE_URL: 'http://localhost:12345',
             ANTHROPIC_MODEL: 'gemini-3.1-pro-low',
             ANTHROPIC_DEFAULT_OPUS_MODEL: 'gemini-3.1-pro-low',
             ANTHROPIC_DEFAULT_SONNET_MODEL: 'gemini-3.5-flash-low',
