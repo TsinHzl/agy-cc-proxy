@@ -86,6 +86,7 @@ function maskEmail(email) {
  * @param {string} entry.timestamp - ISO 8601 timestamp
  * @param {string} entry.model - Model ID
  * @param {string} entry.apiKey - Account email (will be masked)
+ * @param {string} [entry.clientIp] - Client IP address
  * @param {number} entry.inputTokens
  * @param {number} entry.outputTokens
  * @param {number} entry.cacheReadTokens
@@ -98,6 +99,7 @@ function record(entry) {
         timestamp = new Date().toISOString(),
         model = 'unknown',
         apiKey = '-',
+        clientIp = '-',
         inputTokens = 0,
         outputTokens = 0,
         cacheReadTokens = 0,
@@ -113,6 +115,7 @@ function record(entry) {
         timestamp,
         model,
         apiKey: maskEmail(apiKey),
+        clientIp,
         inputTokens,
         outputTokens,
         cacheReadTokens,

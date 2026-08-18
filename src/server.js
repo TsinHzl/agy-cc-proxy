@@ -80,6 +80,19 @@ async function ensureInitialized() {
 app.use(cors());
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 
+// Trust proxy headers (for X-Forwarded-For behind reverse proxies)
+app.set('trust proxy', true);
+
+// Access logging middleware - record client IP for all API requests
+app.use('/v1', (req, res, next) => {
+    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+    req._clientIp = clientIp;
+    if (req.method === 'POST') {
+        logger.info(`[Access] ${req.method} ${req.path} from ${clientIp} model=${req.body?.model || '-'}`);
+    }
+    next();
+});
+
 // API Key authentication middleware for /v1/* endpoints
 app.use('/v1', (req, res, next) => {
     // Skip validation if apiKey is not configured
@@ -882,6 +895,7 @@ app.post('/v1/messages', async (req, res) => {
                     timestamp: new Date(streamStartTime).toISOString(),
                     model: modelId,
                     apiKey: validationAccount?.email || '-',
+                    clientIp: req._clientIp || req.ip || '-',
                     inputTokens: usageInputTokens,
                     outputTokens: usageOutputTokens,
                     cacheReadTokens: usageCacheReadTokens,
@@ -929,6 +943,7 @@ app.post('/v1/messages', async (req, res) => {
                 timestamp: new Date(nonStreamStartTime).toISOString(),
                 model: modelId,
                 apiKey: validationAccount?.email || '-',
+                clientIp: req._clientIp || req.ip || '-',
                 inputTokens: u.input_tokens || 0,
                 outputTokens: u.output_tokens || 0,
                 cacheReadTokens: u.cache_read_input_tokens || 0,
