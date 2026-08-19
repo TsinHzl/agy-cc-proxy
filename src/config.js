@@ -9,6 +9,21 @@ const scryptAsync = promisify(scrypt);
 const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 };
 const SCRYPT_KEYLEN = 32;
 
+/** Generate a cryptographically secure random API key. */
+export function generateApiKey() {
+    return `sk-agy-${randomBytes(24).toString('hex')}`;
+}
+
+/** Timing-safe string comparison to prevent timing attacks on API keys. */
+export function verifyApiKey(providedKey, expectedKey) {
+    if (!providedKey || !expectedKey) return false;
+    if (typeof providedKey !== 'string' || typeof expectedKey !== 'string') return false;
+    const bufA = Buffer.from(providedKey);
+    const bufB = Buffer.from(expectedKey);
+    if (bufA.length !== bufB.length) return false;
+    return timingSafeEqual(bufA, bufB);
+}
+
 /** Hash a plaintext password. Returns "scrypt:<saltBase64>:<hashBase64>". */
 export async function hashPassword(plain) {
     const salt = randomBytes(16);
@@ -142,21 +157,23 @@ let config = { ...DEFAULT_CONFIG };
 
 function loadConfig() {
     try {
-        // Env vars take precedence for initial defaults, but file overrides them if present?
-        // Usually Env > File > Default.
+        let isNewConfig = false;
+        let needsSave = false;
 
         if (fs.existsSync(CONFIG_FILE)) {
             const fileContent = fs.readFileSync(CONFIG_FILE, 'utf8');
             const userConfig = JSON.parse(fileContent);
             config = deepMerge(DEFAULT_CONFIG, userConfig);
         } else {
-             // Try looking in current dir for config.json as fallback
-             const localConfigPath = path.resolve('config.json');
-             if (fs.existsSync(localConfigPath)) {
-                 const fileContent = fs.readFileSync(localConfigPath, 'utf8');
-                 const userConfig = JSON.parse(fileContent);
-                 config = deepMerge(DEFAULT_CONFIG, userConfig);
-             }
+            // Try looking in current dir for config.json as fallback
+            const localConfigPath = path.resolve('config.json');
+            if (fs.existsSync(localConfigPath)) {
+                const fileContent = fs.readFileSync(localConfigPath, 'utf8');
+                const userConfig = JSON.parse(fileContent);
+                config = deepMerge(DEFAULT_CONFIG, userConfig);
+            } else {
+                isNewConfig = true;
+            }
         }
 
         // Environment overrides
@@ -165,8 +182,28 @@ function loadConfig() {
         if (process.env.DEBUG === 'true') config.debug = true;
         if (process.env.DEV_MODE === 'true') config.devMode = true;
 
+        // Auto-generate secure API key if not configured or empty
+        if (!config.apiKey || typeof config.apiKey !== 'string' || !config.apiKey.trim()) {
+            config.apiKey = generateApiKey();
+            needsSave = true;
+            logger.info(`[Security] No API key configured. Auto-generated secure API key: ${config.apiKey}`);
+        }
+
         // Backward compat: debug implies devMode
         if (config.debug && !config.devMode) config.devMode = true;
+
+        // Save immediately if newly created or missing API key
+        if (needsSave || isNewConfig) {
+            try {
+                if (!fs.existsSync(CONFIG_DIR)) {
+                    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+                }
+                fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
+                logger.info(`[Config] Configuration saved to ${CONFIG_FILE}`);
+            } catch (saveErr) {
+                logger.error('[Config] Failed to save auto-generated config:', saveErr);
+            }
+        }
 
         // Warn if WebUI password is still stored as plaintext (legacy)
         if (config.webuiPassword && !config.webuiPassword.startsWith('scrypt:')) {

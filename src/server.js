@@ -10,7 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel, resolveModel } from './cloudcode/index.js';
 import { mountWebUI } from './webui/index.js';
-import { config } from './config.js';
+import { config, verifyApiKey } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,23 +95,18 @@ app.use('/v1', (req, res, next) => {
 
 // API Key authentication middleware for /v1/* endpoints
 app.use('/v1', (req, res, next) => {
-    // Skip validation if apiKey is not configured
-    if (!config.apiKey) {
-        return next();
-    }
-
     const authHeader = req.headers['authorization'];
     const xApiKey = req.headers['x-api-key'];
 
     let providedKey = '';
     if (authHeader && authHeader.startsWith('Bearer ')) {
-        providedKey = authHeader.substring(7);
-    } else if (xApiKey) {
-        providedKey = xApiKey;
+        providedKey = authHeader.substring(7).trim();
+    } else if (xApiKey && typeof xApiKey === 'string') {
+        providedKey = xApiKey.trim();
     }
 
-    if (!providedKey || providedKey !== config.apiKey) {
-        logger.warn(`[API] Unauthorized request from ${req.ip}, invalid API key`);
+    if (!providedKey || !verifyApiKey(providedKey, config.apiKey)) {
+        logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
         return res.status(401).json({
             type: 'error',
             error: {

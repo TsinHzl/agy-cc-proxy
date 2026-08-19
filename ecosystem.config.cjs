@@ -8,7 +8,7 @@ module.exports = {
     max_restarts: 10,
     env: {
       NODE_ENV: 'production',
-      PORT: '8080'
+      PORT: '12345'
     }
   }]
 }
