@@ -134,23 +134,35 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const userTextSnippets = (Array.isArray(messages) && messages.length > 0)
         ? (() => {
             const out = [];
-            for (let i = messages.length - 1; i >= 0 && out.length < 6; i--) {
+            // Walk ALL messages (any role) so we can locate the compact
+            // prompt even if CC put it in an assistant block or interleaved
+            // its bookkeeping messages. Cap at 12 snippets × 250 chars.
+            for (let i = messages.length - 1; i >= 0 && out.length < 12; i--) {
                 const m = messages[i];
-                if (m?.role !== 'user') continue;
-                const c = m.content;
+                const c = m?.content;
                 let txt;
                 if (typeof c === 'string') txt = c;
                 else if (Array.isArray(c)) {
                     txt = (c.find(b => b?.type === 'text')?.text) || '';
                 }
-                out.push(`msg[${i}]="${(txt || '').slice(0, 120)}"`);
+                out.push(`${m?.role || '?'}[${i}]="${(txt || '').slice(0, 250)}"`);
             }
-            return out.length ? out.join(' | ') : '(no user msgs)';
+            return out.length ? out.join(' | ') : '(no msgs)';
         })()
         : '(no messages)';
+    const roleHistogram = (Array.isArray(messages) && messages.length > 0)
+        ? (() => {
+            const h = {};
+            for (const m of messages) {
+                const r = m?.role || '?';
+                h[r] = (h[r] || 0) + 1;
+            }
+            return Object.entries(h).map(([k, v]) => `${k}=${v}`).join(',');
+        })()
+        : '(empty)';
     const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
     const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
-    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} userSnippets=${userTextSnippets}`);
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} userSnippets=${userTextSnippets}`);
 
     const googleRequest = {
         contents: [],
