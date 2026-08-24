@@ -163,7 +163,27 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
     const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
     const hasReactivePromptAnchor = systemStr.includes('CRITICAL: Respond with TEXT ONLY') || systemStr.includes('create a detailed summary of this conversation');
-    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} hasReactivePrompt=${hasReactivePromptAnchor} userSnippets=${userTextSnippets}`);
+    const hasCompactedKeyword = systemStr.includes('compacted') || systemStr.includes('Compacted') || systemStr.includes('compaction');
+    // Narrow DIAG-DUMP trigger: only when the request LOOKS like a compact
+    // attempt (system contains "compacted"/"compaction", or there is a
+    // `<system-reminder>` / `<token_count>` tag) but our detector didn't
+    // match. This avoids spamming normal requests.
+    const looksLikeCompact = hasCompactedKeyword || systemStr.includes('<system-reminder>') || systemStr.includes('<token_count>');
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} hasReactivePrompt=${hasReactivePromptAnchor} hasCompactedKeyword=${hasCompactedKeyword} userSnippets=${userTextSnippets}`);
+    if (!isCompact && looksLikeCompact) {
+        // Targeted DIAG-DUMP — find where the compact prompt lives.
+        const sysHead = systemStr.slice(0, 1500);
+        const sysTail = systemStr.length > 2000 ? systemStr.slice(-800) : '';
+        const msgDump = (Array.isArray(messages) ? messages : []).map((m, idx) => {
+            const c = m?.content;
+            let txt;
+            if (typeof c === 'string') txt = c;
+            else if (Array.isArray(c)) txt = (c.find(b => b?.type === 'text')?.text) || '';
+            else txt = JSON.stringify(c || '');
+            return `m[${idx}|${m?.role}]="${txt.slice(0, 120)}"`;
+        }).join(' || ');
+        logger.debug(`[RequestConverter] DIAG-DUMP sysHead="${sysHead}" sysTail="${sysTail}" allMsgs=${msgDump}`);
+    }
 
     const googleRequest = {
         contents: [],
