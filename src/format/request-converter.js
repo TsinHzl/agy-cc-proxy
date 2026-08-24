@@ -104,6 +104,9 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     // "Prompt is too long · automatic compaction failed:
     //  summarization produced empty response".
     const isCompact = isCompactRequest(system, messages);
+    // Debug log so production incidents can verify the detector matched.
+    // Also logs the negative case so we can rule out a missed detection.
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemAnchor=${typeof system === 'string' ? system.slice(0, 60) : JSON.stringify(system).slice(0, 60)}`);
 
     const googleRequest = {
         contents: [],
