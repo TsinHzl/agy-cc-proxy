@@ -35,7 +35,10 @@ export function isCompactRequest(system, messages, req) {
     }
 
     if (Array.isArray(messages)) {
-        for (let i = messages.length - 1; i >= Math.max(0, messages.length - 3); i--) {
+        // Search the full message history, not just the last 3 — CC may inject
+        // a trailing token-count label (`<total_tokens>...`) after the compact
+        // prompt, pushing the actual prompt out of the last-3 window.
+        for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i];
             if (msg?.role !== 'user') continue;
             const content = msg.content;
@@ -124,24 +127,30 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const isCompact = isCompactRequest(system, messages);
     // Debug log so production incidents can verify the detector matched.
     // Also logs the negative case so we can rule out a missed detection.
-    // Search for compact-related anchors directly (avoid huge system dumps).
+    // Capture up to 6 trailing user-message snippets so we can locate the
+    // compact prompt when CC interleaves its own bookkeeping messages
+    // (e.g. `<total_tokens>...`) after the prompt.
     const systemStr = typeof system === 'string' ? system : JSON.stringify(system);
-    const systemSearch = systemStr.length > 4096 ? systemStr.slice(0, 4096) + '...[TRUNCATED ' + (systemStr.length - 4096) + ' chars]' : systemStr;
-    const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
-    const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
-    const lastUserText = Array.isArray(messages) && messages.length > 0
+    const userTextSnippets = (Array.isArray(messages) && messages.length > 0)
         ? (() => {
-            for (let i = messages.length - 1; i >= Math.max(0, messages.length - 3); i--) {
-                const c = messages[i]?.content;
-                if (typeof c === 'string') return c.slice(0, 200);
-                if (Array.isArray(c)) {
-                    for (const b of c) if (b?.type === 'text') return b.text.slice(0, 200);
+            const out = [];
+            for (let i = messages.length - 1; i >= 0 && out.length < 6; i--) {
+                const m = messages[i];
+                if (m?.role !== 'user') continue;
+                const c = m.content;
+                let txt;
+                if (typeof c === 'string') txt = c;
+                else if (Array.isArray(c)) {
+                    txt = (c.find(b => b?.type === 'text')?.text) || '';
                 }
+                out.push(`msg[${i}]="${(txt || '').slice(0, 120)}"`);
             }
-            return '(none)';
+            return out.length ? out.join(' | ') : '(no user msgs)';
         })()
         : '(no messages)';
-    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} lastUserText="${lastUserText}"`);
+    const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
+    const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} userSnippets=${userTextSnippets}`);
 
     const googleRequest = {
         contents: [],
