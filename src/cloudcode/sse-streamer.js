@@ -28,6 +28,14 @@ export async function* streamSSEResponse(response, originalModel) {
     let outputTokens = 0;
     let cacheReadTokens = 0;
     let stopReason = null;
+    // [DIAG] Per-block character counters — used post-stream to detect the
+    // "summarization produced empty response" failure mode where Gemini emits
+    // only thinking blocks and no text block, leaving the downstream Uj6()
+    // extractor with nothing to read.
+    let thinkingChars = 0;
+    let textChars = 0;
+    let toolUseCount = 0;
+    let imageCount = 0;
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -94,6 +102,7 @@ export async function* streamSSEResponse(response, originalModel) {
                         // Handle thinking block
                         const text = part.text || '';
                         const signature = part.thoughtSignature || '';
+                        thinkingChars += text.length;
 
                         if (currentBlockType !== 'thinking') {
                             if (currentBlockType !== null) {
@@ -127,6 +136,7 @@ export async function* streamSSEResponse(response, originalModel) {
                         if (part.text === '') {
                             continue;
                         }
+                        textChars += part.text.length;
 
                         // Handle regular text
                         if (currentBlockType !== 'text') {
@@ -176,6 +186,7 @@ export async function* streamSSEResponse(response, originalModel) {
                         }
                         currentBlockType = 'tool_use';
                         stopReason = 'tool_use';
+                        toolUseCount++;
 
                         const toolId = part.functionCall.id || `toolu_${crypto.randomBytes(12).toString('hex')}`;
 
@@ -226,6 +237,7 @@ export async function* streamSSEResponse(response, originalModel) {
                         currentBlockType = 'image';
 
                         // Emit image block as a complete block
+                        imageCount++;
                         yield {
                             type: 'content_block_start',
                             index: blockIndex,
@@ -258,6 +270,21 @@ export async function* streamSSEResponse(response, originalModel) {
                 logger.warn('[CloudCode] SSE parse error:', parseError.message);
             }
         }
+    }
+
+    // [DIAG] Per-response block breakdown — primary signal for diagnosing
+    // /compact "summarization produced empty response" failures.
+    // The bug surface: stopReason==max_tokens + textChars==0 + thinkingChars>0
+    // means Gemini emitted thinking-only output, leaving the downstream
+    // Uj6() extractor with no text block to return as the summary.
+    const blockSummary = `model=${originalModel} outputTokens=${outputTokens} inputTokens=${inputTokens} stopReason=${stopReason || 'unset'} blocks(thinking=${thinkingChars}c, text=${textChars}c, toolUse=${toolUseCount}, image=${imageCount})`;
+    if (textChars === 0 && thinkingChars > 0) {
+        // [COMPACT-SUSPECT] — strong indicator that a summarization-style
+        // request was processed but produced only thinking. Most likely root
+        // cause for "summarization produced empty response" failures.
+        logger.warn(`[CloudCode] [COMPACT-SUSPECT] ${blockSummary}`);
+    } else if (textChars > 0 || thinkingChars > 0 || toolUseCount > 0) {
+        logger.debug(`[CloudCode] block-summary ${blockSummary}`);
     }
 
     // Handle no content received - throw error to trigger retry in streaming-handler
