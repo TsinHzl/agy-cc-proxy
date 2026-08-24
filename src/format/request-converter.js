@@ -163,7 +163,26 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
     const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
     const hasReactivePromptAnchor = systemStr.includes('CRITICAL: Respond with TEXT ONLY') || systemStr.includes('create a detailed summary of this conversation');
-    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} hasReactivePrompt=${hasReactivePromptAnchor} userSnippets=${userTextSnippets}`);
+    const hasCompactedKeyword = systemStr.includes('compacted') || systemStr.includes('Compacted') || systemStr.includes('compaction');
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} hasReactivePrompt=${hasReactivePromptAnchor} hasCompactedKeyword=${hasCompactedKeyword} userSnippets=${userTextSnippets}`);
+    // [DIAG DUMP] For misclassification investigation: when /compact
+    // detection failed AND thinking budget is unset (suspicious for a
+    // real compact request), dump the system head/tail + every message's
+    // first 80 chars so production captures can locate the compact prompt
+    // regardless of where CC hid it.
+    if (!isCompact && thinking?.budget_tokens == null) {
+        const sysHead = systemStr.slice(0, 1200);
+        const sysTail = systemStr.length > 1700 ? systemStr.slice(-500) : '';
+        const msgDump = (Array.isArray(messages) ? messages : []).map((m, idx) => {
+            const c = m?.content;
+            let txt;
+            if (typeof c === 'string') txt = c;
+            else if (Array.isArray(c)) txt = (c.find(b => b?.type === 'text')?.text) || '';
+            else txt = JSON.stringify(c || '');
+            return `m[${idx}|${m?.role}]="${txt.slice(0, 80)}"`;
+        }).join(' || ');
+        logger.debug(`[RequestConverter] DIAG-DUMP sysHead="${sysHead}" sysTail="${sysTail}" allMsgs=${msgDump}`);
+    }
 
     const googleRequest = {
         contents: [],
