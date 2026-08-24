@@ -162,7 +162,8 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         : '(empty)';
     const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
     const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
-    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} userSnippets=${userTextSnippets}`);
+    const hasReactivePromptAnchor = systemStr.includes('CRITICAL: Respond with TEXT ONLY') || systemStr.includes('create a detailed summary of this conversation');
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} msgCount=${Array.isArray(messages) ? messages.length : 0} roles=${roleHistogram} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} hasReactivePrompt=${hasReactivePromptAnchor} userSnippets=${userTextSnippets}`);
 
     const googleRequest = {
         contents: [],
