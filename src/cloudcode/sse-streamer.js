@@ -287,6 +287,46 @@ export async function* streamSSEResponse(response, originalModel) {
         logger.debug(`[CloudCode] block-summary ${blockSummary}`);
     }
 
+    // [COMPACT-FALLBACK] If the response produced NO text block AND the
+    // stop reason is "tool_use" (model called tools when it should have
+    // output a summary) or "max_tokens" (output budget exhausted by thinking
+    // before text could be emitted), inject a synthetic text block so CC's
+    // Uj6() extractor returns a non-empty summary. Without this, CC reports
+    // "summarization produced empty response" and /compact fails.
+    //
+    // This is a recovery fallback — the underlying cause (model calling tools
+    // during summarisation, or thinking eating all output budget) is a
+    // separate issue. Once the upstream fix (strip tools for /compact, or
+    // lower thinkingBudget) lands, this fallback becomes a no-op because
+    // textChars will be > 0.
+    const needsCompactFallback = textChars === 0 && (
+        stopReason === 'tool_use' ||
+        stopReason === 'max_tokens' ||
+        (stopReason === 'end_turn' && thinkingChars > 0 && toolUseCount === 0)
+    );
+    if (needsCompactFallback) {
+        logger.warn(`[CloudCode] [COMPACT-FALLBACK] emitting synthetic text block: ${blockSummary}`);
+        const fallbackMsg = `[Compact fallback] The model did not produce a text summary (stopReason=${stopReason}, thinking=${thinkingChars}c, toolUse=${toolUseCount}). This synthetic placeholder allows the /compact flow to continue; the original tool call input is preserved in tool_use blocks above.`;
+        if (currentBlockType !== null) {
+            yield { type: 'content_block_stop', index: blockIndex };
+            blockIndex++;
+            currentBlockType = null;
+        }
+        yield {
+            type: 'content_block_start',
+            index: blockIndex,
+            content_block: { type: 'text', text: '' }
+        };
+        yield {
+            type: 'content_block_delta',
+            index: blockIndex,
+            delta: { type: 'text_delta', text: fallbackMsg }
+        };
+        yield { type: 'content_block_stop', index: blockIndex };
+        blockIndex++;
+        stopReason = 'end_turn';
+    }
+
     // Handle no content received - throw error to trigger retry in streaming-handler
     if (!hasEmittedStart) {
         logger.warn('[CloudCode] No content parts received, throwing for retry');
