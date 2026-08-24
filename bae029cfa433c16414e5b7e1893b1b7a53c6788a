@@ -1,0 +1,23 @@
+src/cloudcode/sse-streamer.js
+  9ec9971639743c72 290-329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "bae029cfa433c16414e5b7e1893b1b7a53c6788a",
+  "prompts": {
+    "9ec9971639743c72": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89578515-0012-4555-b767-6340b589adcf",
+        "model": "glm-5.3"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 0,
+      "accepted_lines": 40,
+      "overriden_lines": 0
+    }
+  }
+}
