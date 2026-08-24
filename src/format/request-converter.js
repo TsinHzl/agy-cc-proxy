@@ -1,9 +1,14 @@
 /**
  * Detect whether the current request originates from Claude Code's `/compact`
- * command. Two independent signals are checked and ANY positive match flips
- * the flag, so we tolerate future CC releases that change either signature:
- *   1. System prompt anchor strings that CC injects when compact fires.
+ * command or the autocompact flow. Multiple independent signals are checked
+ * and ANY positive match flips the flag:
+ *   1. System prompt anchor strings that CC injects (older CLI versions).
  *   2. User message text starting with `/compact` (manual invocation).
+ *   3. User message containing CC's compact-summarization prompt
+ *      (`CRITICAL: Respond with TEXT ONLY...create a detailed summary
+ *       of this conversation`). This is the reactive-compact prompt used
+ *      by CC v2.1+ for both manual and auto compaction.
+ *   4. `x-stainless-helper: compaction` header (set by CC's compact client).
  *
  * False positives are harmless (worst case: thinking is disabled for that
  * turn); false negatives reproduce the original bug
@@ -11,9 +16,10 @@
  *
  * @param {Array<string|Object>|string|undefined} system
  * @param {Array<Object>} [messages] - conversation messages for second signal
+ * @param {Object} [req] - the full Anthropic-format request (for headers, optional)
  * @returns {boolean}
  */
-export function isCompactRequest(system, messages) {
+export function isCompactRequest(system, messages, req) {
     const matchesAnchor = (text) =>
         typeof text === 'string' && (
             text.includes('Respond as helpfully as possible, but be very careful to ensure you do not reproduce any copyrighted material') ||
@@ -33,11 +39,23 @@ export function isCompactRequest(system, messages) {
             const msg = messages[i];
             if (msg?.role !== 'user') continue;
             const content = msg.content;
+            const checkText = (text) => {
+                if (typeof text !== 'string') return false;
+                const t = text.trim();
+                if (t.startsWith('/compact')) return true;
+                // CC v2.1+ reactive-compact prompt signature:
+                // The user message is the auto-generated summarization prompt.
+                if (text.includes('CRITICAL: Respond with TEXT ONLY') &&
+                    text.includes('create a detailed summary of this conversation')) {
+                    return true;
+                }
+                return false;
+            };
             if (typeof content === 'string') {
-                if (content.trim().startsWith('/compact')) return true;
+                if (checkText(content)) return true;
             } else if (Array.isArray(content)) {
                 for (const block of content) {
-                    if (block?.type === 'text' && typeof block.text === 'string' && block.text.trim().startsWith('/compact')) return true;
+                    if (block?.type === 'text' && checkText(block.text)) return true;
                 }
             }
         }

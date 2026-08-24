@@ -48,6 +48,28 @@ function normalRequest(model, budgetTokens, maxTokens = 8192) {
     };
 }
 
+// CC v2.1+ reactive-compact prompt signature (autocompact + manual /compact).
+// This is the actual user message CC sends when triggering compaction.
+const CC_REACTIVE_COMPACT_PROMPT = `CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.
+
+- Do NOT use Read, Bash, Grep, Glob, Edit, Write, or ANY other tool.
+- You already have all the context you need in the conversation above.
+- Tool calls will be REJECTED and will waste your only turn — you will fail the task.
+- Your entire response must be plain text: an <analysis> block followed by a <summary> block.
+
+Your task is to create a detailed summary of this conversation. This summary will be placed at the start of a continuing session; newer messages that build on this context will follow after your summary (you do not see them here). Summarize thoroughly so that someone reading only your summary and then the newer messages can fully understand what happened and continue the work.`;
+
+function reactiveCompactRequest(model, budgetTokens, maxTokens = 20000) {
+    return {
+        model,
+        max_tokens: maxTokens,
+        thinking: { type: 'enabled', budget_tokens: budgetTokens },
+        stream: true,
+        system: [{ type: 'text', text: 'You are helpful.' }],  // NO compact anchor
+        messages: [{ role: 'user', content: CC_REACTIVE_COMPACT_PROMPT }]
+    };
+}
+
 async function main() {
     const { convertAnthropicToGoogle, isCompactRequest } = await loadConverter();
 
@@ -68,6 +90,17 @@ async function main() {
         const r = isCompactRequest(
             'normal sys',
             [{ role: 'user', content: '/compact summarize' }]
+        );
+        if (r !== true) throw new Error(`expected true, got ${r}`);
+    });
+    test('isCompactRequest detects CC v2.1+ reactive-compact prompt', () => {
+        // The actual user message CC sends when triggering compaction —
+        // starts with "CRITICAL: Respond with TEXT ONLY" and contains
+        // "create a detailed summary of this conversation". This is what
+        // the production proxy was failing to detect.
+        const r = isCompactRequest(
+            'You are helpful.',  // system WITHOUT compact anchor
+            [{ role: 'user', content: CC_REACTIVE_COMPACT_PROMPT }]
         );
         if (r !== true) throw new Error(`expected true, got ${r}`);
     });
@@ -124,6 +157,33 @@ async function main() {
         }
         if (r.generationConfig.thinkingConfig?.thinking_budget !== 16000) {
             throw new Error(`thinking_budget wrong: ${r.generationConfig.thinkingConfig?.thinking_budget}`);
+        }
+        if (r.generationConfig.maxOutputTokens !== 32384) {
+            throw new Error(`maxOutputTokens wrong: ${r.generationConfig.maxOutputTokens} (want 32384)`);
+        }
+    });
+
+    // --- CC v2.1+ reactive-compact integration scenarios ---
+
+    test('CRITICAL: Reactive-compact prompt (CC v2.1+) detected on Gemini', () => {
+        // This is the actual shape CC sends when triggering autocompact:
+        // - No copyright anchor in system
+        // - User message is the auto-generated "CRITICAL: Respond with TEXT ONLY..."
+        //   prompt that asks the model to summarise the conversation
+        // - max_tokens=20000 (CC reactive-compact hard cap)
+        const r = convertAnthropicToGoogle(reactiveCompactRequest('gemini-3.7-flash-tiered', 16000));
+        if (r.generationConfig.thinkingConfig?.includeThoughts !== true) {
+            throw new Error('thinking must stay enabled for /compact');
+        }
+        if (r.generationConfig.maxOutputTokens !== 32384) {
+            throw new Error(`maxOutputTokens wrong: ${r.generationConfig.maxOutputTokens} (want 32384 = 16K thinking + 16K reserve)`);
+        }
+    });
+
+    test('CRITICAL: Reactive-compact prompt (CC v2.1+) detected on Claude', () => {
+        const r = convertAnthropicToGoogle(reactiveCompactRequest('claude-opus-4-6-thinking', 16000));
+        if (r.generationConfig.thinkingConfig?.include_thoughts !== true) {
+            throw new Error('thinking must stay enabled for /compact');
         }
         if (r.generationConfig.maxOutputTokens !== 32384) {
             throw new Error(`maxOutputTokens wrong: ${r.generationConfig.maxOutputTokens} (want 32384)`);
