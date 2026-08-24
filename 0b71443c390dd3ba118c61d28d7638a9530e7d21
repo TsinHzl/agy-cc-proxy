@@ -1,0 +1,23 @@
+src/format/request-converter.js
+  9ec9971639743c72 38-41,130-132,134,136-144,146,148,151-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "0b71443c390dd3ba118c61d28d7638a9530e7d21",
+  "prompts": {
+    "9ec9971639743c72": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89578515-0012-4555-b767-6340b589adcf",
+        "model": "glm-5.3"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 13,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    }
+  }
+}
