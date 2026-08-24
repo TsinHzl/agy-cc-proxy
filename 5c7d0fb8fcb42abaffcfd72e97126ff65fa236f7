@@ -1,0 +1,29 @@
+src/format/request-converter.js
+  9ec9971639743c72 2-48,98-103,203-209,223-227
+src/cloudcode/streaming-handler.js
+  9ec9971639743c72 555
+src/cloudcode/sse-streamer.js
+  9ec9971639743c72 281-285
+src/server.js
+  9ec9971639743c72 155,162-165,169-171,180-183,199-229,945-949,958,996,1022-1024
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "5c7d0fb8fcb42abaffcfd72e97126ff65fa236f7",
+  "prompts": {
+    "9ec9971639743c72": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89578515-0012-4555-b767-6340b589adcf",
+        "model": "glm-5.3"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 147,
+      "total_deletions": 34,
+      "accepted_lines": 125,
+      "overriden_lines": 0
+    }
+  }
+}
