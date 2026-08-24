@@ -106,7 +106,24 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const isCompact = isCompactRequest(system, messages);
     // Debug log so production incidents can verify the detector matched.
     // Also logs the negative case so we can rule out a missed detection.
-    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemAnchor=${typeof system === 'string' ? system.slice(0, 60) : JSON.stringify(system).slice(0, 60)}`);
+    // Search for compact-related anchors directly (avoid huge system dumps).
+    const systemStr = typeof system === 'string' ? system : JSON.stringify(system);
+    const systemSearch = systemStr.length > 4096 ? systemStr.slice(0, 4096) + '...[TRUNCATED ' + (systemStr.length - 4096) + ' chars]' : systemStr;
+    const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
+    const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
+    const lastUserText = Array.isArray(messages) && messages.length > 0
+        ? (() => {
+            for (let i = messages.length - 1; i >= Math.max(0, messages.length - 3); i--) {
+                const c = messages[i]?.content;
+                if (typeof c === 'string') return c.slice(0, 200);
+                if (Array.isArray(c)) {
+                    for (const b of c) if (b?.type === 'text') return b.text.slice(0, 200);
+                }
+            }
+            return '(none)';
+        })()
+        : '(no messages)';
+    logger.debug(`[RequestConverter] /compact detection: isCompact=${isCompact} model=${modelName} thinkingBudget(anthropic)=${thinking?.budget_tokens ?? 'unset'} systemLen=${systemStr.length} hasCopyright=${hasCopyrightAnchor} hasClaudeAgent=${hasClaudeAgentAnchor} lastUserText="${lastUserText}"`);
 
     const googleRequest = {
         contents: [],
