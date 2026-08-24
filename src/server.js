@@ -152,18 +152,23 @@ function parseError(error) {
     let errorType = 'api_error';
     let statusCode = 500;
     let errorMessage = error.message;
+    let retryAfterMs = null;
 
     if (error.message.includes('401') || error.message.includes('UNAUTHENTICATED')) {
         errorType = 'authentication_error';
         statusCode = 401;
         errorMessage = 'Authentication failed. Make sure Antigravity is running with a valid token.';
     } else if (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED') || error.message.includes('QUOTA_EXHAUSTED')) {
-        errorType = 'invalid_request_error';  // Use invalid_request_error to force client to purge/stop
-        statusCode = 400;  // Use 400 to ensure client does not retry (429 and 529 trigger retries)
+        // Preserve upstream 429 status so the client (Claude Code) backs off
+        // and retries on its own instead of throwing "Prompt is too long".
+        errorType = 'rate_limit_error';
+        statusCode = 429;
 
         // Try to extract the quota reset time from the error
         const resetMatch = error.message.match(/quota will reset after ([\dh\dm\ds]+)/i);
-        // Try to extract model from our error format "Rate limited on <model>" or JSON format
+        // Try to extract model from our error format "Rate limited on <model>" or JSON format.
+        // Note: email / account / project identifiers are intentionally NOT included —
+        // those leak internal pool state to the client.
         const modelMatch = error.message.match(/Rate limited on ([^.]+)\./) || error.message.match(/"model":\s*"([^"]+)"/);
         const model = modelMatch ? modelMatch[1] : 'the model';
 
@@ -172,6 +177,10 @@ function parseError(error) {
         } else {
             errorMessage = `RESOURCE_EXHAUSTED: You have exhausted your capacity on ${model}. Please wait for your quota to reset.`;
         }
+        // Surface a Retry-After header so clients back off intelligently
+        // instead of tight-looping. Prefer the upstream reset hint, fall back
+        // to a conservative 60s default.
+        retryAfterMs = parseResetDuration(resetMatch?.[1]) ?? 60000;
     } else if (error.message.includes('invalid_request_error') || error.message.includes('INVALID_ARGUMENT')) {
         errorType = 'invalid_request_error';
         statusCode = 400;
@@ -187,7 +196,37 @@ function parseError(error) {
         errorMessage = errorMessage;
     }
 
-    return { errorType, statusCode, errorMessage };
+    return { errorType, statusCode, errorMessage, retryAfterMs };
+}
+
+/**
+ * Parse a human duration string like "1h59m58s" / "4m59s" / "29m54s" into milliseconds.
+ * Returns null if the string cannot be parsed.
+ *
+ * @param {string|undefined} raw
+ * @returns {number|null}
+ */
+function parseResetDuration(raw) {
+    if (!raw) return null;
+    let totalMs = 0;
+    const re = /(\d+)\s*([hms])/gi;
+    let matched = false;
+    let m;
+    while ((m = re.exec(raw)) !== null) {
+        matched = true;
+        const n = parseInt(m[1], 10);
+        if (m[2].toLowerCase() === 'h') totalMs += n * 3600_000;
+        else if (m[2].toLowerCase() === 'm') totalMs += n * 60_000;
+        else totalMs += n * 1000;
+    }
+    if (!matched || !Number.isFinite(totalMs)) return null;
+    // Defensive clamp: very large reset windows (or parseInt overflow past 2^53)
+    // would make Retry-After header invalid (NaN) and cause Express to throw
+    // ERR_INVALID_ARG_VALUE, turning a 429 into a 500. Cap at 24h.
+    const MAX_MS = 24 * 3600_000;
+    if (totalMs > MAX_MS) totalMs = MAX_MS;
+    if (totalMs < 1000) totalMs = 1000;
+    return totalMs;
 }
 
 // Request logging middleware
@@ -903,8 +942,11 @@ app.post('/v1/messages', async (req, res) => {
                 // If we haven't sent headers yet, we can send a proper error status
                 if (!res.headersSent) {
                     logger.error('[API] Initial stream error:', error);
-                    const { errorType, statusCode, errorMessage } = parseError(error);
-                    
+                    const { errorType, statusCode, errorMessage, retryAfterMs } = parseError(error);
+
+                    if (retryAfterMs) {
+                        res.setHeader('Retry-After', Math.ceil(retryAfterMs / 1000));
+                    }
                     return res.status(statusCode).json({
                         type: 'error',
                         error: {
@@ -913,7 +955,7 @@ app.post('/v1/messages', async (req, res) => {
                         }
                     });
                 }
-                
+
                 // If headers were already sent (should only happen if error occurs mid-stream),
                 // we have to fallback to SSE error event
                 logger.error('[API] Mid-stream error:', error);
@@ -951,7 +993,7 @@ app.post('/v1/messages', async (req, res) => {
     } catch (error) {
         logger.error('[API] Error:', error);
 
-        let { errorType, statusCode, errorMessage } = parseError(error);
+        let { errorType, statusCode, errorMessage, retryAfterMs } = parseError(error);
 
         // For auth errors, try to refresh token
         if (errorType === 'authentication_error') {
@@ -977,6 +1019,9 @@ app.post('/v1/messages', async (req, res) => {
             })}\n\n`);
             res.end();
         } else {
+            if (retryAfterMs) {
+                res.setHeader('Retry-After', Math.ceil(retryAfterMs / 1000));
+            }
             res.status(statusCode).json({
                 type: 'error',
                 error: {

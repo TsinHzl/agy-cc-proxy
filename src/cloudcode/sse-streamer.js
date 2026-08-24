@@ -278,7 +278,11 @@ export async function* streamSSEResponse(response, originalModel) {
         }
     }
 
-    // Emit message_delta and message_stop
+    // Emit message_delta and message_stop. Anthropic's spec for `message_delta.usage`
+    // reserves `input_tokens` for `message_start.usage`; repeating it here would
+    // let downstream SDKs (incl. Claude Code) overwrite their cumulative context
+    // counter with the per-turn input total, regressing auto-compact accuracy.
+    // We only emit the incremental fields authorised by Anthropic's spec.
     yield {
         type: 'message_delta',
         delta: { stop_reason: stopReason || 'end_turn', stop_sequence: null },

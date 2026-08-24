@@ -552,7 +552,7 @@ function* emitEmptyResponseFallback(model) {
     yield {
         type: 'content_block_delta',
         index: 0,
-        delta: { type: 'text_delta', text: '[No response after retries - please try again]' }
+        delta: { type: 'text_delta', text: 'No response after retries. If retries repeatedly fail with empty responses, try /compact to lower context size, or /clear and restart with a focused question.' }
     };
 
     yield { type: 'content_block_stop', index: 0 };

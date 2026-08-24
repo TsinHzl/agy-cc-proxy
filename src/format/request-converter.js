@@ -1,4 +1,52 @@
 /**
+ * Detect whether the current request originates from Claude Code's `/compact`
+ * command. Two independent signals are checked and ANY positive match flips
+ * the flag, so we tolerate future CC releases that change either signature:
+ *   1. System prompt anchor strings that CC injects when compact fires.
+ *   2. User message text starting with `/compact` (manual invocation).
+ *
+ * False positives are harmless (worst case: thinking is disabled for that
+ * turn); false negatives reproduce the original bug
+ * (`summarization produced empty response`).
+ *
+ * @param {Array<string|Object>|string|undefined} system
+ * @param {Array<Object>} [messages] - conversation messages for second signal
+ * @returns {boolean}
+ */
+export function isCompactRequest(system, messages) {
+    const matchesAnchor = (text) =>
+        typeof text === 'string' && (
+            text.includes('Respond as helpfully as possible, but be very careful to ensure you do not reproduce any copyrighted material') ||
+            text.includes('You are a Claude agent, built on Anthropic')
+        );
+
+    if (system) {
+        const blocks = Array.isArray(system) ? system : [system];
+        for (const block of blocks) {
+            const text = typeof block === 'string' ? block : block?.text;
+            if (matchesAnchor(text)) return true;
+        }
+    }
+
+    if (Array.isArray(messages)) {
+        for (let i = messages.length - 1; i >= Math.max(0, messages.length - 3); i--) {
+            const msg = messages[i];
+            if (msg?.role !== 'user') continue;
+            const content = msg.content;
+            if (typeof content === 'string') {
+                if (content.trim().startsWith('/compact')) return true;
+            } else if (Array.isArray(content)) {
+                for (const block of content) {
+                    if (block?.type === 'text' && typeof block.text === 'string' && block.text.trim().startsWith('/compact')) return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
  * Request Converter
  * Converts Anthropic Messages API requests to Google Generative AI format
  */
@@ -47,6 +95,12 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const isClaudeModel = modelFamily === 'claude';
     const isGeminiModel = modelFamily === 'gemini';
     const isThinking = isThinkingModel(modelName);
+    // Disable thinking for Claude Code's `/compact` summarisation requests.
+    // Otherwise the full output budget is consumed by the thinking block
+    // and the summarisation text comes back empty, causing
+    // "Prompt is too long · automatic compaction failed:
+    //  summarization produced empty response".
+    const isCompact = isCompactRequest(system, messages);
 
     const googleRequest = {
         contents: [],
@@ -146,6 +200,13 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     if (max_tokens) {
         googleRequest.generationConfig.maxOutputTokens = max_tokens;
     }
+    // Boost the output ceiling for `/compact` summarisation. Even after
+    // stripping thinking, 8K is often too small for a faithful summary of
+    // a long conversation, causing the summary to be truncated and CC to
+    // misjudge compact as failed.
+    if (isCompact && (!max_tokens || max_tokens < 16384)) {
+        googleRequest.generationConfig.maxOutputTokens = 16384;
+    }
     if (temperature !== undefined) {
         googleRequest.generationConfig.temperature = temperature;
     }
@@ -159,8 +220,11 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         googleRequest.generationConfig.stopSequences = stop_sequences;
     }
 
-    // Enable thinking for thinking models (Claude and Gemini 3+)
-    if (isThinking) {
+    // Enable thinking for thinking models (Claude and Gemini 3+).
+    // Skip the thinking block entirely for `/compact` summarisation requests —
+    // the summarisation output must fit within max_tokens, so reserving any
+    // budget for thinking would silently truncate the summary.
+    if (isThinking && !isCompact) {
         if (isClaudeModel) {
             // Claude thinking config
             const thinkingConfig = {
