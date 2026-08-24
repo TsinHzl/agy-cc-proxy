@@ -95,9 +95,12 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const isClaudeModel = modelFamily === 'claude';
     const isGeminiModel = modelFamily === 'gemini';
     const isThinking = isThinkingModel(modelName);
-    // Disable thinking for Claude Code's `/compact` summarisation requests.
-    // Otherwise the full output budget is consumed by the thinking block
-    // and the summarisation text comes back empty, causing
+    // Detect Claude Code's `/compact` summarisation requests. For these we
+    // keep thinking enabled (Cloud Code rejects `thinkingCfg=none` for Gemini 3
+    // with HTTP 429 — production logs, Aug 2026) and enlarge max_tokens so the
+    // summary fits after the thinking block. Without the enlarge, thinking
+    // consumes the entire output budget and the summarisation text comes back
+    // empty, causing
     // "Prompt is too long · automatic compaction failed:
     //  summarization produced empty response".
     const isCompact = isCompactRequest(system, messages);
@@ -200,13 +203,6 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     if (max_tokens) {
         googleRequest.generationConfig.maxOutputTokens = max_tokens;
     }
-    // Boost the output ceiling for `/compact` summarisation. Even after
-    // stripping thinking, 8K is often too small for a faithful summary of
-    // a long conversation, causing the summary to be truncated and CC to
-    // misjudge compact as failed.
-    if (isCompact && (!max_tokens || max_tokens < 16384)) {
-        googleRequest.generationConfig.maxOutputTokens = 16384;
-    }
     if (temperature !== undefined) {
         googleRequest.generationConfig.temperature = temperature;
     }
@@ -220,22 +216,51 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         googleRequest.generationConfig.stopSequences = stop_sequences;
     }
 
-    // Enable thinking for thinking models (Claude and Gemini 3+).
-    // Skip the thinking block entirely for `/compact` summarisation requests —
-    // the summarisation output must fit within max_tokens, so reserving any
-    // budget for thinking would silently truncate the summary.
-    if (isThinking && !isCompact) {
+    // Reserve 16K tokens for the summary text on top of the thinking budget.
+    // The summary must fit inside maxOutputTokens AFTER the thinking block is
+    // accounted for; otherwise thinking eats the whole output and the
+    // summarisation returns empty — CC then reports "summarization produced
+    // empty response" and auto-compact fails.
+    const COMPACT_SUMMARY_RESERVE = 16384;
+    // Resolve the thinking budget up-front so the Gemini cap below can see it.
+    let resolvedThinkingBudget = null;
+    if (isThinking) {
         if (isClaudeModel) {
-            // Claude thinking config
-            const thinkingConfig = {
-                include_thoughts: true
-            };
+            resolvedThinkingBudget = thinking?.budget_tokens || 32000;
+        } else if (isGeminiModel) {
+            resolvedThinkingBudget = clampGeminiThinkingBudget(modelName, thinking?.budget_tokens);
+        }
+    }
 
-            // Cloud Code API requires thinking_budget to actually produce thinking blocks.
-            // Without it, include_thoughts alone is ignored and Claude falls back to
-            // <thinking> XML tags in text. Default to 32000 when not provided (e.g. adaptive mode).
-            const thinkingBudget = thinking?.budget_tokens || 32000;
-            thinkingConfig.thinking_budget = thinkingBudget;
+    // Enable thinking for thinking models (Claude and Gemini 3+).
+    //
+    // Why we DO NOT strip thinking for `/compact` requests: production logs
+    // (Aug 2026) show Cloud Code API rejects `thinkingCfg=none` for Gemini 3
+    // with HTTP 429 RESOURCE_EXHAUSTED across all accounts. The fix is to keep
+    // thinking enabled and instead enlarge max_tokens so the summary fits
+    // after the thinking block.
+    if (isThinking) {
+        const thinkingBudget = resolvedThinkingBudget;
+
+        // Compute the desired max_tokens for this request, including the
+        // compact-summary reserve when applicable.
+        let desiredMaxTokens = googleRequest.generationConfig.maxOutputTokens
+            || (isCompact ? 16384 : 0);
+        if (isCompact && thinkingBudget) {
+            const compactMaxTokens = thinkingBudget + COMPACT_SUMMARY_RESERVE;
+            if (desiredMaxTokens < compactMaxTokens) {
+                logger.debug(`[RequestConverter] Boosting max_tokens for /compact: ${desiredMaxTokens} → ${compactMaxTokens} (thinkingBudget=${thinkingBudget} + ${COMPACT_SUMMARY_RESERVE} summary)`);
+                desiredMaxTokens = compactMaxTokens;
+            }
+        }
+        googleRequest.generationConfig.maxOutputTokens = desiredMaxTokens;
+
+        // Build the thinking config and apply.
+        if (isClaudeModel) {
+            const thinkingConfig = {
+                include_thoughts: true,
+                thinking_budget: thinkingBudget
+            };
             logger.debug(`[RequestConverter] Claude thinking enabled with budget: ${thinkingBudget}${!thinking?.budget_tokens ? ' (default)' : ''}`);
 
             // Validate max_tokens > thinking_budget as required by the API
@@ -252,14 +277,11 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
             googleRequest.generationConfig.thinkingConfig = thinkingConfig;
         } else if (isGeminiModel) {
-            // Gemini thinking config (uses camelCase)
-            // Clamp budget to model-specific max (e.g., Gemini 2.5 Flash max is 24,576)
             const thinkingConfig = {
                 includeThoughts: true,
-                thinkingBudget: clampGeminiThinkingBudget(modelName, thinking?.budget_tokens)
+                thinkingBudget
             };
-            logger.debug(`[RequestConverter] Gemini thinking enabled with budget: ${thinkingConfig.thinkingBudget}`);
-
+            logger.debug(`[RequestConverter] Gemini thinking enabled with budget: ${thinkingBudget}`);
 
             googleRequest.generationConfig.thinkingConfig = thinkingConfig;
         }
@@ -313,9 +335,16 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     }
 
     // Cap max tokens for Gemini models
-    if (isGeminiModel && googleRequest.generationConfig.maxOutputTokens > GEMINI_MAX_OUTPUT_TOKENS) {
-        logger.debug(`[RequestConverter] Capping Gemini max_tokens from ${googleRequest.generationConfig.maxOutputTokens} to ${GEMINI_MAX_OUTPUT_TOKENS}`);
-        googleRequest.generationConfig.maxOutputTokens = GEMINI_MAX_OUTPUT_TOKENS;
+    // For `/compact` requests, the cap must scale with the thinking budget so
+    // the summary always retains its 16K reserve. If we used a fixed 32K cap
+    // a `thinkingBudget` ≥ 16K would silently eat the summary budget back to
+    // a few thousand tokens — exactly the bug we are fixing.
+    const geminiCap = (isCompact && typeof resolvedThinkingBudget === 'number')
+        ? Math.max(GEMINI_MAX_OUTPUT_TOKENS, resolvedThinkingBudget + COMPACT_SUMMARY_RESERVE)
+        : GEMINI_MAX_OUTPUT_TOKENS;
+    if (isGeminiModel && googleRequest.generationConfig.maxOutputTokens > geminiCap) {
+        logger.debug(`[RequestConverter] Capping Gemini max_tokens from ${googleRequest.generationConfig.maxOutputTokens} to ${geminiCap}${isCompact ? ' (compact)' : ''}`);
+        googleRequest.generationConfig.maxOutputTokens = geminiCap;
     }
 
     // Cap max tokens for Claude models — Cloud Code API rejects requests > 64K for Claude
