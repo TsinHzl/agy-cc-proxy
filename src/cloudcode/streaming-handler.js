@@ -24,6 +24,7 @@ import { logger } from '../utils/logger.js';
 import { parseResetTime } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
 import { streamSSEResponse } from './sse-streamer.js';
+import { isCompactRequest } from '../format/request-converter.js';
 import { getFallbackModel } from '../fallback-config.js';
 import {
     getRateLimitBackoff,
@@ -334,10 +335,15 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
                     // Stream the response with retry logic for empty responses
                     let currentResponse = response;
+                    // Compute once per request — isCompact doesn't change across empty-retries.
+                    // Passed into streamSSEResponse so the COMPACT-FALLBACK text
+                    // injection only fires for /compact requests, never for normal
+                    // tool_use or thinking-only outputs (those are legitimate).
+                    const isCompact = isCompactRequest(anthropicRequest.system, anthropicRequest.messages, anthropicRequest);
 
                     for (let emptyRetries = 0; emptyRetries <= MAX_EMPTY_RESPONSE_RETRIES; emptyRetries++) {
                         try {
-                            yield* streamSSEResponse(currentResponse, anthropicRequest.model);
+                            yield* streamSSEResponse(currentResponse, anthropicRequest.model, isCompact);
                             logger.debug('[CloudCode] Stream completed');
                             // Clear rate limit state on success
                             clearRateLimitState(account.email, model);

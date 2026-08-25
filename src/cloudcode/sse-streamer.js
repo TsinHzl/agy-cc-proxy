@@ -18,7 +18,7 @@ import { logger } from '../utils/logger.js';
  * @param {string} originalModel - The original model name
  * @yields {Object} Anthropic-format SSE events
  */
-export async function* streamSSEResponse(response, originalModel) {
+export async function* streamSSEResponse(response, originalModel, isCompactFlag = false) {
     const messageId = `msg_${crypto.randomBytes(16).toString('hex')}`;
     let hasEmittedStart = false;
     let blockIndex = 0;
@@ -287,26 +287,24 @@ export async function* streamSSEResponse(response, originalModel) {
         logger.debug(`[CloudCode] block-summary ${blockSummary}`);
     }
 
-    // [COMPACT-FALLBACK] If the response produced NO text block AND the
-    // stop reason is "tool_use" (model called tools when it should have
-    // output a summary) or "max_tokens" (output budget exhausted by thinking
-    // before text could be emitted), inject a synthetic text block so CC's
+    // [COMPACT-FALLBACK] If this is a confirmed /compact request AND the
+    // response produced NO text block, inject a synthetic text block so CC's
     // Uj6() extractor returns a non-empty summary. Without this, CC reports
     // "summarization produced empty response" and /compact fails.
     //
-    // This is a recovery fallback — the underlying cause (model calling tools
-    // during summarisation, or thinking eating all output budget) is a
-    // separate issue. Once the upstream fix (strip tools for /compact, or
-    // lower thinkingBudget) lands, this fallback becomes a no-op because
-    // textChars will be > 0.
-    const needsCompactFallback = textChars === 0 && (
-        stopReason === 'tool_use' ||
-        stopReason === 'max_tokens' ||
-        (stopReason === 'end_turn' && thinkingChars > 0 && toolUseCount === 0)
-    );
-    if (needsCompactFallback) {
+    // Scope is gated by isCompactFlag (passed in from streaming-handler, which
+    // calls isCompactRequest()). This prevents polluting normal responses —
+    // e.g. a regular tool-use reply legitimately has textChars=0 and
+    // stopReason='tool_use' and must NOT be turned into an end_turn text block.
+    //
+    // We deliberately do NOT rewrite stopReason. Anthropic SSE semantics
+    // require stop_reason to match the actual content: tool_use stays tool_use,
+    // max_tokens stays max_tokens, end_turn stays end_turn. CC's P4z/Uj6
+    // extractor only needs a non-empty text block; stop_reason does not
+    // influence whether Uj6() returns the summary string.
+    if (isCompactFlag && textChars === 0) {
         logger.warn(`[CloudCode] [COMPACT-FALLBACK] emitting synthetic text block: ${blockSummary}`);
-        const fallbackMsg = `[Compact fallback] The model did not produce a text summary (stopReason=${stopReason}, thinking=${thinkingChars}c, toolUse=${toolUseCount}). This synthetic placeholder allows the /compact flow to continue; the original tool call input is preserved in tool_use blocks above.`;
+        const fallbackMsg = `[Compact fallback] The model did not produce a text summary (stopReason=${stopReason || 'unset'}, thinking=${thinkingChars}c, toolUse=${toolUseCount}). This synthetic placeholder allows the /compact flow to continue; the original tool call input is preserved in tool_use blocks above.`;
         if (currentBlockType !== null) {
             yield { type: 'content_block_stop', index: blockIndex };
             blockIndex++;
@@ -324,7 +322,6 @@ export async function* streamSSEResponse(response, originalModel) {
         };
         yield { type: 'content_block_stop', index: blockIndex };
         blockIndex++;
-        stopReason = 'end_turn';
     }
 
     // Handle no content received - throw error to trigger retry in streaming-handler
