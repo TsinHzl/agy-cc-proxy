@@ -104,12 +104,56 @@ async function main() {
         );
         if (r !== true) throw new Error(`expected true, got ${r}`);
     });
+    test('isCompactRequest detects split reactive-compact content blocks', () => {
+        // CC can interleave bookkeeping blocks with its generated prompt.
+        // The detector must not require both anchors in the same text block,
+        // but per-block Tier-2 pairing (anchor + CC marker) is required to
+        // avoid false positives. Block A here matches the Tier-2 pair
+        // "CRITICAL: Respond with TEXT ONLY" + "do NOT call any tools",
+        // which is enough to flip the flag.
+        const r = isCompactRequest(
+            'You are helpful.',
+            [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: 'CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.' },
+                    { type: 'text', text: 'Your task is to create a detailed summary of this conversation.' }
+                ]
+            }]
+        );
+        if (r !== true) throw new Error(`expected true (Tier-2 pair in block A), got ${r}`);
+    });
+    test('isCompactRequest detects single reactive-compact anchor', () => {
+        // Tier-1 anchor pair in one block — canonical /compact prompt.
+        const r = isCompactRequest(
+            'You are helpful.',
+            [{ role: 'user', content: 'CRITICAL: Respond with TEXT ONLY. Your task is to create a detailed summary of this conversation before continuing.' }]
+        );
+        if (r !== true) throw new Error(`expected true (Tier-1 anchor pair), got ${r}`);
+    });
     test('isCompactRequest false for normal query', () => {
         const r = isCompactRequest(
             'normal sys',
             [{ role: 'user', content: 'help me' }]
         );
         if (r !== false) throw new Error(`expected false, got ${r}`);
+    });
+    // CR Round 1 H1 — guards against false positives when a user asks for
+    // a summary without invoking /compact. Single keywords like
+    // "create a detailed summary" alone MUST NOT trigger.
+    test('isCompactRequest false for user asking to summarise, not /compact', () => {
+        const r = isCompactRequest(
+            'You are helpful.',
+            [{ role: 'user', content: 'Please create a detailed summary of this conversation and translate it to Chinese.' }]
+        );
+        if (r !== false) throw new Error(`expected false (no compact signal), got ${r}`);
+    });
+    test('isCompactRequest false for user mentioning "do NOT call any tools" alone', () => {
+        const r = isCompactRequest(
+            'You are helpful.',
+            [{ role: 'user', content: 'In this exercise, do NOT call any tools. Just answer in plain text.' }]
+        );
+        if (r !== false) throw new Error(`expected false (no compact signal), got ${r}`);
     });
 
     // --- Critical regression scenarios ---

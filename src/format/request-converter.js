@@ -26,6 +26,33 @@ export function isCompactRequest(system, messages, req) {
             text.includes('You are a Claude agent, built on Anthropic')
         );
 
+    // Reactive-compact signature — CC v2.1+ autocompact / manual /compact sends
+    // a synthesised summarisation prompt as a user message. Production logs
+    // (Aug 2026) showed the exact two strings we matched on are reliably
+    // present, but the prompt may be split across content blocks or interleaved
+    // with bookkeeping tokens.
+    //
+    // This function is called from checkText() per text/string block, so it
+    // does NOT need to recurse into tool_use / image blocks (those never
+    // contain the prompt). Two match tiers:
+    //   Tier 1 (canonical) — both anchors present in the SAME text block.
+    //   Tier 2 (split) — single canonical anchor + a paired CC-specific
+    //     marker, to avoid false positives on user prompts that happen to
+    //     say "create a detailed summary" without being a /compact request.
+    const matchesReactivePrompt = (text) => {
+        if (typeof text !== 'string') return false;
+        // Normalise to lowercase once — CC's reactive-compact prompt uses
+        // inconsistent casing across versions ("Do NOT" vs "do NOT", "TEXT
+        // ONLY" vs "Text Only"). We must not require exact casing.
+        const lower = text.toLowerCase();
+        const hasCritical = lower.includes('critical: respond with text only');
+        const hasDetailed = lower.includes('create a detailed summary of this conversation');
+        if (hasCritical && hasDetailed) return true;          // Tier 1: canonical pair
+        if (hasCritical && lower.includes('do not call any tools')) return true;  // Tier 2: split
+        if (hasDetailed && lower.includes('<analysis>') && lower.includes('<summary>')) return true; // Tier 2: split
+        return false;
+    };
+
     if (system) {
         const blocks = Array.isArray(system) ? system : [system];
         for (const block of blocks) {
@@ -46,13 +73,7 @@ export function isCompactRequest(system, messages, req) {
                 if (typeof text !== 'string') return false;
                 const t = text.trim();
                 if (t.startsWith('/compact')) return true;
-                // CC v2.1+ reactive-compact prompt signature:
-                // The user message is the auto-generated summarization prompt.
-                if (text.includes('CRITICAL: Respond with TEXT ONLY') &&
-                    text.includes('create a detailed summary of this conversation')) {
-                    return true;
-                }
-                return false;
+                return matchesReactivePrompt(text);
             };
             if (typeof content === 'string') {
                 if (checkText(content)) return true;
@@ -162,7 +183,34 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         : '(empty)';
     const hasCopyrightAnchor = systemStr.includes('do not reproduce any copyrighted material');
     const hasClaudeAgentAnchor = systemStr.includes('You are a Claude agent, built on Anthropic');
-    const hasReactivePromptAnchor = systemStr.includes('CRITICAL: Respond with TEXT ONLY') || systemStr.includes('create a detailed summary of this conversation');
+    // Reactive-compact signature lives in the LAST user message, not the system
+    // prompt. Scan system + all-message text together so the diagnostic
+    // reflects whether EITHER location contains the signature (production
+    // logs previously only scanned systemStr, masking real matches in messages).
+    // IMPORTANT: the extraction must mirror isCompactRequest()'s scan path —
+    // it walks every text block inside `content` arrays (not just the first
+    // one), because CC splits reactive-compact prompts across multiple
+    // text blocks. Mismatch would reproduce the v2.7.19 false-negative bug.
+    const collectMessageText = (m) => {
+        const c = m?.content;
+        if (typeof c === 'string') return c;
+        if (Array.isArray(c)) return c.filter(b => b?.type === 'text').map(b => b.text || '').join(' ');
+        return '';
+    };
+    const allMessagesText = (Array.isArray(messages) ? messages : []).map(collectMessageText).join(' ');
+    const diagScanText = `${systemStr} ${allMessagesText}`;
+    // Same split-pair logic as isCompactRequest's matchesReactivePrompt — see
+    // tier-1/tier-2 doc comment above. Keeping the diagnostic aligned with
+    // the function prevents "log says false, function says true" gaps.
+    const diagLower = diagScanText.toLowerCase();
+    const hasCritical = diagLower.includes('critical: respond with text only');
+    const hasDetailed = diagLower.includes('create a detailed summary of this conversation');
+    const hasReactivePromptAnchor = (hasCritical && hasDetailed) ||
+                                    (hasCritical && diagLower.includes('do not call any tools')) ||
+                                    (hasDetailed && diagLower.includes('<analysis>') && diagLower.includes('<summary>'));
+    // hasCompactedKeyword stays scoped to systemStr only — scanning all
+    // message text would spam DIAG-DUMP for any conversation that ever
+    // mentioned the word "compacted".
     const hasCompactedKeyword = systemStr.includes('compacted') || systemStr.includes('Compacted') || systemStr.includes('compaction');
     // Narrow DIAG-DUMP trigger: only when the request LOOKS like a compact
     // attempt (system contains "compacted"/"compaction", or there is a
