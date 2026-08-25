@@ -273,17 +273,11 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         }
     }
 
-    // Apply thinking recovery for Gemini thinking models when needed
-    // Gemini needs recovery for tool loops/interrupted tools (stripped thinking)
-    let processedMessages = messages;
-
-    if (isGeminiModel && isThinking && needsThinkingRecovery(messages)) {
-        logger.debug('[RequestConverter] Applying thinking recovery for Gemini');
-        processedMessages = closeToolLoopForThinking(messages, 'gemini');
-    }
-
     // For Claude: apply recovery for cross-model (Gemini→Claude) or unsigned thinking blocks
-    // Unsigned thinking blocks occur when Claude Code strips signatures it doesn't understand
+    // Unsigned thinking blocks occur when Claude Code strips signatures it doesn't understand.
+    // Note: Gemini models do NOT need closeToolLoopForThinking in tool loops because content-converter
+    // automatically restores thoughtSignatures from cache or falls back to GEMINI_SKIP_SIGNATURE.
+    let processedMessages = messages;
     const needsClaudeRecovery = hasGeminiHistory(messages) || hasUnsignedThinkingBlocks(messages);
     if (isClaudeModel && isThinking && needsClaudeRecovery && needsThinkingRecovery(messages)) {
         logger.debug('[RequestConverter] Applying thinking recovery for Claude');
