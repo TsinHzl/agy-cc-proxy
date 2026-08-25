@@ -1,0 +1,23 @@
+src/format/request-converter.js
+  dfe8c85cd02df2e4 277-280
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "b6d9238bc8e7c5462b7a81b8599849534e16eacb",
+  "prompts": {
+    "dfe8c85cd02df2e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea74fd13-b4d4-4284-85c3-ae6bfbc012e1",
+        "model": "gemini-3.7-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 10,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
