@@ -46,10 +46,13 @@ export function isCompactRequest(system, messages, req) {
         // ONLY" vs "Text Only"). We must not require exact casing.
         const lower = text.toLowerCase();
         const hasCritical = lower.includes('critical: respond with text only');
-        const hasDetailed = lower.includes('create a detailed summary of this conversation');
+        const hasDetailed = lower.includes('create a detailed summary of this conversation') ||
+                            lower.includes('create a detailed summary of the conversation') ||
+                            (lower.includes('create a detailed summary') && lower.includes('conversation'));
         if (hasCritical && hasDetailed) return true;          // Tier 1: canonical pair
-        if (hasCritical && lower.includes('do not call any tools')) return true;  // Tier 2: split
+        if (hasCritical && (lower.includes('do not call any tools') || lower.includes('tool calls will be rejected') || lower.includes('plain text'))) return true;  // Tier 2: split
         if (hasDetailed && lower.includes('<analysis>') && lower.includes('<summary>')) return true; // Tier 2: split
+        if (hasDetailed && lower.includes('do not call any tools')) return true; // Tier 2: split
         return false;
     };
 
@@ -259,7 +262,7 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     }
 
     // Add interleaved thinking hint for Claude thinking models with tools
-    if (isClaudeModel && isThinking && tools && tools.length > 0) {
+    if (!isCompact && isClaudeModel && isThinking && tools && tools.length > 0) {
         const hint = 'Interleaved thinking is enabled. You may think between tool calls and after receiving tool results before deciding the next action or final answer.';
         if (!googleRequest.systemInstruction) {
             googleRequest.systemInstruction = { parts: [{ text: hint }] };
@@ -409,8 +412,10 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         }
     }
 
-    // Convert tools to Google format
-    if (tools && tools.length > 0) {
+    // Convert tools to Google format (skip for /compact requests to force text summary)
+    // Claude Code's compaction explicitly requires TEXT ONLY without tool calls.
+    // Stripping tools prevents the model from emitting tool_use during compaction.
+    if (!isCompact && tools && tools.length > 0) {
         const functionDeclarations = tools.map((tool, idx) => {
             // Extract name from various possible locations
             const name = tool.name || tool.function?.name || tool.custom?.name || `tool-${idx}`;
@@ -454,6 +459,8 @@ export function convertAnthropicToGoogle(anthropicRequest) {
                 }
             };
         }
+    } else if (isCompact && tools && tools.length > 0) {
+        logger.debug(`[RequestConverter] Stripping ${tools.length} tool(s) for /compact request to force text summary`);
     }
 
     // Cap max tokens for Gemini models

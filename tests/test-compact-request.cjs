@@ -236,6 +236,27 @@ async function main() {
 
     // --- Non-compact path must be untouched ---
 
+    test('/compact request strips tools and toolConfig', () => {
+        const req = compactRequest('gemini-3.7-flash-tiered', 16000);
+        req.tools = [{ name: 'Read', description: 'Read file', input_schema: { type: 'object' } }];
+        const r = convertAnthropicToGoogle(req);
+        if (r.tools !== undefined) {
+            throw new Error(`expected tools to be undefined, got: ${JSON.stringify(r.tools)}`);
+        }
+        if (r.toolConfig !== undefined) {
+            throw new Error(`expected toolConfig to be undefined, got: ${JSON.stringify(r.toolConfig)}`);
+        }
+    });
+
+    test('Non-compact request preserves tools', () => {
+        const req = normalRequest('gemini-3.7-flash-tiered', 16000);
+        req.tools = [{ name: 'Read', description: 'Read file', input_schema: { type: 'object' } }];
+        const r = convertAnthropicToGoogle(req);
+        if (!r.tools || r.tools.length === 0) {
+            throw new Error('expected tools to be preserved for normal request');
+        }
+    });
+
     test('Non-compact Gemini request: maxOutputTokens = user-provided value', () => {
         const r = convertAnthropicToGoogle(normalRequest('gemini-3.7-flash-tiered', 16000, 8192));
         if (r.generationConfig.maxOutputTokens !== 8192) {
