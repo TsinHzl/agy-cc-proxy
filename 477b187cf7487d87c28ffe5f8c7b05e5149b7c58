@@ -1,0 +1,25 @@
+tests/test-compact-request.cjs
+  5b5049a9ad750fcd 237-250,274-290
+src/format/request-converter.js
+  5b5049a9ad750fcd 68-70,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "477b187cf7487d87c28ffe5f8c7b05e5149b7c58",
+  "prompts": {
+    "5b5049a9ad750fcd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa11ddc9-74de-4ef2-b057-28ad9634b1b4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 41,
+      "total_deletions": 10,
+      "accepted_lines": 37,
+      "overriden_lines": 0
+    }
+  }
+}
