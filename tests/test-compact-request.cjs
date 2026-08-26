@@ -234,6 +234,20 @@ async function main() {
         }
     });
 
+    test('Reactive-compact detects a prompt followed by user bookkeeping', () => {
+        const req = reactiveCompactRequest('gemini-3.7-flash-tiered', 16000);
+        req.tools = [{ name: 'Read', description: 'Read file', input_schema: { type: 'object' } }];
+        req.messages.push({ role: 'user', content: '<total_tokens>200000</total_tokens>' });
+
+        const r = convertAnthropicToGoogle(req);
+        if (r.tools !== undefined) {
+            throw new Error(`expected compact request to strip tools, got: ${JSON.stringify(r.tools)}`);
+        }
+        if (r.generationConfig.maxOutputTokens !== 32384) {
+            throw new Error(`maxOutputTokens wrong: ${r.generationConfig.maxOutputTokens} (want 32384)`);
+        }
+    });
+
     // --- Non-compact path must be untouched ---
 
     test('/compact request strips tools and toolConfig', () => {
@@ -254,6 +268,23 @@ async function main() {
         const r = convertAnthropicToGoogle(req);
         if (!r.tools || r.tools.length === 0) {
             throw new Error('expected tools to be preserved for normal request');
+        }
+    });
+
+    test('Reactive compact history does not strip tools from the next normal request', () => {
+        const req = normalRequest('gemini-3.7-flash-tiered', 16000);
+        req.tools = [{ name: 'Read', description: 'Read file', input_schema: { type: 'object' } }];
+        req.messages = [
+            { role: 'user', content: 'Inspect the project configuration.' },
+            { role: 'assistant', content: 'I will inspect it.' },
+            { role: 'user', content: CC_REACTIVE_COMPACT_PROMPT },
+            { role: 'assistant', content: '<analysis>Conversation compacted.</analysis><summary>Prior context.</summary>' },
+            { role: 'user', content: 'Now read package.json and report the scripts.' }
+        ];
+
+        const r = convertAnthropicToGoogle(req);
+        if (r.tools?.[0]?.functionDeclarations?.[0]?.name !== 'Read') {
+            throw new Error(`expected next normal request to preserve Read tool, got: ${JSON.stringify(r.tools)}`);
         }
     });
 

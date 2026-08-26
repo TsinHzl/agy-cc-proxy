@@ -65,12 +65,12 @@ export function isCompactRequest(system, messages, req) {
     }
 
     if (Array.isArray(messages)) {
-        // Search the full message history, not just the last 3 — CC may inject
-        // a trailing token-count label (`<total_tokens>...`) after the compact
-        // prompt, pushing the actual prompt out of the last-3 window.
+        // Only the current user turn can request compaction. Permit Claude Code's
+        // trailing token-count bookkeeping, but stop at an assistant response so
+        // a completed /compact prompt cannot classify later turns as compact.
         for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i];
-            if (msg?.role !== 'user') continue;
+            if (msg?.role !== 'user') break;
             const content = msg.content;
             const checkText = (text) => {
                 if (typeof text !== 'string') return false;
