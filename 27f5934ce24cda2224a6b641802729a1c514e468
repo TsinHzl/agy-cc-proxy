@@ -1,0 +1,37 @@
+CLAUDE.md
+  a999a55a7c7def42 33,35-40,56-57,59,80
+  578646d89320af0e 7,9,15-21,24,26-30,42,44-55,64-79,81-94,97-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "27f5934ce24cda2224a6b641802729a1c514e468",
+  "prompts": {
+    "578646d89320af0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b46eaf22-9369-425e-b0d3-449738d7b3cf",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 79,
+      "total_deletions": 56,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    },
+    "a999a55a7c7def42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30c0e333-957f-4a7b-8648-6084d5686754",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 7,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    }
+  }
+}
