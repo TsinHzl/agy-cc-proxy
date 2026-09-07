@@ -1,0 +1,25 @@
+src/format/schema-sanitizer.js
+  6e520368cc6c8812 672-686
+tests/test-schema-sanitizer.cjs
+  6e520368cc6c8812 257-310
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "dff50b2cf3382efb1e948ba0f432635430f82368",
+  "prompts": {
+    "6e520368cc6c8812": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1f84b09-fab9-4123-888c-8456c3b73b5a",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 79,
+      "total_deletions": 10,
+      "accepted_lines": 69,
+      "overriden_lines": 0
+    }
+  }
+}
