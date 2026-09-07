@@ -684,5 +684,25 @@ export function cleanSchema(schema) {
         result.required = ['reason'];
     }
 
+    // Phase 6b: Google proto validation likewise requires ARRAY schemas to declare `items`.
+    // { type: ['array','null'] } with no items produces bare { type: 'ARRAY' }, triggering
+    // upstream 400 "...properties[query].properties[where]***.items: missing field".
+    // Boolean form (JSON Schema draft 2020-12) and tuple form are also unsupported by Google.
+    // Note: Phase 5 already uppercased type, so only 'ARRAY' is reachable here.
+    if (result.type === 'ARRAY' &&
+        (!result.items || typeof result.items === 'boolean')) {
+        result.items = {
+            type: 'STRING',
+            description: 'Array item (original schema did not specify item type)'
+        };
+    } else if (result.type === 'ARRAY' && Array.isArray(result.items)) {
+        // Tuple form not supported by Google - collapse to the first schema.
+        // Elements were already recursively cleaned in Phase 4, so no re-clean here
+        // (a second cleanSchema pass would duplicate enum hints in descriptions).
+        result.items = result.items.length > 0
+            ? result.items[0]
+            : { type: 'STRING', description: 'Array item (original schema did not specify item type)' };
+    }
+
     return result;
 }

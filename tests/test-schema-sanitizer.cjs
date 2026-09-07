@@ -308,6 +308,57 @@ async function runTests() {
         assertEqual(result.required, ['a']);
     });
 
+    // Test 15: Regression — nested nullable array without items (screenshot error path:
+    // ".tools[0].function_declarations[1].***.properties[query].properties[where].***.items: missing field")
+    test('Nested nullable array without items gets items placeholder', () => {
+        const schema = {
+            type: 'object',
+            properties: {
+                query: {
+                    type: 'object',
+                    properties: {
+                        where: { type: ['array', 'null'], description: 'filter conditions' }
+                    }
+                }
+            }
+        };
+
+        const result = cleanSchema(sanitizeSchema(schema));
+
+        const where = result.properties.query.properties.where;
+        assertEqual(where.type, 'ARRAY');
+        if (!where.items || typeof where.items !== 'object') {
+            throw new Error('ARRAY without items triggers "items: missing field" 400');
+        }
+        assertEqual(where.items.type, 'STRING');
+    });
+
+    // Test 16: Bare array without items gets items placeholder
+    test('Bare array gets items placeholder', () => {
+        const result = cleanSchema(sanitizeSchema({ type: 'array' }));
+
+        assertEqual(result.type, 'ARRAY');
+        assertEqual(result.items.type, 'STRING');
+    });
+
+    // Test 17: Boolean items form (JSON Schema draft 2020-12) gets items placeholder
+    test('Boolean items gets items placeholder', () => {
+        const result = cleanSchema(sanitizeSchema({ type: 'array', items: true }));
+
+        assertEqual(result.type, 'ARRAY');
+        assertEqual(result.items.type, 'STRING');
+    });
+
+    // Test 18: Tuple items form collapses to first schema
+    test('Tuple items collapses to first schema', () => {
+        const schema = { type: 'array', items: [{ type: 'string' }, { type: 'number' }] };
+
+        const result = cleanSchema(sanitizeSchema(schema));
+
+        assertEqual(result.type, 'ARRAY');
+        assertEqual(result.items.type, 'STRING');
+    });
+
     // Summary
     console.log('\n' + '═'.repeat(60));
     console.log(`Tests completed: ${passed} passed, ${failed} failed`);
