@@ -254,6 +254,60 @@ async function runTests() {
         assertEqual(result.properties.todoList.items.properties.status.type, 'STRING');
     });
 
+    // Test 11: Object|null type arrays must not produce bare OBJECT without properties
+    // Regression: upstream 400 INVALID_ARGUMENT ".tools[0].function_declarations[N]..properties| missing field"
+    test('Object-null type array gets properties placeholder', () => {
+        const schema = { type: ['object', 'null'], description: 'maybe object' };
+
+        const result = cleanSchema(sanitizeSchema(schema));
+
+        assertEqual(result.type, 'OBJECT');
+        assertEqual(result.properties.reason.type, 'STRING');
+        assertEqual(result.required, ['reason']);
+    });
+
+    // Test 12: Multi-type including object gets properties placeholder
+    test('Object-string type array gets properties placeholder', () => {
+        const schema = { type: ['object', 'string'] };
+
+        const result = cleanSchema(sanitizeSchema(schema));
+
+        assertEqual(result.type, 'OBJECT');
+        assertEqual(result.properties.reason.type, 'STRING');
+        assertEqual(result.required, ['reason']);
+    });
+
+    // Test 13: Nested bare OBJECT inside items gets properties placeholder too
+    test('Nested bare OBJECT inside array items gets properties placeholder', () => {
+        const schema = {
+            type: 'array',
+            items: { type: ['object', 'null'] }
+        };
+
+        const result = cleanSchema(sanitizeSchema(schema));
+
+        assertEqual(result.type, 'ARRAY');
+        assertEqual(result.items.type, 'OBJECT');
+        assertEqual(result.items.properties.reason.type, 'STRING');
+    });
+
+    // Test 14: Guard — schemas with real properties must not be overwritten by the placeholder
+    test('Existing properties are preserved untouched', () => {
+        const schema = {
+            type: 'object',
+            properties: {
+                a: { type: 'string' },
+                b: { type: 'number' }
+            },
+            required: ['a']
+        };
+
+        const result = cleanSchema(sanitizeSchema(schema));
+
+        assertEqual(Object.keys(result.properties), ['a', 'b']);
+        assertEqual(result.required, ['a']);
+    });
+
     // Summary
     console.log('\n' + '═'.repeat(60));
     console.log(`Tests completed: ${passed} passed, ${failed} failed`);

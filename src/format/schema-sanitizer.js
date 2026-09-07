@@ -669,5 +669,20 @@ export function cleanSchema(schema) {
         result.type = toGoogleType(result.type);
     }
 
+    // Phase 6: Google proto validation requires OBJECT schemas to declare `properties`.
+    // Schemas like { type: ['object','null'] } or anyOf-flattened objects can end up
+    // as bare { type: 'OBJECT' }, which triggers upstream 400
+    // ".tools[0].function_declarations[N]..properties| missing field" (INVALID_ARGUMENT).
+    if ((result.type === 'OBJECT' || result.type === 'object') &&
+        (!result.properties || Object.keys(result.properties).length === 0)) {
+        result.properties = {
+            reason: {
+                type: 'STRING',
+                description: 'Reason for calling this tool'
+            }
+        };
+        result.required = ['reason'];
+    }
+
     return result;
 }
