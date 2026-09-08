@@ -44,7 +44,7 @@
         <!-- Account Select -->
         <div class="relative min-w-[180px]">
             <select
-                class="h-[31px] w-full cursor-pointer appearance-none truncate rounded-[7px] border border-hairline bg-surface pl-3 pr-8 text-[12px] font-medium text-ink-2 transition-colors hover:border-hairline-2 focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand-soft"
+                class="h-[31px] w-full cursor-pointer appearance-none truncate rounded-[7px] border border-hairline bg-surface pl-3 pr-8 text-[12px] leading-none font-medium text-ink-2 transition-colors hover:border-hairline-2 focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand-soft"
                 style="-webkit-appearance: none; -moz-appearance: none; background-image: none;"
                 x-model="$store.data.filters.account" @change="$store.data.computeQuotaRows()">
                 <option value="all" x-text="$store.global.t('allAccounts')">All Accounts</option>

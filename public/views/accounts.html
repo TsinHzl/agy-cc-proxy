@@ -131,7 +131,8 @@
                     <tr class="group hover:bg-surface-2 [&>td]:border-b [&>td]:border-hairline [&:last-child>td]:border-b-0"
                         :class="{ '[&>td:not(:last-child)]:opacity-[.55]': acc.enabled === false }">
                         <td class="border-b border-hairline px-3 py-[11px] align-middle">
-                            <label class="relative inline-flex h-[18px] w-8 shrink-0 cursor-pointer items-center rounded-[10px] bg-track transition-colors peer-checked:bg-brand has-[:peer-checked]:bg-brand">
+                            <label class="relative inline-flex h-[18px] w-8 shrink-0 cursor-pointer items-center rounded-[10px] transition-colors"
+                                :class="acc.enabled !== false ? 'bg-brand' : 'bg-track'">
                                 <input type="checkbox" class="sr-only peer"
                                     :checked="acc.enabled !== false"
                                     @change="toggleAccount(acc.email, $el.checked)">
