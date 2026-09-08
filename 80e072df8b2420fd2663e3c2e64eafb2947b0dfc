@@ -1,0 +1,25 @@
+public/views/accounts.html
+  2a2097225f0e55b5 134-135
+public/views/models.html
+  2a2097225f0e55b5 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "80e072df8b2420fd2663e3c2e64eafb2947b0dfc",
+  "prompts": {
+    "2a2097225f0e55b5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "db9aa92a-1d40-45d6-bab5-742e7baab391",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 2,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
