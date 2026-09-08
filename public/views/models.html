@@ -241,9 +241,8 @@
                                 </div>
                                 <div class="relative">
                                     <div class="quota-bar"
-                                         :class="$store.settings.compact ? '' : 'h-1.5'">
+                                         :class="($store.settings.compact ? '' : 'h-1.5') + (row.avgQuota > 60 ? ' quota-tier-safe' : (row.avgQuota > 30 ? ' quota-tier-mod' : (row.avgQuota > 15 ? ' quota-tier-warn' : ' quota-tier-danger')))">
                                         <div class="transition-all duration-500"
-                                             :class="row.avgQuota > 60 ? 'quota-tier-safe' : (row.avgQuota > 30 ? 'quota-tier-mod' : (row.avgQuota > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
                                              :style="'width: ' + (row.avgQuota ?? 0) + '%'"></div>
                                     </div>
                                     <!-- Per-account draggable quota threshold markers -->
@@ -278,9 +277,9 @@
                                         <div class="flex items-center gap-2">
                                             <span class="w-20 flex-shrink-0 truncate text-right font-mono text-[10px] text-ink-3"
                                                   x-text="Redact.email(q.email)"></span>
-                                            <div class="quota-bar flex-1">
+                                            <div class="quota-bar flex-1"
+                                                 :class="q.pct > 60 ? 'quota-tier-safe' : (q.pct > 30 ? 'quota-tier-mod' : (q.pct > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))">
                                                 <div class="transition-all duration-500"
-                                                     :class="q.pct > 60 ? 'quota-tier-safe' : (q.pct > 30 ? 'quota-tier-mod' : (q.pct > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
                                                      :style="'width: ' + q.pct + '%'"></div>
                                             </div>
                                             <span class="w-8 flex-shrink-0 text-right font-mono text-[10px] tabular-nums"
@@ -481,9 +480,8 @@
                                         </div>
                                         <div class="relative">
                                             <div class="quota-bar"
-                                                 :class="$store.settings.compact ? '' : 'h-1.5'">
+                                                 :class="($store.settings.compact ? '' : 'h-1.5') + (row.avgQuota > 60 ? ' quota-tier-safe' : (row.avgQuota > 30 ? ' quota-tier-mod' : (row.avgQuota > 15 ? ' quota-tier-warn' : ' quota-tier-danger')))">
                                                 <div class="transition-all duration-500"
-                                                     :class="row.avgQuota > 60 ? 'quota-tier-safe' : (row.avgQuota > 30 ? 'quota-tier-mod' : (row.avgQuota > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
                                                      :style="'width: ' + (row.avgQuota ?? 0) + '%'"></div>
                                             </div>
                                             <!-- Per-account draggable quota threshold markers -->
@@ -518,9 +516,9 @@
                                                 <div class="flex items-center gap-2">
                                                     <span class="w-20 flex-shrink-0 truncate text-right font-mono text-[10px] text-ink-3"
                                                           x-text="Redact.email(q.email)"></span>
-                                                    <div class="quota-bar flex-1">
+                                                    <div class="quota-bar flex-1"
+                                                         :class="q.pct > 60 ? 'quota-tier-safe' : (q.pct > 30 ? 'quota-tier-mod' : (q.pct > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))">
                                                         <div class="transition-all duration-500"
-                                                             :class="q.pct > 60 ? 'quota-tier-safe' : (q.pct > 30 ? 'quota-tier-mod' : (q.pct > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
                                                              :style="'width: ' + q.pct + '%'"></div>
                                                     </div>
                                                     <span class="w-8 flex-shrink-0 text-right font-mono text-[10px] tabular-nums"
