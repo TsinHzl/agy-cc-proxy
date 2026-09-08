@@ -6,16 +6,16 @@
 window.Components = window.Components || {};
 
 window.Components.models = () => ({
-    // Color palette for per-account threshold markers
+    // Color palette for per-account threshold markers (new semantic tokens)
     thresholdColors: [
-        { bg: '#eab308', shadow: 'rgba(234,179,8,0.5)' },    // yellow
-        { bg: '#06b6d4', shadow: 'rgba(6,182,212,0.5)' },     // cyan
-        { bg: '#a855f7', shadow: 'rgba(168,85,247,0.5)' },    // purple
-        { bg: '#22c55e', shadow: 'rgba(34,197,94,0.5)' },     // green
-        { bg: '#ef4444', shadow: 'rgba(239,68,68,0.5)' },     // red
-        { bg: '#f97316', shadow: 'rgba(249,115,22,0.5)' },    // orange
-        { bg: '#ec4899', shadow: 'rgba(236,72,153,0.5)' },    // pink
-        { bg: '#8b5cf6', shadow: 'rgba(139,92,246,0.5)' },    // violet
+        { bg: '#9A6300', shadow: 'rgba(154,99,0,0.5)' },      // warn
+        { bg: '#0284c7', shadow: 'rgba(2,132,199,0.5)' },     // mod (chart-14)
+        { bg: '#0D7A6F', shadow: 'rgba(13,122,111,0.5)' },    // brand
+        { bg: '#137A4C', shadow: 'rgba(19,122,76,0.5)' },     // ok
+        { bg: '#BB3538', shadow: 'rgba(187,53,56,0.5)' },     // danger
+        { bg: '#d97706', shadow: 'rgba(217,119,6,0.5)' },     // amber (chart-12)
+        { bg: '#6366f1', shadow: 'rgba(99,102,241,0.5)' },    // indigo (chart-13)
+        { bg: '#818cf8', shadow: 'rgba(129,140,248,0.5)' },   // soft indigo (chart-13 dark)
     ],
 
     getThresholdColor(index) {

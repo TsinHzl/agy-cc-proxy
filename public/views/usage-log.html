@@ -1,109 +1,197 @@
-<div x-data="usageLogViewer" class="view-container h-full flex flex-col">
-    <div class="view-card !p-0 flex flex-col flex-1 min-h-0">
-        <!-- Toolbar -->
-        <div class="bg-space-900 flex flex-wrap gap-y-2 justify-between items-center p-2 px-4 border-b border-space-border select-none min-h-[48px] shrink-0">
-            <!-- Left: Decor & Title -->
-            <div class="flex items-center gap-3 shrink-0">
-                <div class="flex gap-2">
-                    <div class="w-3 h-3 rounded-full bg-red-500 border border-red-600"></div>
-                    <div class="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-green-500 border border-green-600"></div>
-                </div>
-                <span class="text-xs font-mono text-gray-300 hidden sm:inline-block">~/usage-log</span>
+<div x-data="usageLogViewer" class="view-container">
+    <!-- PageHead（kiro2cc PageHead 规格） -->
+    <div class="mb-5 flex flex-wrap items-end gap-4">
+        <div class="min-w-0">
+            <div class="mb-[5px] text-[11px] tracking-[.02em] text-ink-3">
+                <span x-text="$store.global.t('systemDesc')">CLAUDE PROXY SYSTEM</span>&nbsp;/&nbsp;<b
+                    class="font-medium text-ink-2" aria-hidden="true" x-text="$store.global.t('usageLog')">Usage
+                    Log</b>
             </div>
-
-            <!-- Right: Stats & Controls -->
-            <div class="flex items-center gap-4 shrink-0">
-                <div class="text-[10px] font-mono text-gray-400">
-                    <div class="flex gap-4 items-center">
-                        <span x-text="$store.global.t('totalRecords', { count: records.length })"></span>
-                        <div class="h-3 w-px bg-space-border/50 hidden sm:block"></div>
-                        <span class="text-neon-green" x-text="'Total Credits: ' + totalCredits.toFixed(4)"></span>
-                    </div>
-                </div>
-                <button class="btn-action-ghost-square" @click="copyAll" :title="copied ? $store.global.t('copied') : $store.global.t('copyAll')" :disabled="records.length === 0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            :d="copied ? 'M5 13l4 4L19 7' : 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z'" />
-                    </svg>
-                </button>
-                <button class="btn-action-ghost-square" @click="refreshData" :title="$store.global.t('refreshData')" :disabled="loading">
-                    <svg class="w-4 h-4" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                </button>
-            </div>
+            <h1 class="text-[19px] font-semibold leading-[1.2] tracking-[-.02em]" x-text="$store.global.t('usageLog')">
+                Usage Log
+            </h1>
         </div>
 
-        <!-- Usage Log Table -->
-        <div class="flex-1 overflow-auto bg-space-950 custom-scrollbar">
-            <table class="w-full text-[11px] font-mono">
-                <thead class="sticky top-0 z-10">
-                    <tr class="bg-space-900 text-gray-300 uppercase tracking-wider text-[10px]">
-                        <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('time')">时间</th>
-                        <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('model')">模型</th>
-                        <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('apiKey')">API 密钥</th>
-                        <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('modelUsage')">模型用量</th>
-                        <th class="px-3 py-2 text-left font-medium whitespace-nowrap" x-text="$store.global.t('requestLatency')">请求耗时</th>
-                        <th class="px-3 py-2 text-right font-medium whitespace-nowrap" x-text="$store.global.t('cost')">消费金额</th>
+        <!-- Search Box（kiro2cc SearchBox 规格：h-31px + rounded-[7px] + brand focus） -->
+        <div class="relative ml-auto w-[236px]">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="h-3.5 w-3.5 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <input type="text"
+                :placeholder="$store.global.t('searchPlaceholder')"
+                :aria-label="$store.global.t('searchPlaceholder')"
+                class="input-search-sm pr-9"
+                x-model="search">
+            <button x-show="search"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-75"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    @click="search = ''"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-3 transition-colors hover:text-ink"
+                    :aria-label="$store.global.t('searchPlaceholder')">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Panel Title（kiro2cc PANEL_TITLE 规格） -->
+    <h3 class="mb-[7px] text-[10.5px] font-semibold uppercase tracking-[.07em] text-ink-3"
+        x-text="$store.global.t('usageLog')">Usage Log</h3>
+
+    <!-- Main Table（kiro2cc table-kit PANEL 规格） -->
+    <section class="flex min-h-0 flex-col overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
+        <div class="max-h-[70vh] min-h-0 overflow-y-auto">
+            <table class="w-full border-collapse text-[12.5px]">
+                <thead>
+                    <tr>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('time')">Time</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('model')">Model</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('apiKey')">API Key</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('modelUsage')">Model Usage</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('requestLatency')">Latency</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-right text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('cost')">Cost</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <template x-if="records.length === 0 && !loading">
-                        <tr>
-                            <td colspan="6" class="text-center py-16 text-gray-400 italic">
-                                <span x-text="$store.global.t('noUsageRecords')">暂无使用记录</span>
-                            </td>
-                        </tr>
-                    </template>
+                <tbody class="[&>tr:last-child>td]:border-b-0">
+                    <!-- Loading（kiro2cc 空态规格） -->
                     <template x-if="loading && records.length === 0">
                         <tr>
-                            <td colspan="6" class="text-center py-16">
-                                <span class="loading loading-spinner loading-sm text-neon-purple"></span>
+                            <td colspan="6" class="px-3 py-14">
+                                <div class="flex flex-col items-center gap-2.5 text-ink-3">
+                                    <svg class="size-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="3" stroke="currentColor" fill="none"></circle>
+                                        <path class="opacity-75" d="M12 2a10 10 0 0110 10" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round"></path>
+                                    </svg>
+                                    <span class="text-[12.5px]"
+                                        x-text="$store.global.t('establishingUplink')">ESTABLISHING UPLINK...</span>
+                                </div>
                             </td>
                         </tr>
                     </template>
-                    <template x-for="(rec, idx) in records" :key="idx">
-                        <tr class="border-b border-space-border/30 hover:bg-white/[0.02] transition-colors group">
+                    <!-- Empty State（kiro2cc 空态规格；区分「无记录」与「搜索无命中」） -->
+                    <template x-if="!loading && records.length > 0 && filteredRecords.length === 0">
+                        <tr>
+                            <td colspan="6" class="px-3 py-14">
+                                <div class="flex flex-col items-center gap-2.5 text-ink-3">
+                                    <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <span class="text-[12.5px] font-medium text-ink-2"
+                                        x-text="$store.global.t('noMatchingModels')">No matching models</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- Empty State（无任何记录） -->
+                    <template x-if="!loading && records.length === 0">
+                        <tr>
+                            <td colspan="6" class="px-3 py-14">
+                                <div class="flex flex-col items-center gap-2.5 text-ink-3">
+                                    <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="text-[12.5px] font-medium text-ink-2"
+                                        x-text="$store.global.t('noUsageRecords')">No usage records</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- Data Rows -->
+                    <template x-for="rec in filteredRecords" :key="rec.timestamp + '|' + (rec.model || '')">
+                        <tr class="transition-colors hover:bg-surface-2">
                             <!-- Time -->
-                            <td class="px-3 py-2 text-gray-300 whitespace-nowrap" x-text="formatTime(rec.timestamp)"></td>
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] align-middle text-[11.5px] text-ink-2"
+                                x-text="formatTime(rec.timestamp)"></td>
 
                             <!-- Model -->
-                            <td class="px-3 py-2 whitespace-nowrap">
-                                <span class="text-neon-purple" x-text="rec.model"></span>
-                                <span class="text-gray-400 ml-1" x-show="rec.streaming"
+                            <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                                <span class="font-mono text-[11.5px] text-brand" x-text="rec.model"></span>
+                                <span class="ml-1 text-[11px] text-ink-3" x-show="rec.streaming"
                                     x-text="'(' + $store.global.t('streaming') + ')'"></span>
                             </td>
 
                             <!-- API Key -->
-                            <td class="px-3 py-2">
-                                <div class="text-gray-300 text-[10px]" x-text="$store.global.t('defaultKey')">默认密钥</div>
-                                <div class="text-gray-300" x-text="rec.apiKey"></div>
+                            <td class="max-w-[132px] border-b border-hairline px-3 py-[11px] align-middle">
+                                <div class="truncate text-[11.5px] text-ink-2" :title="rec.apiKey"
+                                    x-text="rec.apiKey"></div>
+                                <div class="text-[10.5px] text-ink-3" x-text="$store.global.t('defaultKey')">默认密钥</div>
                             </td>
 
                             <!-- Model Usage -->
-                            <td class="px-3 py-2">
-                                <div class="text-gray-400" x-text="formatTokens('input', rec.inputTokens)"></div>
-                                <div class="text-gray-400" x-text="formatTokens('output', rec.outputTokens)"></div>
-                                <div class="text-gray-300" x-text="formatTokens('cache', rec.cacheReadTokens)"></div>
-                                <div class="text-gray-300 font-bold pt-0.5" x-text="formatTokens('total', rec.totalTokens)"></div>
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] align-middle text-[11px] text-ink-2">
+                                <div class="flex flex-col gap-px">
+                                    <span>
+                                        <span x-text="formatTokens('input', rec.inputTokens)"></span>
+                                    </span>
+                                    <span>
+                                        <span x-text="formatTokens('output', rec.outputTokens)"></span>
+                                    </span>
+                                    <span class="text-ok">
+                                        <span x-text="formatTokens('cache', rec.cacheReadTokens)"></span>
+                                    </span>
+                                    <span class="font-medium text-ink">
+                                        <span x-text="formatTokens('total', rec.totalTokens)"></span>
+                                    </span>
+                                </div>
                             </td>
 
                             <!-- Latency -->
-                            <td class="px-3 py-2 text-gray-400 whitespace-nowrap">
-                                <div x-text="formatDuration(rec.totalDuration)"></div>
-                                <div class="text-gray-300" x-show="rec.timeToFirstToken != null"
-                                    x-text="formatFirstToken(rec.timeToFirstToken)"></div>
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] align-middle text-[11.5px] text-ink-2">
+                                <div class="flex flex-col gap-px">
+                                    <span class="font-mono tabular-nums" x-text="formatDuration(rec.totalDuration)"></span>
+                                    <span class="text-[11px] text-ink-3" x-show="rec.timeToFirstToken != null"
+                                        x-text="formatFirstToken(rec.timeToFirstToken)"></span>
+                                </div>
                             </td>
 
                             <!-- Credits -->
-                            <td class="px-3 py-2 text-right whitespace-nowrap">
-                                <span class="text-neon-green" x-text="formatCredits(rec.credits)"></span>
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] text-right align-middle font-mono text-[12px] font-medium tabular-nums text-brand">
+                                <span x-text="formatCredits(rec.credits)"></span>
                             </td>
                         </tr>
                     </template>
                 </tbody>
             </table>
         </div>
-    </div>
+
+        <!-- Panel Foot（kiro2cc PANEL_FOOT 规格） -->
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-hairline bg-surface-2 px-[13px] py-[9px] text-[11.5px] text-ink-3">
+            <span x-text="$store.global.t('totalRecords', { count: filteredRecords.length })">0 records</span>
+            <span class="h-3 w-px bg-hairline-2"></span>
+            <span class="font-medium text-brand" x-text="'Total Credits: ' + filteredCredits.toFixed(4)"></span>
+
+            <!-- UpdatedAgo（kiro2cc UpdatedAgo 规格：ml-auto 相对时间小字，agoTick 心跳驱动重渲染） -->
+            <span class="ml-auto shrink-0 text-[11px] text-ink-3" x-show="lastUpdated > 0"
+                x-text="$store.global.t('updatedAgo', { time: formatAgo(lastUpdated) })"></span>
+
+            <div class="flex shrink-0 items-center gap-1">
+                <button type="button" class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    @click="copyAll" :title="copied ? $store.global.t('copied') : $store.global.t('copyAll')" :disabled="filteredRecords.length === 0">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            :d="copied ? 'M5 13l4 4L19 7' : 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z'" />
+                    </svg>
+                </button>
+                <button type="button" class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    @click="refreshData" :title="$store.global.t('refreshData')" :disabled="loading">
+                    <svg class="h-3.5 w-3.5" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </section>
 </div>

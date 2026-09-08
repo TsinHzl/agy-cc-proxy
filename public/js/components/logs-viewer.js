@@ -161,6 +161,19 @@ window.Components.logsViewer = () => ({
         this._pendingLogs = [];
     },
 
+    // Segmented 单选映射（kiro2cc SEG_LEVELS 口径）：ALL = 四档全开；单档 = 该档独开。
+    // DEBUG 不进 Segmented，仍由 settings.debugLogging 联动。
+    setLevel(level) {
+        this.filters.INFO = level === 'INFO';
+        this.filters.SUCCESS = level === 'SUCCESS';
+        this.filters.WARN = level === 'WARN';
+        this.filters.ERROR = level === 'ERROR';
+    },
+
+    isLevelAll() {
+        return this.filters.INFO && this.filters.SUCCESS && this.filters.WARN && this.filters.ERROR;
+    },
+
     exportLogs() {
         if (this.logs.length === 0) return;
 

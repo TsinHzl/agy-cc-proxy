@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="antigravity" class="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -12,12 +12,14 @@
     <!-- Alpine.js must be deferred so stores register their listeners first -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    <!-- Self-hosted IBM Plex fonts (kiro2cc admin-ui parity) -->
+    <link rel="stylesheet" href="fonts.css">
     <!-- Compiled Tailwind CSS (includes DaisyUI) -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body
-    class="bg-space-950 text-gray-300 font-sans antialiased min-h-screen overflow-hidden selection:bg-neon-purple selection:text-white"
+    class="bg-background text-ink font-sans antialiased min-h-screen overflow-hidden selection:bg-brand-soft selection:text-brand"
     x-cloak x-data="app" x-init="if(window.UILogger) window.UILogger.debug('App initialized')">
 
     <!-- Toast Notification -->
@@ -29,10 +31,10 @@
                 x-transition:leave="transition ease-in duration-200"
                 x-transition:leave-start="opacity-100 translate-x-0 scale-100"
                 x-transition:leave-end="opacity-0 translate-x-4 scale-95"
-                class="alert shadow-lg border backdrop-blur-md pointer-events-auto min-w-[300px]" :class="{
-                    'alert-info border-neon-cyan/20 bg-space-900/90 text-neon-cyan': $store.global.toast.type === 'info',
-                    'alert-success border-neon-green/20 bg-space-900/90 text-neon-green': $store.global.toast.type === 'success',
-                    'alert-error border-red-500/20 bg-space-900/90 text-red-400': $store.global.toast.type === 'error'
+                class="alert bg-surface border shadow-pop pointer-events-auto min-w-[300px]" :class="{
+                    'border-brand-line text-brand': $store.global.toast.type === 'info',
+                    'border-ok-line text-ok': $store.global.toast.type === 'success',
+                    'border-danger-line text-danger': $store.global.toast.type === 'error'
                  }">
                 <div class="flex items-center gap-3">
                     <!-- Icons based on type -->
@@ -60,64 +62,21 @@
         </template>
     </div>
 
-    <!-- Navbar -->
-    <div
-        class="h-14 border-b border-space-border flex items-center px-4 lg:px-6 justify-between bg-space-900/50 backdrop-blur-md z-50 relative">
-        <div class="flex items-center gap-3">
-            <!-- Mobile Menu Button -->
-            <button @click="toggleSidebar()" class="text-gray-400 hover:text-white focus:outline-none p-1 transition-colors">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </button>
-
-            <div
-                class="w-8 h-8 rounded bg-gradient-to-br from-neon-purple to-blue-600 flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(168,85,247,0.4)]">
-                AG</div>
-            <div class="flex flex-col">
-                <span class="text-sm font-bold tracking-wide text-white"
-                    x-text="$store.global.t('systemName')">ANTIGRAVITY</span>
-                <div class="flex items-center gap-1.5">
-                    <span class="text-[10px] text-gray-500 font-mono tracking-wider"
-                        x-text="$store.global.t('systemDesc')">CLAUDE PROXY SYSTEM</span>
-                    <span class="text-[10px] text-gray-500 font-mono tracking-wider"
-                        x-text="'v' + $store.global.version">v1.0.0</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-4">
-            <!-- Connection Pill -->
-            <div class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border transition-all duration-300"
-                :class="connectionStatus === 'connected'
-                    ? 'bg-neon-green/10 border-neon-green/20 text-neon-green'
-                    : (connectionStatus === 'connecting' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' : 'bg-red-500/10 border-red-500/20 text-red-500')">
-                <div class="w-1.5 h-1.5 rounded-full"
-                    :class="connectionStatus === 'connected' ? 'bg-neon-green shadow-[0_0_8px_rgba(34,197,94,0.6)]' : (connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500')">
-                </div>
-                <span
-                    x-text="connectionStatus === 'connected' ? $store.global.t('online') : (connectionStatus === 'disconnected' ? $store.global.t('offline') : $store.global.t('connecting'))"></span>
-            </div>
-
-            <div class="h-4 w-px bg-space-border"></div>
-
-            <!-- Refresh Button -->
-            <button type="button" class="btn btn-ghost btn-xs btn-square text-gray-400 hover:text-white hover:bg-white/5"
-                @click="fetchData" :disabled="loading" :title="$store.global.t('refreshData')" aria-label="Refresh data">
-                <svg class="w-4 h-4" :class="{'animate-spin': loading}" fill="none" stroke="currentColor"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-            </button>
-        </div>
-    </div>
-
     <!-- Layout -->
-    <div class="flex h-[calc(100vh-56px)] relative">
+    <div class="flex h-screen relative">
+
+        <!-- Mobile hamburger (outside <aside>: the aside itself is translated off-screen
+             when collapsed on mobile, so the reopen entry must not live inside it) -->
+        <button x-show="!sidebarOpen" @click="toggleSidebar()"
+            class="fixed left-3 top-3 z-50 rounded-[7px] p-1.5 text-ink-2 transition-colors hover:bg-surface-3 hover:text-ink lg:hidden"
+            aria-label="Open menu">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
 
         <!-- Mobile Sidebar Overlay -->
-        <div x-show="sidebarOpen" 
+        <div x-show="sidebarOpen"
              x-transition:enter="transition-opacity ease-linear duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
@@ -125,95 +84,100 @@
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              @click="sidebarOpen = false"
-             class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+             class="fixed inset-0 bg-ink/20 z-40 lg:hidden"
              style="display: none;"></div>
 
-        <!-- Sidebar -->
-        <div class="fixed top-14 bottom-0 left-0 z-40 bg-space-900 border-r border-space-border transition-all duration-300 shadow-2xl overflow-hidden lg:static lg:h-auto lg:shadow-none lg:flex-shrink-0"
+        <!-- Sidebar (kiro2cc: 232px + bg-grid-dot + border-hairline) -->
+        <aside class="bg-sidebar bg-grid-dot border-r border-hairline fixed top-0 left-0 bottom-0 z-40 flex flex-col transition-all duration-200 overflow-hidden lg:static lg:flex-shrink-0"
              :class="{
                  'translate-x-0': sidebarOpen,
                  '-translate-x-full': !sidebarOpen,
-                 'w-64': sidebarOpen,
+                 'w-[232px]': sidebarOpen,
                  'lg:translate-x-0': sidebarOpen,
-                 'lg:w-64': sidebarOpen,
+                 'lg:w-[232px]': sidebarOpen,
                  'sidebar-collapsed': !sidebarOpen
              }">
-             
+
             <!-- Inner Sidebar Content (Fixed Width to prevent squashing) -->
-            <div class="w-64 flex flex-col h-full pt-6 pb-4 flex-shrink-0">
-                <!-- Mobile Menu Header -->
-                <div class="flex items-center justify-between px-4 mb-6 lg:hidden">
-                    <span class="text-sm font-bold text-white" x-text="$store.global.t('menu')">Menu</span>
-                    <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white">
+            <div class="w-[232px] flex flex-col h-full">
+
+                <!-- Logo Header -->
+                <div class="flex items-center border-b border-hairline gap-2.5 px-4 pt-4 pb-3.5">
+                    <div class="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[7px] bg-brand text-[12px] font-bold text-brand-fg shadow-hair">AG</div>
+                    <div class="flex min-w-0 flex-1 flex-col">
+                        <span class="truncate text-[13.5px] font-semibold leading-[1.2] tracking-[-.01em] text-ink"
+                            x-text="$store.global.t('systemName')">ANTIGRAVITY</span>
+                        <span class="truncate text-[10.5px] tracking-[.02em] text-ink-3"
+                            x-text="$store.global.t('systemDesc')">CLAUDE PROXY SYSTEM</span>
+                    </div>
+                    <!-- Mobile close button -->
+                    <button @click="sidebarOpen = false" class="shrink-0 text-ink-3 hover:text-ink lg:hidden" aria-label="Close menu">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <!-- Desktop Header (Main) -->
-                <div class="px-4 mb-2 text-xs font-bold text-gray-600 uppercase tracking-widest hidden lg:block"
-                    x-text="$store.global.t('main')">Main</div>
-                
-                <nav class="flex flex-col gap-1">
+                <!-- Nav -->
+                <nav class="flex-1 overflow-y-auto px-2 py-3">
+                    <div class="px-2.5 pb-1.5 pt-0.5 text-[10px] font-semibold uppercase tracking-[.09em] text-ink-3"
+                        x-text="$store.global.t('main')">Main</div>
                     <button
-                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'dashboard'}"
                         @click="$store.global.activeTab = 'dashboard'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
                         <span x-text="$store.global.t('dashboard')">Dashboard</span>
                     </button>
                     <button
-                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'models'}"
                         @click="$store.global.activeTab = 'models'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                         </svg>
                         <span x-text="$store.global.t('models')">Models</span>
                     </button>
                     <button
-                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'accounts'}"
                         @click="$store.global.activeTab = 'accounts'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
                         <span x-text="$store.global.t('accounts')">Accounts</span>
                     </button>
-                </nav>
 
-                <div class="px-4 mt-8 mb-2 text-xs font-bold text-gray-600 uppercase tracking-widest"
-                    x-text="$store.global.t('system')">System</div>
-                <nav class="flex flex-col gap-1">
+                    <div class="px-2.5 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-[.09em] text-ink-3"
+                        x-text="$store.global.t('system')">System</div>
                     <button
-                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'usageLog'}" @click="$store.global.activeTab = 'usageLog'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         <span x-text="$store.global.t('usageLog')">使用日志</span>
                     </button>
                     <button
-                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'logs'}" @click="$store.global.activeTab = 'logs'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span x-text="$store.global.t('logs')">Logs</span>
                     </button>
                     <button
-                        class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5"
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'settings'}"
                         @click="$store.global.activeTab = 'settings'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -223,23 +187,38 @@
                     </button>
                 </nav>
 
-                <!-- Footer Info -->
-                <div class="mt-auto px-6 text-xs text-gray-400 font-mono">
-                    <div class="flex justify-center">
-                        <a href="https://github.com/TsinHzl/agy-cc-proxy" target="_blank" rel="noopener noreferrer"
-                            class="flex items-center gap-1.5 hover:text-neon-purple transition-colors">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                <!-- Sidebar Footer: connection status + refresh + version link -->
+                <div class="flex flex-col gap-[9px] border-t border-hairline px-3 py-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-2 text-[11.5px] font-[450] text-ink-2">
+                            <div class="h-1.5 w-1.5 shrink-0 rounded-full ring-[3px]"
+                                :class="connectionStatus === 'connected' ? 'bg-ok ring-ok-soft' : (connectionStatus === 'connecting' ? 'animate-pulse bg-warn ring-warn-soft' : 'bg-ink-3 ring-surface-3')"></div>
+                            <span class="truncate"
+                                x-text="connectionStatus === 'connected' ? $store.global.t('online') : (connectionStatus === 'disconnected' ? $store.global.t('offline') : $store.global.t('connecting'))"></span>
+                        </div>
+                        <button type="button"
+                            class="inline-flex h-[31px] w-[31px] shrink-0 items-center justify-center rounded-[7px] border border-hairline bg-surface text-ink-2 shadow-hair transition-colors hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+                            @click="fetchData" :disabled="loading" :title="$store.global.t('refreshData')" aria-label="Refresh data">
+                            <svg class="w-[15px] h-[15px]" :class="{'animate-spin': loading}" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            <span x-text="$store.global.t('github')">GitHub</span>
-                        </a>
+                        </button>
                     </div>
+                    <a href="https://github.com/TsinHzl/agy-cc-proxy" target="_blank" rel="noopener noreferrer"
+                        class="flex items-center gap-1.5 text-[10.5px] text-ink-3 transition-colors hover:text-brand">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        <span class="font-mono text-[10.5px]"><span x-text="$store.global.t('github')">GitHub</span> <span x-text="'v' + $store.global.version">v1.0.0</span></span>
+                    </a>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <!-- Main Content -->
-        <div class="flex-1 overflow-auto bg-space-950 relative custom-scrollbar">
+        <!-- Main Content (padding delegated to .view-container: 36px/28px = kiro2cc px-9 py-7) -->
+        <div class="flex-1 overflow-auto bg-background relative custom-scrollbar">
 
             <!-- Views Container -->
             <!-- Dashboard -->
@@ -275,11 +254,11 @@
 
     <!-- Add Account Modal -->
     <dialog id="add_account_modal" class="modal backdrop-blur-sm" x-data="addAccountModal">
-        <div class="modal-box max-w-lg w-full bg-space-900 border border-space-border text-gray-300 shadow-[0_0_50px_rgba(0,0,0,0.5)] p-6">
-            <h3 class="font-bold text-lg text-white mb-4" x-text="$store.global.t('addAccount')">Add New Account</h3>
+        <div class="modal-box max-w-lg w-full bg-surface border border-hairline text-ink shadow-pop p-6">
+            <h3 class="font-bold text-lg text-ink mb-4" x-text="$store.global.t('addAccount')">Add New Account</h3>
 
             <div class="flex flex-col gap-4">
-                <p class="text-sm text-gray-400 leading-relaxed" x-text="$store.global.t('connectGoogleDesc')">Connect a Google
+                <p class="text-sm text-ink-2 leading-relaxed" x-text="$store.global.t('connectGoogleDesc')">Connect a Google
                     Workspace account to increase your API quota limit.
                     The account will be used to proxy Claude requests via Antigravity.</p>
 
@@ -302,34 +281,34 @@
                 </button>
 
                 <div class="text-center mt-2">
-                    <p class="text-xs text-gray-500 mb-2" x-text="$store.global.t('or')">OR</p>
-                    
+                    <p class="text-xs text-ink-3 mb-2" x-text="$store.global.t('or')">OR</p>
+
                     <!-- Manual Mode (collapsible) -->
                     <details class="group mb-2" @toggle="initManualAuth($event)">
-                        <summary class="text-xs text-gray-400 hover:text-neon-cyan cursor-pointer transition-colors inline-flex items-center gap-1">
+                        <summary class="text-xs text-ink-2 hover:text-brand cursor-pointer transition-colors inline-flex items-center gap-1">
                             <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                             <span x-text="$store.global.t('manualMode')">Manual Mode</span>
                         </summary>
-                        <div class="mt-3 p-3 bg-black/50 rounded border border-space-border/30 text-xs">
+                        <div class="mt-3 p-3 bg-surface-2 rounded-[7px] border border-hairline text-xs">
                             <template x-if="authUrl">
                                 <div>
                                     <div class="flex items-center gap-2 mb-2">
-                                        <input type="text" readonly :value="authUrl" 
-                                               class="input input-xs input-bordered flex-1 bg-space-800 text-gray-300 font-mono">
-                                        <button class="btn btn-xs btn-ghost text-neon-cyan" @click="copyLink" :title="$store.global.t('linkCopied')">
+                                        <input type="text" readonly :value="authUrl"
+                                               class="input input-xs input-bordered flex-1 bg-surface text-ink font-mono">
+                                        <button class="btn btn-xs btn-ghost text-brand" @click="copyLink" :title="$store.global.t('linkCopied')">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                             </svg>
                                         </button>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <input type="text" x-model="callbackInput" 
+                                        <input type="text" x-model="callbackInput"
                                                :placeholder="$store.global.t('pasteCallbackPlaceholder')"
-                                               class="input input-xs input-bordered flex-1 bg-space-800 text-gray-300 font-mono">
-                                        <button class="btn btn-xs btn-success" 
-                                                @click="completeManualAuth" 
+                                               class="input input-xs input-bordered flex-1 bg-surface text-ink font-mono">
+                                        <button class="btn btn-xs btn-success"
+                                                @click="completeManualAuth"
                                                 :disabled="!callbackInput || submitting"
                                                 :class="{ 'loading': submitting }">
                                             <span x-text="$store.global.t('completeAuth')">OK</span>
@@ -338,22 +317,22 @@
                                 </div>
                             </template>
                             <template x-if="!authUrl">
-                                <div class="text-gray-500">Loading...</div>
+                                <div class="text-ink-3">Loading...</div>
                             </template>
                         </div>
                     </details>
 
                     <!-- CLI Command -->
                     <details class="group">
-                        <summary class="text-xs text-gray-400 hover:text-neon-cyan cursor-pointer transition-colors inline-flex items-center gap-1">
+                        <summary class="text-xs text-ink-2 hover:text-brand cursor-pointer transition-colors inline-flex items-center gap-1">
                             <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                             <span x-text="$store.global.t('useCliCommand')">Use CLI Command</span>
                         </summary>
-                        <div class="mt-3 p-3 bg-black/50 rounded border border-space-border/30 font-mono text-xs text-gray-300">
+                        <div class="mt-3 p-3 bg-surface-2 rounded-[7px] border border-hairline font-mono text-xs text-ink">
                             <div class="flex items-center gap-2">
-                                <span class="text-gray-600">$</span>
+                                <span class="text-ink-3">$</span>
                                 <code>npm run accounts:add</code>
                             </div>
                         </div>
@@ -363,7 +342,7 @@
 
             <div class="modal-action mt-6">
                 <form method="dialog">
-                    <button type="submit" class="btn btn-ghost hover:bg-white/10" @click="resetState()" x-text="$store.global.t('close')">Close</button>
+                    <button type="submit" class="btn btn-ghost border border-hairline hover:bg-surface-3" @click="resetState()" x-text="$store.global.t('close')">Close</button>
                 </form>
             </div>
         </div>
@@ -374,32 +353,32 @@
 
     <!-- OAuth Progress Modal -->
     <dialog id="oauth_progress_modal" class="modal" :class="{ 'modal-open': $store.global.oauthProgress.active }">
-        <div class="modal-box bg-space-900 border border-neon-purple/50">
-            <h3 class="font-bold text-lg text-white flex items-center gap-2">
-                <svg class="w-6 h-6 text-neon-purple animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="modal-box bg-surface border border-hairline shadow-pop">
+            <h3 class="font-bold text-lg text-ink flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span x-text="$store.global.t('oauthWaiting')">Waiting for OAuth...</span>
             </h3>
-            <p class="py-4 text-gray-400 text-sm" x-text="$store.global.t('oauthWaitingDesc')">
+            <p class="py-4 text-ink-2 text-sm" x-text="$store.global.t('oauthWaitingDesc')">
                 Please complete authentication in the popup window.
             </p>
 
             <!-- Progress Bar -->
-            <div class="w-full bg-space-800 rounded-full h-2 mb-4 overflow-hidden">
-                <div class="bg-neon-purple h-2 rounded-full transition-all duration-500"
+            <div class="w-full bg-track rounded-full h-1.5 mb-4 overflow-hidden">
+                <div class="bg-brand h-1.5 rounded-full transition-all duration-500"
                      :style="`width: ${($store.global.oauthProgress.current / $store.global.oauthProgress.max) * 100}%`">
                 </div>
             </div>
 
             <!-- Progress Text -->
-            <div class="flex justify-between text-xs text-gray-600 mb-4">
+            <div class="flex justify-between text-xs text-ink-3 mb-4">
                 <span x-text="`${$store.global.oauthProgress.current} / ${$store.global.oauthProgress.max}s`"></span>
                 <span x-text="`${Math.round(($store.global.oauthProgress.current / $store.global.oauthProgress.max) * 100)}%`"></span>
             </div>
 
             <div class="modal-action">
-                <button class="btn btn-sm btn-ghost text-gray-400"
+                <button class="btn btn-sm btn-ghost border border-hairline text-ink-2 hover:bg-surface-3"
                         @click="$store.global.oauthProgress.cancel && $store.global.oauthProgress.cancel()"
                         x-text="$store.global.t('cancelOAuth')">
                     Cancel

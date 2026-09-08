@@ -7,8 +7,19 @@ window.Components = window.Components || {};
 
 window.Components.usageLogViewer = () => ({
     records: [],
-    get totalCredits() {
-        return this.records.reduce((sum, r) => sum + Number(r.credits || 0), 0);
+    search: '',
+    lastUpdated: 0,
+    agoTick: 0,
+    get filteredRecords() {
+        const q = this.search.trim().toLowerCase();
+        if (!q) return this.records;
+        return this.records.filter(r =>
+            (r.model || '').toLowerCase().includes(q) ||
+            (r.apiKey || '').toLowerCase().includes(q)
+        );
+    },
+    get filteredCredits() {
+        return this.filteredRecords.reduce((sum, r) => sum + Number(r.credits || 0), 0);
     },
     loading: false,
     copied: false,
@@ -25,6 +36,32 @@ window.Components.usageLogViewer = () => ({
         // Follow global polling interval
         this.$watch('$store.settings.refreshInterval', () => this.startAutoRefresh());
         this.startAutoRefresh();
+
+        // UpdatedAgo 心跳：每 30s 重渲染一次相对时间文案（kiro2cc UpdatedAgo 同机制）
+        this.agoTimer = setInterval(() => { this.agoTick++; }, 30000);
+    },
+
+    destroy() {
+        if (this.agoTimer) clearInterval(this.agoTimer);
+        if (this.refreshTimer) clearInterval(this.refreshTimer);
+    },
+
+    /**
+     * Format last refresh timestamp to relative "ago" string (kiro2cc UpdatedAgo 规格).
+     * 消费 this.agoTick：调用方 effect 依赖收集到心跳值，30s 触发文案重渲染。
+     */
+    formatAgo(ts) {
+        void this.agoTick;
+        const t = Alpine.store('global');
+        const diff = Date.now() - ts;
+        if (diff < 0) return t.t('justNow');
+        const seconds = Math.floor(diff / 1000);
+        if (seconds < 60) return t.t('secondsAgo', { count: seconds });
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return t.t('minutesAgo', { count: minutes });
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return t.t('hoursAgo', { count: hours });
+        return t.t('daysAgo', { count: Math.floor(hours / 24) });
     },
 
     startAutoRefresh() {
@@ -32,11 +69,13 @@ window.Components.usageLogViewer = () => ({
         const interval = parseInt(Alpine.store('settings')?.refreshInterval || 60);
         if (interval > 0) {
             this.refreshTimer = setInterval(() => this.refreshData(), interval * 1000);
+        } else {
+            this.refreshTimer = null;
         }
     },
 
     copyAll() {
-        const records = this.records;
+        const records = this.filteredRecords;
         if (!records.length) return;
 
         // Build TSV: header + one row per record
@@ -95,6 +134,7 @@ window.Components.usageLogViewer = () => ({
                 const data = await resp.json();
                 if (data.status === 'ok') {
                     this.records = data.records || [];
+                    this.lastUpdated = Date.now();
                 }
             }
         } catch (e) {

@@ -1,21 +1,18 @@
 <div x-data="accountManager" class="view-container">
-    <!-- Compact Header -->
-    <div class="flex items-center justify-between gap-4 mb-6">
-        <!-- Title with inline subtitle -->
-        <div class="flex flex-wrap items-center gap-4">
-            <h1 class="text-2xl font-bold text-white tracking-tight" x-text="$store.global.t('accountManagement')">
+    <!-- Page Head（kiro2cc PageHead 规格） -->
+    <div class="mb-5 flex flex-wrap items-end gap-4">
+        <div>
+            <div class="mb-[5px] text-[11px] tracking-[.02em] text-ink-3"
+                 x-text="$store.global.t('manageTokens')">
+                Manage Google Account tokens and authorization states
+            </div>
+            <h1 class="text-[19px] font-semibold leading-[1.2] tracking-[-.02em] text-ink" x-text="$store.global.t('accountManagement')">
                 Account Management
             </h1>
-            <div class="flex items-center h-6 px-3 rounded-full bg-space-800/80 border border-space-border/50 shadow-sm backdrop-blur-sm">
-                <span class="text-[10px] font-mono text-gray-400 uppercase tracking-wider"
-                      x-text="$store.global.t('manageTokens')">
-                    Manage Google Account tokens and authorization states
-                </span>
-            </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex items-center gap-2">
+        <div class="ml-auto flex items-center gap-2">
             <!-- Search -->
             <div class="relative" x-show="$store.data.accounts.length > 0">
                 <input type="text"
@@ -24,13 +21,13 @@
                        :aria-label="$store.global.t('searchAccounts')"
                        class="input-search-sm w-48 pl-9 h-8"
                        @keydown.escape="searchQuery = ''">
-                <svg class="w-4 h-4 absolute left-3 top-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 absolute left-3 top-2 text-ink-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
 
             <!-- Export Button -->
-            <button class="btn btn-xs btn-outline border-space-border text-gray-400 hover:text-white transition-all gap-2 h-8"
+            <button class="btn-action-ghost gap-2 h-8"
                 @click="exportAccounts()"
                 x-show="$store.data.accounts.length > 0"
                 :title="$store.global.t('exportAccounts') || 'Export Accounts'">
@@ -41,7 +38,7 @@
             </button>
 
             <!-- Import Button -->
-            <label class="btn btn-xs btn-outline border-space-border text-gray-400 hover:text-white transition-all gap-2 h-8 cursor-pointer"
+            <label class="btn-action-ghost gap-2 h-8 cursor-pointer"
                 :title="$store.global.t('importAccounts') || 'Import Accounts'">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -50,7 +47,7 @@
                 <input type="file" accept=".json" class="hidden" @change="importAccounts($event)">
             </label>
 
-            <button class="btn btn-xs btn-outline border-space-border text-gray-400 hover:text-white transition-all gap-2 h-8"
+            <button class="btn-action-ghost gap-2 h-8"
                 @click="reloadAccounts()"
                 :disabled="reloading">
                 <svg xmlns="http://www.w3.org/2000/svg"
@@ -62,13 +59,13 @@
                 <span x-text="$store.global.t('reload')">Reload</span>
             </button>
             <!-- Account Count Indicator -->
-            <div class="flex items-center h-6 px-2 rounded bg-space-800/80 border border-space-border/50"
-                 :class="{ 'border-yellow-500/50': $store.data.accounts.length >= $store.data.maxAccounts }">
-                <span class="text-[11px] font-mono"
-                      :class="$store.data.accounts.length >= $store.data.maxAccounts ? 'text-yellow-400' : 'text-gray-400'"
+            <div class="flex items-center h-6 px-2 rounded-[6px] border border-hairline bg-surface-2"
+                 :class="{ 'border-warn-line': $store.data.accounts.length >= $store.data.maxAccounts }">
+                <span class="text-[11px] font-mono tabular-nums"
+                      :class="$store.data.accounts.length >= $store.data.maxAccounts ? 'text-warn' : 'text-ink-3'"
                       x-text="$store.data.accounts.length + '/' + $store.data.maxAccounts"></span>
             </div>
-            <button class="btn bg-neon-purple hover:bg-purple-600 border-none text-white btn-xs gap-2 shadow-lg shadow-neon-purple/20 h-8"
+            <button class="btn-primary gap-2 h-8"
                 :class="{ 'opacity-50 cursor-not-allowed': $store.data.accounts.length >= $store.data.maxAccounts }"
                 :disabled="$store.data.accounts.length >= $store.data.maxAccounts"
                 @click="$store.data.accounts.length < $store.data.maxAccounts && document.getElementById('add_account_modal').showModal()">
@@ -80,46 +77,47 @@
         </div>
     </div>
 
-    <!-- Table Card -->
-    <div class="view-card !p-0">
-        <table class="w-full">
+    <!-- Table Card（kiro2cc table-kit PANEL 规格） -->
+    <section class="overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
+        <div class="max-h-[70vh] overflow-y-auto">
+            <table class="w-full border-separate border-spacing-0">
             <thead x-show="$store.data.accounts.length > 0">
-                <tr class="bg-space-900/50 border-b border-space-border/50">
-                    <th class="pl-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-16" x-text="$store.global.t('enabled')">Enabled</th>
-                    <th class="py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider flex-1 min-w-[200px]" x-text="$store.global.t('accountEmail')">Account (Email)</th>
-                    <th class="py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20" x-text="$store.global.t('source')">Source</th>
-                    <th class="py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-16" x-text="$store.global.t('tier')">Tier</th>
-                    <th class="py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-32" x-text="$store.global.t('quota')">Quota</th>
-                    <th class="py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24" x-text="$store.global.t('health')">Health</th>
-                    <th class="py-3 pr-6 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider w-32" x-text="$store.global.t('operations')">Operations</th>
+                <tr>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-16" x-text="$store.global.t('enabled')">Enabled</th>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 min-w-[200px]" x-text="$store.global.t('accountEmail')">Account (Email)</th>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-20" x-text="$store.global.t('source')">Source</th>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-16" x-text="$store.global.t('tier')">Tier</th>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-36" x-text="$store.global.t('quota')">Quota</th>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-28" x-text="$store.global.t('health')">Health</th>
+                    <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-right text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-36" x-text="$store.global.t('operations')">Operations</th>
                 </tr>
             </thead>
             <tbody>
                 <!-- Empty State -->
                 <template x-if="$store.data.accounts.length === 0">
                     <tr>
-                        <td colspan="6" class="py-16 text-center">
-                            <div class="flex flex-col items-center gap-4 max-w-lg mx-auto">
-                                <svg class="w-20 h-20 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td colspan="7">
+                            <div class="flex flex-col items-center gap-3 px-3 py-14 max-w-lg mx-auto">
+                                <svg class="size-6 text-ink-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                           d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
-                                <h3 class="text-xl font-semibold text-gray-400" x-text="$store.global.t('noAccountsYet')">
+                                <h3 class="text-[12.5px] font-medium text-ink-2" x-text="$store.global.t('noAccountsYet')">
                                     No Accounts Yet
                                 </h3>
-                                <p class="text-sm text-gray-600 max-w-md leading-relaxed" x-text="$store.global.t('noAccountsDesc')">
+                                <p class="text-[12.5px] text-ink-3 max-w-md leading-relaxed" x-text="$store.global.t('noAccountsDesc')">
                                     Get started by adding a Google account via OAuth, or use the CLI command to import credentials.
                                 </p>
                                 <div class="flex items-center gap-4 mt-2">
-                                    <button class="btn bg-neon-purple hover:bg-purple-600 border-none text-white btn-sm gap-2 shadow-lg shadow-neon-purple/20"
+                                    <button class="btn-primary btn-sm gap-2"
                                         onclick="document.getElementById('add_account_modal').showModal()">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                         </svg>
                                         <span x-text="$store.global.t('addFirstAccount')">Add Your First Account</span>
                                     </button>
-                                    <span class="text-xs text-gray-600" x-text="$store.global.t('or')">or</span>
-                                    <div class="text-xs font-mono bg-space-800 px-3 py-2 rounded border border-space-border text-gray-400">
+                                    <span class="text-xs text-ink-3" x-text="$store.global.t('or')">or</span>
+                                    <div class="text-xs font-mono bg-surface-2 px-3 py-2 rounded-[6px] border border-hairline text-ink-2">
                                         npm run accounts:add
                                     </div>
                                 </div>
@@ -130,28 +128,37 @@
 
                 <!-- Account Rows -->
                 <template x-for="acc in filteredAccounts" :key="acc.email">
-                    <tr class="border-b border-space-border/30 last:border-0 hover:bg-white/5 transition-colors group">
-                        <td class="pl-6 py-4">
-                            <label class="relative inline-flex items-center cursor-pointer">
+                    <tr class="group hover:bg-surface-2 [&>td]:border-b [&>td]:border-hairline [&:last-child>td]:border-b-0"
+                        :class="{ '[&>td:not(:last-child)]:opacity-[.55]': acc.enabled === false }">
+                        <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                            <label class="relative inline-flex h-[18px] w-8 shrink-0 cursor-pointer items-center rounded-[10px] bg-track transition-colors peer-checked:bg-brand has-[:peer-checked]:bg-brand">
                                 <input type="checkbox" class="sr-only peer"
                                     :checked="acc.enabled !== false"
                                     @change="toggleAccount(acc.email, $el.checked)">
-                                <div class="w-9 h-5 bg-space-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-gray-600 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-neon-green peer-checked:after:bg-white"></div>
+                                <span class="pointer-events-none ml-[2px] block size-3 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.28)] transition-transform peer-checked:translate-x-[14px]"></span>
                             </label>
                         </td>
-                        <td class="py-4">
-                            <div class="tooltip tooltip-right" :data-tip="Redact.email(acc.email)">
-                                <span class="font-mono text-sm text-gray-300 truncate max-w-[320px] inline-block cursor-help group-hover:text-white transition-colors"
-                                      x-text="formatEmail(Redact.email(acc.email))">
-                                </span>
+                        <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                            <div class="flex min-w-0 items-center gap-[9px]">
+                                <div class="grid size-[26px] flex-none place-items-center rounded-[7px] text-[11px] font-semibold tracking-[-0.02em]"
+                                     :class="acc.status === 'ok' ? 'bg-ok-soft text-ok' : (acc.status === 'banned' ? 'bg-danger-soft text-danger' : 'bg-warn-soft text-warn')"
+                                     x-text="(acc.email[0] || '?').toUpperCase()"></div>
+                                <div class="flex min-w-0 flex-col gap-px">
+                                    <span class="text-[12.5px] font-semibold tracking-[-0.01em] text-ink truncate max-w-[280px] cursor-help"
+                                          x-text="formatEmail(Redact.email(acc.email))">
+                                    </span>
+                                    <span class="font-mono text-[10.5px] text-ink-3 truncate max-w-[190px]"
+                                          x-text="Redact.email(acc.email)"
+                                          :title="Redact.email(acc.email)"></span>
+                                </div>
                             </div>
                         </td>
-                        <td class="py-4">
+                        <td class="border-b border-hairline px-3 py-[11px] align-middle">
                             <span :class="acc.source === 'oauth' ? 'status-pill-purple' : 'status-pill-free'"
                                   x-text="acc.source || 'oauth'">
                             </span>
                         </td>
-                        <td class="py-4">
+                        <td class="border-b border-hairline px-3 py-[11px] align-middle">
                             <span :class="{
                                       'status-pill-ultra': acc.subscription?.tier === 'ultra',
                                       'status-pill-pro': acc.subscription?.tier === 'pro',
@@ -160,55 +167,50 @@
                                   x-text="(acc.subscription?.tier || 'free').toUpperCase()">
                             </span>
                         </td>
-                        <td class="py-4 cursor-pointer" @click="openQuotaModal(acc)">
-                            <div x-data="{ quota: getMainModelQuota(acc) }">
+                        <td class="cursor-pointer border-b border-hairline px-3 py-[11px] align-middle" @click="openQuotaModal(acc)">
+                            <div x-data="{ quota: getMainModelQuota(acc) }" class="flex min-w-[132px] flex-col gap-[5px]">
                                 <template x-if="quota.percent !== null">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-16 bg-gray-700 rounded-full h-2 overflow-hidden">
-                                            <div class="h-full rounded-full transition-all"
-                                                 :class="{
-                                                     'bg-neon-green': quota.percent > 50,
-                                                     'bg-yellow-500': quota.percent > 20 && quota.percent <= 50,
-                                                     'bg-red-500': quota.percent <= 20
-                                                 }"
-                                                 :style="`width: ${quota.percent}%`">
-                                            </div>
-                                        </div>
-                                        <span class="text-xs font-mono text-gray-400" x-text="quota.percent + '%'"></span>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-[11px] text-ink-2 tabular-nums"
+                                              x-text="quota.percent + '%'"></span>
+                                        <span class="quota-badge"
+                                              :class="quota.percent > 60 ? 'quota-badge-safe' : (quota.percent > 30 ? 'quota-badge-mod' : (quota.percent > 15 ? 'quota-badge-warn' : 'quota-badge-danger'))"
+                                              x-text="quota.percent + '%'"></span>
+                                    </div>
+                                </template>
+                                <template x-if="quota.percent !== null">
+                                    <div class="quota-bar justify-end"
+                                         :class="quota.percent > 60 ? 'quota-tier-safe' : (quota.percent > 30 ? 'quota-tier-mod' : (quota.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))">
+                                        <div :style="`width: ${quota.percent}%`"></div>
                                     </div>
                                 </template>
                                 <template x-if="quota.percent === null">
-                                    <span class="text-xs text-gray-600">-</span>
+                                    <span class="text-xs text-ink-3">-</span>
                                 </template>
                                 <div x-show="acc.quotaThreshold !== undefined"
-                                     class="text-[10px] font-mono text-neon-yellow/60 mt-0.5"
+                                     class="text-[10px] font-mono text-ink-3"
                                      x-text="'min: ' + getEffectiveThreshold(acc)"></div>
                             </div>
                         </td>
-                        <td class="py-4">
-                            <div class="flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full flex-shrink-0"
-                                     :class="acc.status === 'ok' ?
-                                             'bg-neon-green shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse' :
-                                             (acc.status === 'banned' ? 
-                                              'bg-red-800 shadow-[0_0_8px_rgba(153,27,27,0.6)]' :
-                                              'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]')">
-                                </div>
-                                <span class="text-xs font-mono font-semibold"
-                                      :class="acc.status === 'ok' ? 'text-neon-green' : (acc.status === 'banned' ? 'text-red-800' : 'text-red-400')"
-                                      x-text="acc.status.toUpperCase()">
+                        <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                            <div class="flex min-w-0 items-center gap-[5px]">
+                                <span class="inline-flex h-5 items-center gap-[5px] rounded-[6px] border px-[7px] text-[11px] font-semibold"
+                                      :class="acc.status === 'ok' ? 'text-ok bg-ok-soft border-ok-line' : (acc.status === 'banned' ? 'text-danger bg-danger-soft border-danger-line' : 'text-warn bg-warn-soft border-warn-line')">
+                                    <span class="inline-block size-[5px] rounded-full"
+                                          :class="acc.status === 'ok' ? 'bg-ok ring-[2.5px] ring-ok-soft' : (acc.status === 'banned' ? 'bg-danger ring-[2.5px] ring-danger-soft' : 'bg-warn ring-[2.5px] ring-warn-soft')"></span>
+                                    <span x-text="acc.status.toUpperCase()"></span>
                                 </span>
-                                <p x-show="acc.status === 'banned'" 
-                                   class="text-[9px] text-red-600/70 mt-0.5 max-w-[200px] leading-tight"
+                                <p x-show="acc.status === 'banned'"
+                                   class="text-[9px] text-ink-3 max-w-[160px] leading-tight truncate"
                                    x-text="acc.error || 'Gemini disabled for ToS violation'">
                                 </p>
                             </div>
                         </td>
-                        <td class="py-4 pr-6">
-                            <div class="flex justify-end gap-2">
+                        <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                            <div class="flex justify-end items-center gap-1">
                                 <!-- Fix Button -->
                                 <button x-show="acc.status === 'invalid'"
-                                    class="px-3 py-1 text-[10px] font-bold font-mono uppercase tracking-wider rounded bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 hover:border-yellow-500/50 transition-all"
+                                    class="inline-flex h-5 items-center rounded-[6px] border border-warn-line bg-warn-soft px-[7px] text-[10px] font-bold font-mono uppercase tracking-wider text-warn hover:bg-warn-soft transition-colors"
                                     @click="fixAccount(acc.email)"
                                     x-text="$store.global.t('fix')">
                                     FIX
@@ -216,12 +218,12 @@
                                 <!-- Appeal Button (banned accounts only) -->
                                 <a x-show="acc.status === 'banned'"
                                    href="mailto:gemini-code-assist-user-feedback@google.com"
-                                   class="px-3 py-1 text-[10px] font-bold font-mono uppercase tracking-wider rounded bg-red-900/20 text-red-400 hover:bg-red-900/30 border border-red-800/30 hover:border-red-800/50 transition-all"
+                                   class="inline-flex h-5 items-center rounded-[6px] border border-danger-line bg-danger-soft px-[7px] text-[10px] font-bold font-mono uppercase tracking-wider text-danger hover:bg-danger-soft transition-colors"
                                    title="Email Google to appeal this ban">
                                    APPEAL
                                 </a>
                                 <!-- Settings Button (threshold) -->
-                                <button class="p-2 rounded hover:bg-white/10 text-gray-500 hover:text-neon-yellow transition-colors"
+                                <button class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                                     @click="openThresholdModal(acc)"
                                     title="Account Settings">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,7 +233,8 @@
                                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                 </button>
-                                <button class="p-2 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+                                <span class="mx-[5px] h-4 w-px bg-hairline"></span>
+                                <button class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                                     @click="refreshAccount(acc.email)"
                                     :disabled="refreshing"
                                     :title="$store.global.t('refreshData')">
@@ -243,8 +246,8 @@
                                     </svg>
                                 </button>
                                 <button
-                                    class="p-2 rounded transition-colors"
-                                    :class="acc.source === 'database' ? 'text-gray-700 cursor-not-allowed' : 'hover:bg-red-500/10 text-gray-500 hover:text-red-400'"
+                                    class="grid size-[26px] flex-none place-items-center rounded-[6px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                    :class="acc.source === 'database' ? 'text-ink-3 opacity-40 cursor-not-allowed' : 'text-ink-3 hover:bg-danger-soft hover:text-danger'"
                                     :disabled="acc.source === 'database'"
                                     @click="acc.source !== 'database' && confirmDeleteAccount(acc.email)"
                                     :title="acc.source === 'database' ? $store.global.t('cannotDeleteDatabase') : $store.global.t('delete')">
@@ -261,25 +264,27 @@
                 <!-- No Search Results -->
                 <template x-if="$store.data.accounts.length > 0 && filteredAccounts.length === 0">
                     <tr>
-                        <td colspan="6" class="py-12 text-center">
-                            <div class="flex flex-col items-center gap-3">
-                                <svg class="w-12 h-12 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td colspan="7">
+                            <div class="flex flex-col items-center gap-3 px-3 py-14">
+                                <svg class="size-6 text-ink-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
-                                <p class="text-sm text-gray-600" x-text="$store.global.t('noSearchResults')">No accounts match your search</p>
-                                <button class="btn-action-ghost !text-gray-500" @click="searchQuery = ''" x-text="$store.global.t('clearSearch')">Clear Search</button>
+                                <p class="text-[12.5px] text-ink-3" x-text="$store.global.t('noSearchResults')">No accounts match your search</p>
+                                <button class="rounded-[6px] border border-hairline-2 bg-surface px-2.5 py-1 text-[11.5px] font-medium text-ink-2 shadow-hair hover:bg-surface-2 transition-colors"
+                                        @click="searchQuery = ''" x-text="$store.global.t('clearSearch')">Clear Search</button>
                             </div>
                         </td>
                     </tr>
                 </template>
             </tbody>
         </table>
-    </div>
+        </div>
+    </section>
 
     <!-- Account Status Info -->
-    <div x-show="$store.data.accounts.length > 0" class="mt-4 px-6 py-3 bg-space-900/20 rounded-lg border border-space-border/20">
-        <p class="text-xs text-gray-600 flex items-center gap-2">
-            <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div x-show="$store.data.accounts.length > 0" class="mt-4 px-4 py-2.5 rounded-[9px] border border-hairline bg-surface-2">
+        <p class="text-xs text-ink-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-ink-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span x-html="$store.global.t('disabledAccountsNote')"></span>
@@ -288,28 +293,28 @@
 
     <!-- Strategy Health Inspector (Developer Mode) -->
     <div x-show="$store.data.devMode && $store.settings.healthInspector" class="mt-6" x-cloak>
-        <div class="view-card !p-0 border-neon-purple/30">
+        <div class="overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
             <!-- Header -->
-            <button class="w-full flex items-center justify-between px-6 py-3 bg-space-900/50 border-b border-space-border/50 hover:bg-space-900/70 transition-colors"
+            <button class="w-full flex items-center justify-between px-4 py-3 border-b border-hairline hover:bg-surface-2 transition-colors"
                 @click="$store.settings.toggle('healthInspectorOpen'); if ($store.settings.healthInspectorOpen && !healthData.strategy) fetchHealthData()">
                 <div class="flex items-center gap-3">
-                    <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-neon-purple/20 text-neon-purple border border-neon-purple/30">DEV</span>
-                    <span class="text-sm font-semibold text-gray-300" x-text="$store.global.t('strategyHealthInspector')">Strategy Health Inspector</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-[5px] bg-brand-soft text-brand border border-brand-line">DEV</span>
+                    <span class="text-[12.5px] font-semibold text-ink" x-text="$store.global.t('strategyHealthInspector')">Strategy Health Inspector</span>
                 </div>
-                <svg class="w-4 h-4 text-gray-500 transition-transform" :class="{ 'rotate-180': $store.settings.healthInspectorOpen }"
+                <svg class="w-4 h-4 text-ink-3 transition-transform" :class="{ 'rotate-180': $store.settings.healthInspectorOpen }"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
             <!-- Content -->
-            <div x-show="$store.settings.healthInspectorOpen" x-transition class="p-6">
+            <div x-show="$store.settings.healthInspectorOpen" x-transition class="p-5">
                 <!-- Refresh button -->
                 <div class="flex items-center justify-between mb-4">
-                    <span class="text-xs text-gray-500 font-mono" x-show="healthData.strategy"
+                    <span class="text-xs text-ink-3 font-mono" x-show="healthData.strategy"
                         x-text="'Strategy: ' + healthData.strategy">
                     </span>
-                    <button class="btn btn-xs btn-outline border-neon-purple/50 text-neon-purple hover:bg-neon-purple/10 gap-1"
+                    <button class="btn-action-ghost gap-1"
                         @click="fetchHealthData()"
                         :disabled="healthLoading">
                         <svg class="w-3 h-3" :class="{ 'animate-spin': healthLoading }"
@@ -323,60 +328,54 @@
 
                 <!-- Not available message for non-hybrid strategies -->
                 <div x-show="healthData.trackers === null && healthData.strategy" class="text-center py-8">
-                    <p class="text-sm text-gray-500" x-text="$store.global.t('healthNotAvailable')">Health tracking only available with hybrid strategy</p>
+                    <p class="text-[12.5px] text-ink-3" x-text="$store.global.t('healthNotAvailable')">Health tracking only available with hybrid strategy</p>
                 </div>
 
                 <!-- Health data table -->
                 <div x-show="healthData.trackers !== null && healthData.trackers?.accounts?.length > 0">
-                    <table class="w-full">
+                    <table class="w-full border-separate border-spacing-0">
                         <thead>
-                            <tr class="border-b border-space-border/50">
-                                <th class="py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-40"
+                            <tr>
+                                <th class="border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3">Email</th>
+                                <th class="border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-40"
                                     x-text="$store.global.t('healthScore')">Health Score</th>
-                                <th class="py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-28"
+                                <th class="border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-28"
                                     x-text="$store.global.t('tokenBucket')">Tokens</th>
-                                <th class="py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20"
+                                <th class="border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-20"
                                     x-text="$store.global.t('consecutiveFailures')">Failures</th>
-                                <th class="py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20">Status</th>
+                                <th class="border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3 w-20">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-for="acc in (healthData.trackers?.accounts || [])" :key="acc.email">
-                                <tr class="border-b border-space-border/20 last:border-0">
-                                    <td class="py-2">
-                                        <span class="text-xs font-mono text-gray-300" x-text="Redact.email(acc.email)"></span>
+                                <tr>
+                                    <td class="border-b border-hairline px-3 py-[9px]">
+                                        <span class="font-mono text-[11px] text-ink-2" x-text="Redact.email(acc.email)"></span>
                                     </td>
-                                    <td class="py-2">
+                                    <td class="border-b border-hairline px-3 py-[9px]">
                                         <div class="flex items-center gap-2">
-                                            <div class="w-20 bg-gray-700 rounded-full h-2 overflow-hidden">
-                                                <div class="h-full rounded-full transition-all"
-                                                    :class="{
-                                                        'bg-neon-green': acc.healthScore > 70,
-                                                        'bg-yellow-500': acc.healthScore > 50 && acc.healthScore <= 70,
-                                                        'bg-red-500': acc.healthScore <= 50
-                                                    }"
-                                                    :style="`width: ${acc.healthScore}%`">
-                                                </div>
+                                            <div class="w-20 quota-bar"
+                                                 :class="acc.healthScore > 70 ? 'quota-tier-safe' : (acc.healthScore > 50 ? 'quota-tier-warn' : 'quota-tier-danger')">
+                                                <div :style="`width: ${acc.healthScore}%`"></div>
                                             </div>
-                                            <span class="text-xs font-mono" :class="{
-                                                'text-neon-green': acc.healthScore > 70,
-                                                'text-yellow-500': acc.healthScore > 50 && acc.healthScore <= 70,
-                                                'text-red-500': acc.healthScore <= 50
+                                            <span class="text-[11px] font-mono tabular-nums" :class="{
+                                                'text-ok': acc.healthScore > 70,
+                                                'text-warn': acc.healthScore > 50 && acc.healthScore <= 70,
+                                                'text-danger': acc.healthScore <= 50
                                             }" x-text="acc.healthScore"></span>
                                         </div>
                                     </td>
-                                    <td class="py-2">
-                                        <span class="text-xs font-mono" :class="acc.hasTokens ? 'text-gray-300' : 'text-red-400'"
+                                    <td class="border-b border-hairline px-3 py-[9px]">
+                                        <span class="text-[11px] font-mono tabular-nums" :class="acc.hasTokens ? 'text-ink-2' : 'text-danger'"
                                             x-text="acc.tokens + '/' + acc.maxTokens"></span>
                                     </td>
-                                    <td class="py-2">
-                                        <span class="text-xs font-mono" :class="acc.consecutiveFailures > 0 ? 'text-yellow-400' : 'text-gray-500'"
+                                    <td class="border-b border-hairline px-3 py-[9px]">
+                                        <span class="text-[11px] font-mono tabular-nums" :class="acc.consecutiveFailures > 0 ? 'text-warn' : 'text-ink-3'"
                                             x-text="acc.consecutiveFailures"></span>
                                     </td>
-                                    <td class="py-2">
-                                        <span class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
-                                            :class="acc.isUsable ? 'bg-neon-green/10 text-neon-green border border-neon-green/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'"
+                                    <td class="border-b border-hairline px-3 py-[9px]">
+                                        <span class="inline-flex h-5 items-center rounded-[6px] border px-[7px] text-[10px] font-bold uppercase"
+                                            :class="acc.isUsable ? 'text-ok bg-ok-soft border-ok-line' : 'text-danger bg-danger-soft border-danger-line'"
                                             x-text="acc.isUsable ? 'OK' : 'DEGRADED'"></span>
                                     </td>
                                 </tr>
@@ -386,8 +385,8 @@
                 </div>
 
                 <!-- Scoring reference -->
-                <div x-show="healthData.trackers !== null && healthData.trackers?.accounts?.length > 0" class="mt-3 px-3 py-2 rounded bg-space-900/40 border border-space-border/30">
-                    <p class="text-[10px] text-gray-500 font-mono leading-relaxed">
+                <div x-show="healthData.trackers !== null && healthData.trackers?.accounts?.length > 0" class="mt-3 px-3 py-2 rounded-[6px] bg-surface-2 border border-hairline">
+                    <p class="text-[10px] text-ink-3 font-mono leading-relaxed">
                         Score is adjusted for successes, rate limits, and failures with passive recovery.
                         <br>
                         Selection uses weighted health, token usage, quota, and recency (LRU).
@@ -396,7 +395,7 @@
 
                 <!-- Empty state (no data loaded yet) -->
                 <div x-show="!healthData.strategy && !healthLoading" class="text-center py-6">
-                    <p class="text-xs text-gray-600" x-text="$store.global.t('refreshHealthData')">Click Refresh to load health data</p>
+                    <p class="text-xs text-ink-3" x-text="$store.global.t('refreshHealthData')">Click Refresh to load health data</p>
                 </div>
             </div>
         </div>
@@ -404,19 +403,19 @@
 
     <!-- Delete Confirmation Modal -->
     <dialog id="delete_account_modal" class="modal">
-        <div class="modal-box bg-space-900 border-2 border-red-500/50">
-            <h3 class="font-bold text-lg text-red-400 flex items-center gap-2">
+        <div class="modal-box bg-surface border border-hairline shadow-pop">
+            <h3 class="font-bold text-lg text-danger flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <span x-text="$store.global.t('dangerousOperation')">Dangerous Operation</span>
             </h3>
-            <p class="py-4 text-gray-300">
+            <p class="py-4 text-ink-2">
                 <span x-text="$store.global.t('confirmDeletePrompt')">Are you sure you want to delete account</span>
-                <strong class="text-white font-mono" x-text="Redact.email(deleteTarget)"></strong>?
+                <strong class="text-ink font-mono" x-text="Redact.email(deleteTarget)"></strong>?
             </p>
-            <div class="bg-red-500/10 border border-red-500/30 rounded p-3 mb-4">
-                <p class="text-sm text-red-300 flex items-start gap-2">
+            <div class="bg-danger-soft border border-danger-line rounded-[6px] p-3 mb-4">
+                <p class="text-sm text-danger flex items-start gap-2">
                     <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
@@ -424,10 +423,10 @@
                 </p>
             </div>
             <div class="modal-action">
-                <button class="btn btn-ghost text-gray-400" onclick="document.getElementById('delete_account_modal').close()" x-text="$store.global.t('cancel')">
+                <button class="btn btn-action-ghost" onclick="document.getElementById('delete_account_modal').close()" x-text="$store.global.t('cancel')">
                     Cancel
                 </button>
-                <button class="btn bg-red-500 hover:bg-red-600 border-none text-white"
+                <button class="btn bg-danger hover:bg-danger border-none text-white"
                         @click="executeDelete()"
                         :disabled="deleting"
                         :class="{ 'loading': deleting }">
@@ -445,38 +444,38 @@
 
     <!-- Quota Distribution Modal -->
     <dialog id="quota_modal" class="modal backdrop-blur-sm">
-        <div class="modal-box max-w-2xl w-full bg-space-900 border border-space-border text-gray-300 shadow-2xl p-6">
-            <h3 class="font-bold text-xl text-white mb-2 flex items-center gap-2">
-                <svg class="w-6 h-6 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="modal-box max-w-2xl w-full bg-surface border border-hairline text-ink shadow-pop p-6">
+            <h3 class="font-bold text-xl text-ink mb-2 flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 <span x-text="$store.global.t('quotaDistribution')">Quota Distribution</span>
             </h3>
-            <p class="text-sm text-gray-500 font-mono mb-6" x-text="Redact.email(selectedAccountEmail)"></p>
+            <p class="text-sm text-ink-3 font-mono mb-6" x-text="Redact.email(selectedAccountEmail)"></p>
 
             <div class="grid grid-cols-1 gap-4 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
                 <template x-for="(limit, modelId) in selectedAccountLimits" :key="modelId">
-                    <div class="p-3 bg-space-800/50 border border-space-border/30 rounded-lg">
+                    <div class="p-3 bg-surface-2 border border-hairline rounded-[9px]">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-semibold text-gray-200" x-text="modelId"></span>
+                            <span class="text-sm font-semibold text-ink" x-text="modelId"></span>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-mono"
-                                      :class="limit.remainingFraction > 0.5 ? 'text-neon-green' : (limit.remainingFraction > 0.2 ? 'text-yellow-500' : 'text-red-500')"
+                                <span class="quota-badge font-mono"
+                                      :class="limit.remainingFraction * 100 > 60 ? 'quota-badge-safe' : (limit.remainingFraction * 100 > 30 ? 'quota-badge-mod' : (limit.remainingFraction * 100 > 15 ? 'quota-badge-warn' : 'quota-badge-danger'))"
                                       x-text="Math.round(limit.remainingFraction * 100) + '%'"></span>
                             </div>
                         </div>
 
-                        <div class="w-full bg-gray-700 rounded-full h-2.5 mb-2 overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-500"
-                                 :class="limit.remainingFraction > 0.5 ? 'bg-neon-green' : (limit.remainingFraction > 0.2 ? 'bg-yellow-500' : 'bg-red-500')"
+                        <div class="w-full quota-bar mb-2">
+                            <div class="transition-all duration-500"
+                                 :class="limit.remainingFraction * 100 > 60 ? 'quota-tier-safe' : (limit.remainingFraction * 100 > 30 ? 'quota-tier-mod' : (limit.remainingFraction * 100 > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
                                  :style="`width: ${limit.remainingFraction * 100}%`">
                             </div>
                         </div>
 
                         <div class="flex justify-between items-center">
-                            <span class="text-[10px] text-gray-500 uppercase font-bold" x-text="$store.data.getModelFamily(modelId)"></span>
+                            <span class="text-[10px] text-ink-3 uppercase font-bold" x-text="$store.data.getModelFamily(modelId)"></span>
                             <template x-if="limit.resetTime">
-                                <span class="text-[10px] text-yellow-500/80 font-mono italic"
+                                <span class="text-[10px] text-warn font-mono italic"
                                       x-text="$store.global.t('resetsIn', { time: window.utils.formatTimeUntil(limit.resetTime) })"></span>
                             </template>
                         </div>
@@ -484,7 +483,7 @@
                 </template>
 
                 <template x-if="Object.keys(selectedAccountLimits).length === 0">
-                    <div class="text-center py-8 text-gray-500" x-text="$store.global.t('noQuotaData')">
+                    <div class="text-center py-8 text-ink-3" x-text="$store.global.t('noQuotaData')">
                         No quota data available for this account yet.
                     </div>
                 </template>
@@ -492,7 +491,7 @@
 
             <div class="modal-action">
                 <form method="dialog">
-                    <button class="btn btn-ghost hover:bg-white/10" x-text="$store.global.t('close')">Close</button>
+                    <button class="btn btn-action-ghost" x-text="$store.global.t('close')">Close</button>
                 </form>
             </div>
         </div>
@@ -503,20 +502,20 @@
 
     <!-- Threshold Settings Modal -->
     <dialog id="threshold_modal" class="modal backdrop-blur-sm">
-        <div class="modal-box max-w-md w-full bg-space-900 border border-space-border text-gray-300 shadow-2xl p-6">
-            <h3 class="font-bold text-xl text-white mb-2 flex items-center gap-2">
-                <svg class="w-6 h-6 text-neon-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="modal-box max-w-md w-full bg-surface border border-hairline text-ink shadow-pop p-6">
+            <h3 class="font-bold text-xl text-ink mb-2 flex items-center gap-2">
+                <svg class="w-6 h-6 text-warn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 <span>Account Settings</span>
             </h3>
-            <p class="text-sm text-gray-500 font-mono mb-6" x-text="Redact.email(thresholdDialog.email)"></p>
+            <p class="text-sm text-ink-3 font-mono mb-6" x-text="Redact.email(thresholdDialog.email)"></p>
 
             <div class="space-y-4">
                 <!-- Info Alert -->
-                <div class="bg-space-800/50 border border-space-border/30 rounded-lg p-3">
-                    <p class="text-xs text-gray-400 leading-relaxed">
+                <div class="bg-surface-2 border border-hairline rounded-[9px] p-3">
+                    <p class="text-xs text-ink-2 leading-relaxed">
                         Set a minimum quota level for this account. When the account's quota falls below this threshold,
                         the proxy will switch to another account with more quota remaining.
                     </p>
@@ -525,34 +524,34 @@
                 <!-- Threshold Input -->
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text text-gray-400">Minimum Quota</span>
-                        <span class="label-text-alt font-mono text-neon-yellow"
+                        <span class="label-text text-ink-2">Minimum Quota</span>
+                        <span class="label-text-alt font-mono text-warn"
                               x-text="thresholdDialog.quotaThreshold !== null ? thresholdDialog.quotaThreshold + '%' : 'Default'"></span>
                     </label>
                     <div class="flex gap-3 items-center">
                         <input type="range" min="0" max="99" step="1"
-                            class="custom-range custom-range-yellow flex-1"
+                            class="custom-range flex-1"
                             :value="thresholdDialog.quotaThreshold || 0"
                             :style="`background-size: ${thresholdDialog.quotaThreshold || 0}% 100%`"
                             @input="thresholdDialog.quotaThreshold = parseInt($event.target.value)"
                             aria-label="Minimum quota threshold slider">
                         <div class="flex items-center gap-1">
                             <input type="number" min="0" max="99" step="1"
-                                class="input input-sm input-bordered w-16 bg-space-800 border-space-border text-white font-mono text-center"
+                                class="input input-sm input-bordered w-16 bg-surface-2 border-hairline text-ink font-mono text-center"
                                 :value="thresholdDialog.quotaThreshold ?? ''"
                                 placeholder="-"
                                 @input="thresholdDialog.quotaThreshold = $event.target.value === '' ? null : parseInt($event.target.value)"
                                 aria-label="Minimum quota threshold value">
-                            <span class="text-gray-500 text-xs">%</span>
+                            <span class="text-ink-3 text-xs">%</span>
                         </div>
                     </div>
-                    <p class="text-[10px] text-gray-600 mt-1">
+                    <p class="text-[10px] text-ink-3 mt-1">
                         Leave empty to use the global threshold from Settings.
                     </p>
                 </div>
 
                 <!-- Clear Button -->
-                <button class="btn btn-sm btn-ghost text-gray-500 hover:text-gray-300 w-full"
+                <button class="btn btn-sm btn-ghost text-ink-3 hover:text-ink w-full"
                         @click="clearAccountThreshold()"
                         x-show="thresholdDialog.quotaThreshold !== null">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,10 +561,10 @@
                 </button>
 
                 <!-- Per-Model Thresholds -->
-                <div class="pt-4 border-t border-space-border/30">
+                <div class="pt-4 border-t border-hairline">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-gray-400 font-semibold">Per-Model Overrides</span>
-                        <button class="btn btn-xs btn-ghost text-gray-500 hover:text-neon-yellow gap-1"
+                        <span class="text-xs text-ink-2 font-semibold">Per-Model Overrides</span>
+                        <button class="btn btn-xs btn-ghost text-ink-3 hover:text-brand gap-1"
                                 @click="addModelThreshold()">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -577,17 +576,17 @@
                     <!-- Model threshold list -->
                     <div class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
                         <template x-for="(threshold, modelId) in thresholdDialog.modelQuotaThresholds" :key="modelId">
-                            <div class="flex items-center gap-2 bg-space-800/50 rounded px-2 py-1.5">
-                                <span class="text-xs text-gray-300 flex-1 truncate font-mono" x-text="modelId"></span>
+                            <div class="flex items-center gap-2 bg-surface-2 border border-hairline rounded-[6px] px-2 py-1.5">
+                                <span class="text-xs text-ink flex-1 truncate font-mono" x-text="modelId"></span>
                                 <div class="flex items-center gap-1">
                                     <input type="number" min="0" max="99" step="1"
-                                        class="input input-xs input-bordered w-14 bg-space-900 border-space-border text-white font-mono text-center"
+                                        class="input input-xs input-bordered w-14 bg-surface border-hairline text-ink font-mono text-center"
                                         :value="threshold"
                                         @input="updateModelThreshold(modelId, $event.target.value)"
                                         aria-label="Model threshold">
-                                    <span class="text-gray-500 text-[10px]">%</span>
+                                    <span class="text-ink-3 text-[10px]">%</span>
                                 </div>
-                                <button class="btn btn-xs btn-ghost text-gray-500 hover:text-red-400 px-1"
+                                <button class="btn btn-xs btn-ghost text-ink-3 hover:text-danger px-1"
                                         @click="removeModelThreshold(modelId)">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -597,7 +596,7 @@
                         </template>
 
                         <template x-if="Object.keys(thresholdDialog.modelQuotaThresholds).length === 0">
-                            <p class="text-[10px] text-gray-600 text-center py-2">
+                            <p class="text-[10px] text-ink-3 text-center py-2">
                                 No per-model overrides configured.
                             </p>
                         </template>
@@ -605,9 +604,9 @@
                 </div>
 
                 <!-- Add Model Dialog (inline) -->
-                <div x-show="thresholdDialog.addingModel" class="pt-3 border-t border-space-border/30" x-cloak>
+                <div x-show="thresholdDialog.addingModel" class="pt-3 border-t border-hairline" x-cloak>
                     <div class="flex gap-2">
-                        <select class="select select-sm select-bordered flex-1 bg-space-800 border-space-border text-white text-xs"
+                        <select class="select select-sm select-bordered flex-1 bg-surface-2 border-hairline text-ink text-xs"
                                 x-model="thresholdDialog.newModelId">
                             <option value="">Select model...</option>
                             <template x-for="model in getAvailableModelsForThreshold()" :key="model">
@@ -615,17 +614,17 @@
                             </template>
                         </select>
                         <input type="number" min="0" max="99" step="1"
-                            class="input input-sm input-bordered w-16 bg-space-800 border-space-border text-white font-mono text-center"
+                            class="input input-sm input-bordered w-16 bg-surface-2 border-hairline text-ink font-mono text-center"
                             x-model="thresholdDialog.newModelThreshold"
                             placeholder="10">
-                        <span class="text-gray-500 text-xs self-center">%</span>
+                        <span class="text-ink-3 text-xs self-center">%</span>
                     </div>
                     <div class="flex gap-2 mt-2">
-                        <button class="btn btn-xs btn-ghost text-gray-500 flex-1"
+                        <button class="btn btn-xs btn-ghost text-ink-3 flex-1"
                                 @click="thresholdDialog.addingModel = false">
                             Cancel
                         </button>
-                        <button class="btn btn-xs btn-warning text-black flex-1"
+                        <button class="btn btn-xs bg-warn hover:bg-warn border-none text-white flex-1"
                                 @click="confirmAddModelThreshold()"
                                 :disabled="!thresholdDialog.newModelId">
                             Add Override
@@ -636,9 +635,9 @@
 
             <div class="modal-action">
                 <form method="dialog">
-                    <button class="btn btn-ghost hover:bg-white/10">Cancel</button>
+                    <button class="btn btn-action-ghost">Cancel</button>
                 </form>
-                <button class="btn btn-warning border-none text-black font-semibold"
+                <button class="btn bg-warn hover:bg-warn border-none text-white font-semibold"
                         @click="saveAccountThreshold()"
                         :disabled="thresholdDialog.saving"
                         :class="{ 'loading': thresholdDialog.saving }">

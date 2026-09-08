@@ -1,103 +1,164 @@
-<div x-data="logsViewer" class="view-container h-full flex flex-col">
-    <div class="view-card !p-0 flex flex-col flex-1 min-h-0">
-        <!-- Toolbar -->
-        <div class="bg-space-900 flex flex-wrap gap-y-2 justify-between items-center p-2 px-4 border-b border-space-border select-none min-h-[48px] shrink-0">
-
-        <!-- Left: Decor & Title -->
-        <div class="flex items-center gap-3 shrink-0">
-            <div class="flex gap-2">
-                <div class="w-3 h-3 rounded-full bg-red-500 border border-red-600"></div>
-                <div class="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-500"></div>
-                <div class="w-3 h-3 rounded-full bg-green-500 border border-green-600"></div>
+<div x-data="logsViewer" class="view-container-full h-full flex flex-col">
+    <!-- PageHead（kiro2cc PageHead 规格） -->
+    <div class="mb-5 flex flex-wrap items-end gap-4">
+        <div class="min-w-0">
+            <div class="mb-[5px] text-[11px] tracking-[.02em] text-ink-3">
+                <span x-text="$store.global.t('systemDesc')">CLAUDE PROXY SYSTEM</span>&nbsp;/&nbsp;<b
+                    class="font-medium text-ink-2" aria-hidden="true" x-text="$store.global.t('logs')">Logs</b>
             </div>
-            <span class="text-xs font-mono text-gray-300 hidden sm:inline-block">~/logs</span>
+            <h1 class="text-[19px] font-semibold leading-[1.2] tracking-[-.02em]" x-text="$store.global.t('logs')">
+                Logs
+            </h1>
         </div>
 
-        <!-- Center: Search & Filters -->
-        <div class="flex-1 flex items-center justify-center gap-4 px-4 min-w-0">
-            <!-- Search -->
-            <div class="relative w-full max-w-xs group">
-                <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-                    <svg class="h-3 w-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <!-- Search Box（kiro2cc SearchBox 规格：h-31px + rounded-[7px] + brand focus） -->
+        <div class="relative ml-auto w-[236px]">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="h-3.5 w-3.5 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <input type="text"
+                :placeholder="$store.global.t('grepLogs')"
+                :aria-label="$store.global.t('grepLogs')"
+                class="input-search-sm pr-9"
+                x-model="searchQuery">
+            <button x-show="searchQuery"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-75"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    @click="searchQuery = ''"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-3 transition-colors hover:text-ink"
+                    :aria-label="$store.global.t('grepLogs')">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Panel Title（kiro2cc PANEL_TITLE 规格） -->
+    <h3 class="mb-[7px] text-[10.5px] font-semibold uppercase tracking-[.07em] text-ink-3"
+        x-text="$store.global.t('logs')">Logs</h3>
+
+    <!-- Log Panel（kiro2cc logpanel：PANEL 壳 + 内部滚动） -->
+    <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
+        <!-- Toolbar（kiro2cc Toolbar 规格：flex-wrap + gap-2 + 上下 padding） -->
+        <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline px-[13px] pb-[11px] pt-[14px]">
+
+            <!-- Level Segmented（kiro2cc Segmented 规格：radiogroup + bg-surface-3 容器 + 激活 bg-surface shadow-hair） -->
+            <div role="radiogroup" :aria-label="$store.global.t('filter')"
+                class="flex shrink-0 gap-0.5 rounded-[8px] bg-surface-3 p-0.5">
+                <!-- ALL：filters 四档全开 -->
+                <button type="button" role="radio"
+                    :aria-checked="(filters.INFO && filters.SUCCESS && filters.WARN && filters.ERROR).toString()"
+                    @click="filters.INFO = true; filters.SUCCESS = true; filters.WARN = true; filters.ERROR = true"
+                    class="flex h-[27px] items-center gap-[5px] whitespace-nowrap rounded-[6px] px-2.5 text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    :class="isLevelAll() ? 'bg-surface font-semibold text-ink shadow-hair' : 'font-medium text-ink-2 hover:text-ink'">
+                    <span x-text="$store.global.t('allCaps')">ALL</span>
+                    <span class="font-mono text-[10.5px] tabular-nums"
+                        :class="isLevelAll() ? 'text-ink-2' : 'text-ink-3'"
+                        x-text="logs.length"></span>
+                </button>
+                <!-- INFO -->
+                <button type="button" role="radio" :aria-checked="filters.INFO.toString()"
+                    @click="setLevel('INFO')"
+                    class="flex h-[27px] items-center gap-[5px] whitespace-nowrap rounded-[6px] px-2.5 text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    :class="filters.INFO ? 'bg-surface font-semibold text-ink shadow-hair' : 'font-medium text-ink-2 hover:text-ink'">
+                    <span class="size-[5px] shrink-0 rounded-full bg-brand" aria-hidden="true"></span>
+                    <span x-text="$store.global.t('logLevelInfo')">INFO</span>
+                </button>
+                <!-- SUCCESS（agy 特有档：pip 用 ok 色） -->
+                <button type="button" role="radio" :aria-checked="filters.SUCCESS.toString()"
+                    @click="setLevel('SUCCESS')"
+                    class="flex h-[27px] items-center gap-[5px] whitespace-nowrap rounded-[6px] px-2.5 text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    :class="filters.SUCCESS ? 'bg-surface font-semibold text-ink shadow-hair' : 'font-medium text-ink-2 hover:text-ink'">
+                    <span class="size-[5px] shrink-0 rounded-full bg-ok" aria-hidden="true"></span>
+                    <span x-text="$store.global.t('logLevelSuccess')">SUCCESS</span>
+                </button>
+                <!-- WARN -->
+                <button type="button" role="radio" :aria-checked="filters.WARN.toString()"
+                    @click="setLevel('WARN')"
+                    class="flex h-[27px] items-center gap-[5px] whitespace-nowrap rounded-[6px] px-2.5 text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    :class="filters.WARN ? 'bg-surface font-semibold text-ink shadow-hair' : 'font-medium text-ink-2 hover:text-ink'">
+                    <span class="size-[5px] shrink-0 rounded-full bg-warn" aria-hidden="true"></span>
+                    <span x-text="$store.global.t('logLevelWarn')">WARN</span>
+                </button>
+                <!-- ERROR -->
+                <button type="button" role="radio" :aria-checked="filters.ERROR.toString()"
+                    @click="setLevel('ERROR')"
+                    class="flex h-[27px] items-center gap-[5px] whitespace-nowrap rounded-[6px] px-2.5 text-[12px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    :class="filters.ERROR ? 'bg-surface font-semibold text-ink shadow-hair' : 'font-medium text-ink-2 hover:text-ink'">
+                    <span class="size-[5px] shrink-0 rounded-full bg-danger" aria-hidden="true"></span>
+                    <span x-text="$store.global.t('logLevelError')">ERROR</span>
+                </button>
+            </div>
+
+            <!-- Right: Auto-Scroll Toggle + Count + Export/Clear -->
+            <div class="ml-auto flex shrink-0 items-center gap-2">
+                <span class="text-[11.5px] text-ink-3">
+                    <span class="font-mono tabular-nums" x-text="filteredLogs.length"></span>&nbsp;/&nbsp;<span
+                        class="font-mono tabular-nums" x-text="logs.length"></span>
+                </span>
+
+                <!-- Auto-Scroll Toggle（kiro2cc Toggle 规格：34×19 轨道 + 14px 白点，role=switch） -->
+                <button type="button" role="switch" :aria-checked="isAutoScroll.toString()"
+                    @click="isAutoScroll = !isAutoScroll"
+                    class="flex shrink-0 items-center gap-[7px] rounded-[6px] text-[11.5px] text-ink-2 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                    <span x-text="$store.global.t('autoScroll')">Auto-Scroll</span>
+                    <span class="relative h-[19px] w-[34px] shrink-0 rounded-full transition-colors"
+                        :class="isAutoScroll ? 'bg-brand' : 'bg-hairline-2'">
+                        <span class="absolute top-[2.5px] size-[14px] rounded-full bg-surface shadow-hair transition-all"
+                            :class="isAutoScroll ? 'left-[17px]' : 'left-[2.5px]'"></span>
+                    </span>
+                </button>
+
+                <button type="button" x-show="$store.data.devMode && $store.settings.logExport" @click="exportLogs"
+                    :title="$store.global.t('exportLogs')"
+                    class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
+                </button>
+                <button type="button" @click="clearLogs" :title="$store.global.t('clearLogs')"
+                    class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Log Stream（kiro2cc logstream 等宽行规格：.logrow = ts + lv + msg；CSS 组件类零改动） -->
+        <div id="logs-container" class="logstream custom-scrollbar">
+            <template x-for="(log, idx) in filteredLogs" :key="idx">
+                <div class="logrow" :class="{ 'is-err': log.level === 'ERROR' }">
+                    <!-- Timestamp -->
+                    <span class="ts select-none"
+                        x-text="new Date(log.timestamp).toLocaleTimeString([], {hour12:false})"></span>
+
+                    <!-- Level（静态档类防 Tailwind purge：SUCCESS 无 .lv.success 档，模板层内联 ok 三件套） -->
+                    <span class="lv"
+                        :class="log.level === 'INFO' ? 'lv info' : log.level === 'WARN' ? 'lv warn' : log.level === 'ERROR' ? 'lv error' : log.level === 'DEBUG' ? 'lv debug' : log.level === 'TRACE' ? 'lv trace' : 'lv text-ok bg-ok-soft border-ok-line'"
+                        x-text="log.level"></span>
+
+                    <!-- Message -->
+                    <span class="msg break-all" x-html="Redact.logMessage(log.message).replace(/\n/g, '<br>')"></span>
                 </div>
-                <input type="text" x-model="searchQuery" :placeholder="$store.global.t('grepLogs')"
-                    class="w-full h-7 bg-space-950 border border-space-border rounded text-xs font-mono pl-7 pr-2 focus:border-neon-purple focus:outline-none transition-colors placeholder-gray-500 text-gray-300">
-            </div>
+            </template>
 
-            <!-- Filters -->
-            <div class="hidden md:flex gap-3 text-[10px] font-mono font-bold uppercase select-none">
-                 <label class="flex items-center gap-1.5 cursor-pointer text-blue-400 opacity-50 hover:opacity-100 transition-opacity" :class="{'opacity-100': filters.INFO}">
-                     <input type="checkbox" class="checkbox checkbox-xs checkbox-info rounded-[2px] w-3 h-3 border-blue-400/50" x-model="filters.INFO"> <span x-text="$store.global.t('logLevelInfo')">INFO</span>
-                 </label>
-                 <label class="flex items-center gap-1.5 cursor-pointer text-neon-green opacity-50 hover:opacity-100 transition-opacity" :class="{'opacity-100': filters.SUCCESS}">
-                     <input type="checkbox" class="checkbox checkbox-xs checkbox-success rounded-[2px] w-3 h-3 border-neon-green/50" x-model="filters.SUCCESS"> <span x-text="$store.global.t('logLevelSuccess')">SUCCESS</span>
-                 </label>
-                 <label class="flex items-center gap-1.5 cursor-pointer text-yellow-400 opacity-50 hover:opacity-100 transition-opacity" :class="{'opacity-100': filters.WARN}">
-                     <input type="checkbox" class="checkbox checkbox-xs checkbox-warning rounded-[2px] w-3 h-3 border-yellow-400/50" x-model="filters.WARN"> <span x-text="$store.global.t('logLevelWarn')">WARN</span>
-                 </label>
-                 <label class="flex items-center gap-1.5 cursor-pointer text-red-500 opacity-50 hover:opacity-100 transition-opacity" :class="{'opacity-100': filters.ERROR}">
-                     <input type="checkbox" class="checkbox checkbox-xs checkbox-error rounded-[2px] w-3 h-3 border-red-500/50" x-model="filters.ERROR"> <span x-text="$store.global.t('logLevelError')">ERR</span>
-                 </label>
+            <!-- Empty States（kiro2cc 空态两态拆分：无流 / 无命中） -->
+            <div x-show="logs.length === 0" class="px-[14px] py-8 text-center text-[11.5px] text-ink-3"
+                x-text="$store.global.t('emptyStreamHint')">
+                No logs yet
+            </div>
+            <div x-show="logs.length > 0 && filteredLogs.length === 0"
+                class="px-[14px] py-8 text-center text-[11.5px] text-ink-3" x-text="$store.global.t('emptyNoMatch')">
+                No logs match filter
             </div>
         </div>
-
-        <!-- Right: Controls -->
-        <div class="flex items-center gap-4 shrink-0">
-            <div class="text-[10px] font-mono text-gray-400 hidden lg:block">
-                <span x-text="filteredLogs.length"></span>/<span x-text="logs.length"></span>
-            </div>
-            <label class="cursor-pointer flex items-center gap-2">
-                <span class="text-[10px] font-mono text-gray-300 uppercase hidden sm:inline-block"
-                    x-text="$store.global.t('autoScroll')">Auto-Scroll</span>
-                <input type="checkbox" class="toggle toggle-xs toggle-success" x-model="isAutoScroll">
-            </label>
-            <button class="btn-action-ghost-square" @click="exportLogs" :title="$store.global.t('exportLogs')"
-                x-show="$store.data.devMode && $store.settings.logExport">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-            </button>
-            <button class="btn-action-ghost-square" @click="clearLogs" :title="$store.global.t('clearLogs')">
-                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-            </button>
-        </div>
-    </div>
-
-    <!-- Log Content -->
-    <div id="logs-container" class="flex-1 overflow-auto p-4 font-mono text-[11px] leading-relaxed bg-space-950 custom-scrollbar">
-        <template x-for="(log, idx) in filteredLogs" :key="idx">
-            <div class="flex gap-4 px-2 py-0.5 -mx-2 hover:bg-white/[0.03] transition-colors group">
-                <!-- Timestamp: Muted & Fixed Width -->
-                <span class="text-zinc-400 w-16 shrink-0 select-none group-hover:text-zinc-400 transition-colors"
-                    x-text="new Date(log.timestamp).toLocaleTimeString([], {hour12:false})"></span>
-
-                <!-- Level: Tag Style -->
-                <div class="w-14 shrink-0 flex items-center">
-                    <span class="px-1.5 py-0.5 rounded-[2px] text-[10px] font-bold uppercase tracking-wider leading-none border"
-                        :class="{
-                            'bg-blue-500/10 text-blue-400 border-blue-500/20': log.level === 'INFO',
-                            'bg-yellow-500/10 text-yellow-400 border-yellow-500/20': log.level === 'WARN',
-                            'bg-red-500/10 text-red-500 border-red-500/20': log.level === 'ERROR',
-                            'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': log.level === 'SUCCESS',
-                            'bg-purple-500/10 text-purple-400 border-purple-500/20': log.level === 'DEBUG'
-                        }" x-text="log.level"></span>
-                </div>
-
-                <!-- Message: Clean & High Contrast -->
-                <span class="text-zinc-300 break-all group-hover:text-white transition-colors flex-1"
-                    x-html="Redact.logMessage(log.message).replace(/\n/g, '<br>')"></span>
-            </div>
-        </template>
-        <!-- Blinking Cursor -->
-        <div class="h-3 w-1.5 bg-zinc-600 animate-pulse mt-1 inline-block" x-show="filteredLogs.length === logs.length && !searchQuery"></div>
-        <div x-show="filteredLogs.length === 0 && logs.length > 0" class="text-zinc-400 italic mt-8 text-center"
-            x-text="$store.global.t('noLogsMatch')">
-            No logs match filter
-        </div>
-    </div>
-    </div>
+    </section>
 </div>

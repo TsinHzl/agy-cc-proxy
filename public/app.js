@@ -90,15 +90,11 @@ document.addEventListener('alpine:init', () => {
                 }, 150);
             });
 
-            // Theme setup
-            document.documentElement.setAttribute('data-theme', 'black');
-            document.documentElement.classList.add('dark');
-
             // Chart Defaults
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.color = window.utils.getThemeColor('--color-text-dim');
                 Chart.defaults.borderColor = window.utils.getThemeColor('--color-space-border');
-                Chart.defaults.font.family = '"JetBrains Mono", monospace';
+                Chart.defaults.font.family = '"IBM Plex Mono", monospace';
             }
 
             // Start Data Polling

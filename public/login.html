@@ -1,39 +1,53 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="antigravity" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — Antigravity Console</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
         body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     </style>
 </head>
-<body class="bg-space-950 text-gray-300 font-sans antialiased">
-    <div class="w-full max-w-sm px-6">
-        <div class="card bg-base-200 shadow-xl">
-            <div class="card-body gap-4">
-                <h1 class="card-title text-lg justify-center">Antigravity Console</h1>
-                <p class="text-sm text-center text-gray-400">Enter your WebUI password to continue</p>
-
-                <div id="error" class="hidden alert alert-error text-sm py-2"></div>
-
-                <form id="loginForm" class="flex flex-col gap-3" onsubmit="handleLogin(event)">
-                    <input
-                        id="password"
-                        type="password"
-                        placeholder="Password"
-                        autocomplete="current-password"
-                        class="input input-bordered w-full"
-                        required
-                    />
-                    <button type="submit" id="submitBtn" class="btn btn-primary w-full">
-                        Sign in
-                    </button>
-                </form>
+<!-- kiro2cc login-page: max-w-[352px] surface card on bg-background -->
+<body class="w-full bg-background text-ink font-sans antialiased">
+    <div class="w-full max-w-[352px] rounded-[11px] border border-hairline bg-surface p-[26px] shadow-pop">
+        <!-- Brand block: gradient badge + title/subtitle -->
+        <div class="flex items-center gap-3">
+            <span class="grid size-10 shrink-0 place-items-center rounded-[12px] text-brand-fg shadow-hair"
+                style="background-image: linear-gradient(150deg, var(--brand), var(--brand-deep));">
+                <svg viewBox="0 0 24 24" class="size-[22px]" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                    <path d="M5 20V7a7 7 0 0 1 14 0v13l-2.3-2-2.4 2-2.3-2-2.3 2-2.4-2z" />
+                    <path d="M9.5 10h.01M14.5 10h.01" />
+                </svg>
+            </span>
+            <div class="min-w-0">
+                <div class="text-[17px] font-semibold leading-[1.2] tracking-[-.02em]">Antigravity Console</div>
+                <div class="text-[11px] tracking-[.02em] text-ink-3">Admin Console</div>
             </div>
         </div>
+
+        <p class="mt-[18px] text-[11.5px] leading-[1.55] text-ink-3">Enter your WebUI password to continue</p>
+
+        <div id="error" class="mt-2 hidden rounded-[7px] border border-danger-line bg-danger-soft px-2.5 py-1.5 text-[12px] text-danger"></div>
+
+        <form id="loginForm" class="mt-4 flex flex-col gap-2" onsubmit="handleLogin(event)">
+            <label for="password" class="block text-[10.5px] font-semibold uppercase tracking-[.07em] text-ink-3">Password</label>
+            <input
+                id="password"
+                type="password"
+                placeholder="Password"
+                autocomplete="current-password"
+                class="h-[34px] w-full rounded-[7px] border border-hairline-2 bg-surface-2 px-2.5 text-[12.5px] text-ink transition-colors outline-none placeholder:text-ink-3 focus:border-brand"
+                required
+            />
+            <button type="submit" id="submitBtn"
+                class="mt-2 inline-flex h-[34px] w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] border border-transparent bg-brand text-[12.5px] font-semibold text-brand-fg shadow-hair transition-colors hover:bg-brand-hover disabled:pointer-events-none disabled:opacity-50">
+                Sign in
+            </button>
+        </form>
     </div>
 
     <script>

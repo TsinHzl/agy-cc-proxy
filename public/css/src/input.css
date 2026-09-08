@@ -2,94 +2,294 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* === Background Layers === */
-  --color-space-950: #09090b;
-  --color-space-900: #0f0f11;
-  --color-space-850: #121214;
-  --color-space-800: #18181b;
-  --color-space-border: #27272a;
+/* ==========================================================================
+   主题基座：完全复刻 kiro2cc admin-ui 的设计令牌体系（浅色默认 + .dark 预留）
+   令牌双轨制：
+     上半区 = shadcn HSL 三元组（保名换值，既有原语零改动继承新配色）
+     下半区 = 设计稿原生令牌（完整色值 / rgba，供组件按语义消费）
+     行尾 ↔ 标注配对关系，改色时两处必须同步。
+   ========================================================================== */
+@layer base {
+  :root {
+    --background: 210 12% 97%;        /* ↔ 设计稿 --bg        #F6F7F8 */
+    --foreground: 210 12% 7%;         /* ↔ --ink              #0F1113 */
+    --card: 0 0% 100%;                /* ↔ --surface          #FFFFFF */
+    --card-foreground: 210 12% 7%;
+    --popover: 0 0% 100%;             /* ↔ --surface          #FFFFFF */
+    --popover-foreground: 210 12% 7%;
+    --primary: 174 81% 26%;           /* ↔ --brand            #0D7A6F */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 12% 95%;         /* ↔ --surface-3        #F1F2F4 */
+    --secondary-foreground: 210 12% 7%;
+    --muted: 220 12% 95%;             /* ↔ --surface-3        #F1F2F4 */
+    --muted-foreground: 215 6% 40%;   /* ↔ --ink-2            #5F646B */
+    /* --ink-3 由设计稿 #909699 降一个亮度级至 #71777A：原值在白底对比度仅 3.00，未达 WCAG AA */
+    --accent: 220 12% 95%;            /* ↔ --surface-3（shadcn 语义为 hover 表面，非强调色） */
+    --accent-foreground: 210 12% 7%;
+    --destructive: 359 56% 47%;       /* ↔ --danger           #BB3538 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 9% 91%;             /* ↔ --hairline         #E6E8EA */
+    --input: 210 9% 91%;              /* ↔ --hairline         #E6E8EA */
+    --ring: 174 81% 26%;              /* ↔ --brand            #0D7A6F */
+    --radius: 0.6875rem;              /* 11px，对齐设计稿面板圆角 */
 
-  /* === Neon Accents (Full Saturation) === */
-  --color-neon-purple: #a855f7;
-  --color-neon-green: #22c55e;
-  --color-neon-cyan: #06b6d4;
-  --color-neon-yellow: #eab308;
-  --color-neon-red: #ef4444;
+    --surface: #FFFFFF;
+    --surface-2: #FAFAFB;
+    --surface-3: #F1F2F4;
+    --sidebar: #FFFFFF;
+    --hairline: #E6E8EA;
+    --hairline-2: #DBDEE1;
+    --ink: #0F1113;
+    --ink-2: #5F646B;
+    --ink-3: #71777A;
+    --brand: #0D7A6F;
+    --brand-hover: #0A655C;
+    /* 品牌渐变末端：设计稿 color-mix(in srgb, brand 62%, #063B36) 的预算值 */
+    --brand-deep: #0A6259;
+    --brand-fg: #FFFFFF;
+    --brand-soft: #E4F2F0;
+    --brand-line: #B9DEDA;
+    --ok: #137A4C;
+    --ok-soft: #E5F3EB;
+    --ok-line: #BADFC9;
+    --warn: #9A6300;
+    --warn-soft: #FCF2DF;
+    --warn-line: #EBD6A7;
+    --danger: #BB3538;
+    --danger-soft: #FBECEC;
+    --danger-line: #EFC9C9;
+    --track: #EAECEE;
+    /* 消费额度进度条四档渐变 + 徽章配色，色值取自 quota_progress_bar.html 设计稿 */
+    --quota-safe-grad: linear-gradient(90deg, #059669 0%, #10b981 60%, #34d399 100%);
+    --quota-mod-grad: linear-gradient(90deg, #0284c7 0%, #06b6d4 50%, #10b981 100%);
+    --quota-warn-grad: linear-gradient(90deg, #d97706 0%, #f59e0b 60%, #fbbf24 100%);
+    --quota-danger-grad: linear-gradient(90deg, #e11d48 0%, #f43f5e 60%, #fb7185 100%);
+    --quota-safe-badge-bg: #ecfdf5;
+    --quota-safe-badge-text: #059669;
+    --quota-mod-badge-bg: #f0fdfa;
+    --quota-mod-badge-text: #0d9488;
+    --quota-warn-badge-bg: #fffbeb;
+    --quota-warn-badge-text: #b45309;
+    --quota-danger-badge-bg: #fff1f2;
+    --quota-danger-badge-text: #e11d48;
+    --code-bg: #FBFBFC;
+    --shadow-sm: 0 1px 2px rgba(16, 18, 20, .05);
+    --shadow-md: 0 4px 14px -4px rgba(16, 18, 20, .12), 0 1px 3px rgba(16, 18, 20, .06);
+    --shadow-pop: 0 12px 32px -8px rgba(16, 18, 20, .2), 0 2px 6px rgba(16, 18, 20, .08);
+    --grid-dot: rgba(15, 17, 19, .045);
+    --ring-grad-from: #34d399;
+    --ring-grad-to: #059669;
+    --ring-glow: rgba(16, 185, 129, .2);
 
-  /* === Soft Neon (Reduced Saturation for Fills) === */
-  --color-neon-purple-soft: #9333ea;
-  --color-neon-green-soft: #16a34a;
-  --color-neon-cyan-soft: #0891b2;
+    /* === 旧主题变量保名换值（供 charts.js 15 处 + app.js 2 处 getThemeColor 消费） ===
+       变量名保留、值改指新令牌，防止图表回退硬编码霓虹色（#a855f7 等）。 */
+    /* === Background Layers → 新 surface 体系 === */
+    --color-space-950: #1B2226;       /* tooltip 背景/边框专用：浅色主题下的深色 tooltip 语义值 */
+    --color-space-900: #F1F2F4;       /* ↔ --surface-3 */
+    --color-space-850: #FAFAFB;       /* ↔ --surface-2 */
+    --color-space-800: #F1F2F4;       /* ↔ --surface-3 */
+    --color-space-border: #E6E8EA;    /* ↔ --hairline */
 
-  /* === Text Hierarchy (WCAG AA Compliant) === */
-  --color-text-primary: #ffffff; /* Emphasis: Titles, Key Numbers */
-  --color-text-secondary: #d4d4d8; /* Content: Body Text (zinc-300) */
-  --color-text-tertiary: #a1a1aa; /* Metadata: Timestamps, Labels (zinc-400) */
-  --color-text-quaternary: #71717a; /* Subtle: Decorative (zinc-500) */
+    /* === Neon Accents → 新语义色（保名换值） === */
+    --color-neon-purple: #0D7A6F;     /* ↔ --brand */
+    --color-neon-green: #137A4C;      /* ↔ --ok */
+    --color-neon-cyan: #0D7A6F;       /* ↔ --brand */
+    --color-neon-yellow: #9A6300;     /* ↔ --warn */
+    --color-neon-red: #BB3538;        /* ↔ --danger */
 
-  /* === Legacy Aliases (Backward Compatibility) === */
-  --color-text-main: var(--color-text-secondary);
-  --color-text-dim: var(--color-text-tertiary);
-  --color-text-muted: var(--color-text-tertiary);
-  --color-text-bright: var(--color-text-primary);
+    /* === Soft Neon → 新 -soft 变体（保名换值） === */
+    --color-neon-purple-soft: #E4F2F0; /* ↔ --brand-soft */
+    --color-neon-green-soft: #E5F3EB;  /* ↔ --ok-soft */
+    --color-neon-cyan-soft: #E4F2F0;   /* ↔ --brand-soft */
 
-  /* Gradient Accents */
-  --color-green-400: #4ade80;
-  --color-yellow-400: #facc15;
-  --color-red-400: #f87171;
+    /* === Text Hierarchy → 新 ink 体系（保名换值） === */
+    --color-text-primary: #0F1113;    /* ↔ --ink */
+    --color-text-secondary: #3B4046;  /* ink 与 ink-2 之间的正文色 */
+    --color-text-tertiary: #5F646B;   /* ↔ --ink-2 */
+    --color-text-quaternary: #71777A; /* ↔ --ink-3 */
 
-  /* Chart Colors */
-  --color-chart-1: #a855f7;
-  --color-chart-2: #c084fc;
-  --color-chart-3: #e879f9;
-  --color-chart-4: #d946ef;
-  --color-chart-5: #22c55e;
-  --color-chart-6: #4ade80;
-  --color-chart-7: #86efac;
-  --color-chart-8: #10b981;
-  --color-chart-9: #06b6d4;
-  --color-chart-10: #f59e0b;
-  --color-chart-11: #ef4444;
-  --color-chart-12: #ec4899;
-  --color-chart-13: #8b5cf6;
-  --color-chart-14: #14b8a6;
-  --color-chart-15: #f97316;
-  --color-chart-16: #6366f1;
+    /* === Legacy Aliases（保名换值） === */
+    --color-text-main: #0F1113;       /* ↔ --ink */
+    --color-text-dim: #5F646B;        /* ↔ --ink-2 */
+    --color-text-muted: #5F646B;      /* ↔ --ink-2 */
+    --color-text-bright: #0F1113;     /* ↔ --ink */
+
+    /* Gradient Accents → 新语义色（保名换值） */
+    --color-green-400: #137A4C;       /* ↔ --ok */
+    --color-yellow-400: #9A6300;      /* ↔ --warn */
+    --color-red-400: #BB3538;         /* ↔ --danger */
+
+    /* Chart Colors → kiro2cc 语义色序（保名换值：brand 系 → ok 系 → warn/danger → 辅助色） */
+    --color-chart-1: #0D7A6F;
+    --color-chart-2: #2BB8A6;
+    --color-chart-3: #0A6259;
+    --color-chart-4: #B9DEDA;
+    --color-chart-5: #137A4C;
+    --color-chart-6: #41BE7F;
+    --color-chart-7: #34d399;
+    --color-chart-8: #059669;
+    --color-chart-9: #0d9488;
+    --color-chart-10: #9A6300;
+    --color-chart-11: #BB3538;
+    --color-chart-12: #d97706;
+    --color-chart-13: #6366f1;
+    --color-chart-14: #0284c7;
+    --color-chart-15: #f59e0b;
+    --color-chart-16: #5F646B;
+  }
+
+  .dark {
+    --background: 220 11% 5%;         /* ↔ 设计稿 --bg        #0C0D0F */
+    --foreground: 210 12% 93%;        /* ↔ --ink              #ECEEF0 */
+    --card: 216 11% 9%;               /* ↔ --surface          #15171A */
+    --card-foreground: 210 12% 93%;
+    --popover: 216 11% 9%;            /* ↔ --surface          #15171A */
+    --popover-foreground: 210 12% 93%;
+    --primary: 172 62% 45%;           /* ↔ --brand            #2BB8A6 */
+    --primary-foreground: 174 78% 7%; /* ↔ --brand-fg         #04201D */
+    --secondary: 213 12% 15%;         /* ↔ --surface-3        #22262B */
+    --secondary-foreground: 210 12% 93%;
+    --muted: 213 12% 15%;             /* ↔ --surface-3        #22262B */
+    --muted-foreground: 212 8% 63%;   /* ↔ --ink-2            #9AA1A9 */
+    --accent: 213 12% 15%;            /* ↔ --surface-3（hover 表面） */
+    --accent-foreground: 210 12% 93%;
+    --destructive: 358 80% 67%;       /* ↔ --danger           #EE676C */
+    --destructive-foreground: 0 0% 100%;
+    --border: 213 11% 16%;            /* ↔ --hairline         #24282D */
+    --input: 213 11% 16%;             /* ↔ --hairline         #24282D */
+    --ring: 172 62% 45%;              /* ↔ --brand            #2BB8A6 */
+
+    --surface: #15171A;
+    --surface-2: #1B1E22;
+    --surface-3: #22262B;
+    --sidebar: #111316;
+    --hairline: #24282D;
+    --hairline-2: #31363D;
+    --ink: #ECEEF0;
+    --ink-2: #9AA1A9;
+    --ink-3: #79818B;               /* 设计稿 #6C737C 提亮一级，深卡对比度 3.75 → 4.55 达 AA */
+    --brand: #2BB8A6;
+    --brand-hover: #3FCBB8;
+    --brand-deep: #1D897B;
+    --brand-fg: #04201D;
+    --brand-soft: rgba(43, 184, 166, .13);
+    --brand-line: rgba(43, 184, 166, .32);
+    --ok: #41BE7F;
+    --ok-soft: rgba(65, 190, 127, .13);
+    --ok-line: rgba(65, 190, 127, .3);
+    --warn: #DFA43A;
+    --warn-soft: rgba(223, 164, 58, .13);
+    --warn-line: rgba(223, 164, 58, .3);
+    --danger: #EE676C;
+    --danger-soft: rgba(238, 103, 108, .13);
+    --danger-line: rgba(238, 103, 108, .3);
+    --track: #282D33;
+    /* 渐变主色沿用浅色模式（暗底同样鲜明），仅徽章底色/文字改用半透明适配 */
+    --quota-safe-badge-bg: rgba(16, 185, 129, .15);
+    --quota-safe-badge-text: #34d399;
+    --quota-mod-badge-bg: rgba(6, 182, 212, .15);
+    --quota-mod-badge-text: #2dd4bf;
+    --quota-warn-badge-bg: rgba(245, 158, 11, .15);
+    --quota-warn-badge-text: #fbbf24;
+    --quota-danger-badge-bg: rgba(244, 63, 94, .15);
+    --quota-danger-badge-text: #fb7185;
+    --code-bg: #0A0B0D;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 6px 20px -6px rgba(0, 0, 0, .6), 0 1px 3px rgba(0, 0, 0, .4);
+    --shadow-pop: 0 16px 40px -10px rgba(0, 0, 0, .72), 0 2px 8px rgba(0, 0, 0, .5);
+    --grid-dot: rgba(255, 255, 255, .035);
+    --ring-grad-from: #34d399;
+    --ring-grad-to: #059669;
+    --ring-glow: rgba(16, 185, 129, .35);
+
+    /* === 旧主题变量保名换值（.dark 档） === */
+    --color-space-950: #0C0D0F;       /* 暗色下 tooltip 即卡片深色 */
+    --color-space-900: #22262B;
+    --color-space-850: #1B1E22;
+    --color-space-800: #22262B;
+    --color-space-border: #24282D;
+    --color-neon-purple: #2BB8A6;
+    --color-neon-green: #41BE7F;
+    --color-neon-cyan: #2BB8A6;
+    --color-neon-yellow: #DFA43A;
+    --color-neon-red: #EE676C;
+    --color-neon-purple-soft: rgba(43, 184, 166, .13);
+    --color-neon-green-soft: rgba(65, 190, 127, .13);
+    --color-neon-cyan-soft: rgba(43, 184, 166, .13);
+    --color-text-primary: #ECEEF0;
+    --color-text-secondary: #C9CED4;
+    --color-text-tertiary: #9AA1A9;
+    --color-text-quaternary: #79818B;
+    --color-text-main: #ECEEF0;
+    --color-text-dim: #9AA1A9;
+    --color-text-muted: #9AA1A9;
+    --color-text-bright: #ECEEF0;
+    --color-green-400: #41BE7F;
+    --color-yellow-400: #DFA43A;
+    --color-red-400: #EE676C;
+    --color-chart-1: #2BB8A6;
+    --color-chart-2: #3FCBB8;
+    --color-chart-3: #1D897B;
+    --color-chart-4: #B9DEDA;
+    --color-chart-5: #41BE7F;
+    --color-chart-6: #34d399;
+    --color-chart-7: #6ee7b7;
+    --color-chart-8: #059669;
+    --color-chart-9: #2dd4bf;
+    --color-chart-10: #DFA43A;
+    --color-chart-11: #EE676C;
+    --color-chart-12: #f59e0b;
+    --color-chart-13: #818cf8;
+    --color-chart-14: #38bdf8;
+    --color-chart-15: #fbbf24;
+    --color-chart-16: #9AA1A9;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--hairline);
+  }
+  body {
+    background: hsl(var(--background));
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* kiro2cc 6px 滚动条 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--hairline-2);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-3);
+  }
 }
 
 [x-cloak] {
   display: none !important;
 }
 
-/* Custom Scrollbar */
+/* 自定义滚动条容器（保留旧类名，滚动条规格已全局统一为 6px） */
 .custom-scrollbar {
   scrollbar-gutter: stable;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* 滚动条容器（旧 dark scrollbar） */
+.scrollbar-container {
+  scrollbar-gutter: stable;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(9, 9, 11, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #27272a 0%, #18181b 100%);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
-  border-color: rgba(168, 85, 247, 0.3);
-}
-
-/* Animations */
+/* Animations（保留既有过渡机制） */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -115,206 +315,357 @@
   animation: fadeIn 0.4s ease-out forwards;
 }
 
-.nav-item.active {
-  background: linear-gradient(
-    90deg,
-    theme("colors.neon.purple / 15%") 0%,
-    transparent 100%
-  );
-  @apply border-l-4 border-neon-purple text-white;
-}
-
+/* ==========================================================================
+   侧栏导航项（kiro2cc 几何：bg-brand-soft + 2.5px brand 竖条）
+   ========================================================================== */
 .nav-item {
-  @apply border-l-4 border-transparent transition-all duration-200;
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: var(--ink-2);
+  font-weight: 450;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.nav-item:hover {
+  color: var(--ink);
+  background: var(--surface-3);
+}
+/* active 竖条：kiro2cc 采用 rounded-[7px] 项内左缘局部竖条（-left-2 与 nav px-2 耦合），
+   border-left 全高方案会破坏圆角项几何，故用 ::before 实现 */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  left: -8px; /* -left-2：与侧栏 nav 的 px-2 数值耦合，改 px 时须同步 */
+  top: 8px;
+  bottom: 8px;
+  width: 2.5px;
+  border-radius: 0 3px 3px 0;
+  background: transparent;
+}
+.nav-item.active {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+}
+.nav-item.active::before {
+  background: var(--brand);
 }
 
+/* ==========================================================================
+   消费额度进度条（四档渐变语义类：h-1 + rounded-[3px]）
+   ========================================================================== */
+.quota-bar {
+  height: 4px;
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
+}
+.quota-bar > div {
+  height: 100%;
+  border-radius: 3px;
+}
+.quota-tier-safe   > div { background-image: var(--quota-safe-grad); }
+.quota-tier-mod    > div { background-image: var(--quota-mod-grad); }
+.quota-tier-warn   > div { background-image: var(--quota-warn-grad); }
+.quota-tier-danger > div { background-image: var(--quota-danger-grad); }
+
+/* 保留旧类名：语义类已由四档渐变接管，webkit 原生 progress 元素同步映射 */
 .progress-gradient-success::-webkit-progress-value {
-  background-image: linear-gradient(
-    to right,
-    var(--color-neon-green),
-    var(--color-green-400)
-  );
+  background-image: var(--quota-safe-grad);
 }
-
 .progress-gradient-warning::-webkit-progress-value {
-  background-image: linear-gradient(
-    to right,
-    var(--color-neon-yellow),
-    var(--color-yellow-400)
-  );
+  background-image: var(--quota-warn-grad);
 }
-
 .progress-gradient-error::-webkit-progress-value {
-  background-image: linear-gradient(
-    to right,
-    var(--color-neon-red),
-    var(--color-red-400)
-  );
+  background-image: var(--quota-danger-grad);
 }
-
 .progress-gradient-error,
 .progress-gradient-error::-moz-progress-bar {
   animation: none !important;
   background-image: none !important;
 }
 
-/* Dashboard Grid */
+/* 百分比徽章胶囊（QuotaPercentBadge 风格） */
+.quota-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.quota-badge-safe {
+  background: var(--quota-safe-badge-bg);
+  color: var(--quota-safe-badge-text);
+}
+.quota-badge-mod {
+  background: var(--quota-mod-badge-bg);
+  color: var(--quota-mod-badge-text);
+}
+.quota-badge-warn {
+  background: var(--quota-warn-badge-bg);
+  color: var(--quota-warn-badge-text);
+}
+.quota-badge-danger {
+  background: var(--quota-danger-badge-bg);
+  color: var(--quota-danger-badge-text);
+}
+
+/* Dashboard Grid（保留旧类名，新主题网格） */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
 }
 
-/* Tooltip Customization */
+/* Tooltip Customization（新主题：深色 tooltip 语义，消费 --color-space-950） */
 .tooltip:before {
-  @apply bg-space-800 border border-space-border text-gray-200 font-mono text-xs;
+  background: var(--color-space-950);
+  border: 1px solid var(--color-space-950);
+  color: #ECEEF0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
 }
 
 .tooltip-left:before {
   margin-right: 0.5rem;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Refactored Global Utilities                                                */
-/* -------------------------------------------------------------------------- */
-
-/* Standard Layout Constants */
+/* ==========================================================================
+   标准布局常量（沿用旧类名机制，几何对齐 kiro2cc）
+   ========================================================================== */
 :root {
-  --view-padding: 2rem; /* 32px - Standard Padding */
-  --view-gap: 2rem; /* 32px - Standard component gap */
-  --card-radius: 0.75rem; /* 12px */
+  /* kiro2cc main 区为 px-9(36px) py-7(28px)：main 层不加 padding，
+     由 .view-container 系承担 —— 拆分水平/垂直两个变量 */
+  --view-padding-x: 2.25rem; /* 36px - 水平内边距（px-9） */
+  --view-padding-y: 1.75rem; /* 28px - 垂直内边距（py-7） */
+  --view-gap: 1.25rem;     /* 20px - 组件间距 */
+  --card-radius: 0.6875rem; /* 11px，对齐设计稿面板圆角 */
 }
 
 @media (max-width: 768px) {
   :root {
-    --view-padding: 1rem;
-    --view-gap: 1.25rem;
+    --view-padding-x: 1rem;
+    --view-padding-y: 1rem;
+    --view-gap: 1rem;
   }
 }
 
 /* Base View Container */
 .view-container {
-    display: flex;
-    flex-direction: column;
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-    padding: var(--view-padding);
-    gap: var(--view-gap);
-    min-height: calc(100vh - 56px); /* Align with navbar height */
-    max-width: 1400px;
-    scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: var(--view-padding-y) var(--view-padding-x);
+  gap: var(--view-gap);
 }
 
 /* Specialized container for data-heavy pages (Logs) */
 .view-container-full {
-  @apply w-full animate-fade-in flex flex-col;
-  padding: var(--view-padding);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--view-padding-y) var(--view-padding-x);
   gap: var(--view-gap);
-  min-height: calc(100vh - 56px);
-  max-width: 100%;
 }
 
 /* Centered container for form-heavy pages (Settings/Accounts) */
 .view-container-centered {
-  @apply mx-auto w-full animate-fade-in flex flex-col;
-  padding: var(--view-padding);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: var(--view-padding-y) var(--view-padding-x);
   gap: var(--view-gap);
-  min-height: calc(100vh - 56px);
-  max-width: 900px; /* Comfortable reading width for forms */
+  max-width: 900px;
 }
 
 /* Standard Section Header */
 .view-header {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
 }
 
 @media (min-width: 768px) {
-    .view-header {
-        flex-direction: row;
-        align-items: flex-end;
-    }
+  .view-header {
+    flex-direction: row;
+    align-items: flex-end;
+  }
 }
 
 .view-header-title {
-  @apply flex flex-col;
+  display: flex;
+  flex-direction: column;
 }
 
 .view-header-title h2 {
-  @apply text-2xl font-bold text-white tracking-tight;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 .view-header-title p {
-  @apply text-sm text-gray-500 mt-1;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  margin-top: 0.25rem;
 }
 
 .view-header-actions {
-  @apply flex items-center gap-3;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-/* Standard Card Panel */
+/* ==========================================================================
+   标准卡片（kiro2cc PANEL 规格：rounded-[11px] + 1px hairline + shadow-panel）
+   ========================================================================== */
 .view-card {
-    position: relative;
-    overflow: hidden;
-    border-radius: var(--card-radius);
-    padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(135deg,
-        rgba(15, 15, 17, 0.75) 0%,
-        rgba(18, 18, 20, 0.70) 100%
-    );
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.02) inset,
-        0 4px 24px rgba(0, 0, 0, 0.4);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.6875rem;
+  padding: 1.25rem;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
 .view-card:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-        0 8px 32px rgba(0, 0, 0, 0.5);
+  border-color: var(--hairline-2);
 }
 
 .view-card-header {
-  @apply flex items-center justify-between mb-4 pb-4 border-b border-[rgba(39,39,42,0.3)];
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--hairline);
 }
 
-/* Component Unification */
-.standard-table {
-  @apply table w-full border-separate border-spacing-0;
+/* ==========================================================================
+   指标条（kiro2cc metrics.tsx 规格：rounded-[16px] 一体式通栏 + 1px 分隔线）
+   列模板走 CSS 类而非内联 style，以便 <lg 降级 2 列（内联 style 会压过响应式）
+   ========================================================================== */
+.metrics-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
-.standard-table thead {
-  @apply bg-space-900/50 text-gray-500 font-mono text-xs uppercase border-b border-space-border;
+@media (min-width: 1024px) {
+  .metrics-bar {
+    /* kiro2cc BAR_COLS_5 */
+    grid-template-columns: 1.1fr 1.35fr 1fr 1.25fr 1.1fr;
+  }
+}
+.metric-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.875rem 1.5rem;
+  text-align: left;
+}
+button.metric-cell {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+button.metric-cell:hover {
+  background: var(--surface-3);
+}
+button.metric-cell:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+.metric-divider {
+  /* mobile-first：默认隐藏，≥lg 恢复显示，避免 min/max 双查询在分数视口（如 1023.5px）双不命中 */
+  display: none;
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  right: 0;
+  width: 1px;
+  background: var(--hairline);
+}
+@media (min-width: 1024px) {
+  .metric-divider {
+    display: block;
+  }
+  .metrics-bar > :last-child .metric-divider {
+    display: none;
+  }
+  .metrics-bar > :last-child {
+    grid-column: auto;
+  }
+}
+@media (max-width: 1023px) {
+  .metrics-bar > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ==========================================================================
+   标准表格（kiro2cc table-kit 规格：TH 大写小字 + CELL 边框行）
+   ========================================================================== */
+.standard-table {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.standard-table thead th {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--hairline);
 }
 .standard-table tbody tr {
-  @apply transition-all duration-200 border-b border-[rgba(39,39,42,0.3)] last:border-0;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--hairline);
 }
-
+.standard-table tbody tr:last-child {
+  border-bottom: none;
+}
+.standard-table tbody td {
+  padding: 0.625rem 0.75rem;
+  font-size: 13px;
+  color: var(--ink);
+  border-bottom: 1px solid var(--hairline);
+}
+.standard-table tbody tr:last-child td {
+  border-bottom: none;
+}
 .standard-table tbody tr:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0.03) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background: var(--surface-2);
 }
 
-/* Custom Range Slider - Simplified */
+/* ==========================================================================
+   滑条（kiro2cc 规格：h-1 track + 圆形 thumb，--range-color 变体保名换值）
+   ========================================================================== */
 .custom-range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 4px;
-  background: var(--color-space-800);
+  background: var(--track);
   border-radius: 999px;
   outline: none;
   cursor: pointer;
@@ -326,7 +677,7 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--range-color, var(--color-neon-purple));
+  background: var(--range-color, var(--brand));
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -340,7 +691,7 @@
   height: 14px;
   border: none;
   border-radius: 50%;
-  background: var(--range-color, var(--color-neon-purple));
+  background: var(--range-color, var(--brand));
   cursor: pointer;
   transition: transform 0.1s ease;
 }
@@ -349,124 +700,317 @@
   transform: scale(1.15);
 }
 
-/* Color Variants */
+/* Color Variants（保名换值） */
 .custom-range-purple {
-  --range-color: var(--color-neon-purple);
+  --range-color: var(--brand);
 }
 .custom-range-green {
-  --range-color: var(--color-neon-green);
+  --range-color: var(--ok);
 }
 .custom-range-cyan {
-  --range-color: var(--color-neon-cyan);
+  --range-color: var(--brand);
 }
 .custom-range-yellow {
-  --range-color: var(--color-neon-yellow);
+  --range-color: var(--warn);
 }
 .custom-range-accent {
-  --range-color: var(--color-neon-cyan);
+  --range-color: var(--brand);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Refactored UI Components (Phase 1.2)                                       */
-/* -------------------------------------------------------------------------- */
-
-/* Phase 1.2 additions ... */
-
-/* Filter Controls */
+/* ==========================================================================
+   筛选控件（kiro2cc toolbar 规格：h-[31px] + hairline 边框）
+   ========================================================================== */
 .filter-control {
-    @apply flex items-center justify-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 
-           text-[10px] lg:text-xs font-mono font-medium text-gray-400 
-           bg-space-800 lg:bg-transparent border border-space-border/50 lg:border-transparent 
-           rounded lg:rounded-md hover:text-white lg:hover:bg-space-800 
-           transition-all duration-200 whitespace-nowrap w-full sm:w-auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 31px;
+  padding: 0 0.75rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
-
 .filter-control:hover {
-    @apply border-neon-cyan/50 lg:border-neon-cyan/30 lg:shadow-lg lg:shadow-neon-cyan/10;
+  color: var(--ink);
+  background: var(--surface-3);
 }
 
 .filter-control-item {
-    @apply block w-full px-3 py-1.5 text-left text-[10px] font-mono hover:bg-white/5 transition-colors;
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  text-align: left;
+  font-size: 12px;
+  color: var(--ink-2);
+  transition: background 0.15s ease;
+}
+.filter-control-item:hover {
+  background: var(--surface-3);
+  color: var(--ink);
 }
 
-/* Action Buttons */
+/* ==========================================================================
+   操作按钮（kiro2cc button 规格：ghost 方形图标钮 / primary brand 实底）
+   ========================================================================== */
 .btn-action-ghost {
-  @apply btn btn-xs btn-ghost text-gray-400 hover:text-white transition-colors;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 28px;
+  padding: 0 0.625rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.btn-action-ghost:hover {
+  color: var(--ink);
+  background: var(--surface-3);
 }
 
 .btn-action-ghost-square {
-  @apply btn btn-xs btn-ghost btn-square text-gray-400 hover:text-white transition-colors;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.btn-action-ghost-square:hover {
+  color: var(--ink);
+  background: var(--surface-3);
 }
 
 .btn-action-primary {
-  @apply btn bg-gradient-to-r from-neon-purple to-indigo-600
-         border-none text-white shadow-lg shadow-neon-purple/20
-         hover:shadow-neon-purple/40 transition-all;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 32px;
+  padding: 0 1rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-fg);
+  background: var(--brand);
+  border: none;
+  border-radius: 7px;
+  transition: background 0.15s ease;
+}
+.btn-action-primary:hover {
+  background: var(--brand-hover);
 }
 
 .btn-action-success {
-  @apply btn btn-xs btn-ghost btn-square text-green-500 hover:bg-green-500/20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--ok);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.btn-action-success:hover {
+  background: var(--ok-soft);
 }
 
 .btn-action-danger {
-  @apply btn btn-xs btn-ghost btn-square text-red-400 hover:bg-red-500/20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--danger);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.btn-action-danger:hover {
+  background: var(--danger-soft);
 }
 
 .btn-action-neutral {
-  @apply btn btn-xs btn-ghost btn-square text-gray-500 hover:bg-gray-500/20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.btn-action-neutral:hover {
+  background: var(--surface-3);
 }
 
-/* Status Pills/Badges */
+/* ==========================================================================
+   状态胶囊（kiro2cc badge 规格：soft 底 + line 边 + 语义色文字）
+   ========================================================================== */
 .status-pill {
-  @apply px-2 py-1 text-[10px] font-mono font-bold uppercase rounded border;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  border: 1px solid transparent;
 }
 
 .status-pill-purple {
-  @apply status-pill bg-neon-purple/10 text-neon-purple border-neon-purple/30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand-line);
 }
 
 .status-pill-ultra {
-  @apply status-pill bg-yellow-500/10 text-yellow-400 border-yellow-500/30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-color: var(--warn-line);
 }
 
 .status-pill-pro {
-  @apply status-pill bg-blue-500/10 text-blue-400 border-blue-500/30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand-line);
 }
 
 .status-pill-free {
-  @apply status-pill bg-gray-500/10 text-gray-400 border-gray-500/30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--surface-3);
+  color: var(--ink-3);
+  border-color: var(--hairline-2);
 }
 
 .status-pill-success {
-  @apply status-pill bg-neon-green/10 text-neon-green border-neon-green/30;
+  background: var(--ok-soft);
+  color: var(--ok);
+  border-color: var(--ok-line);
 }
 
 .status-pill-warning {
-  @apply status-pill bg-yellow-500/10 text-yellow-400 border-yellow-500/30;
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-color: var(--warn-line);
 }
 
 .status-pill-error {
-  @apply status-pill bg-red-500/10 text-red-400 border-red-500/30;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger-line);
 }
 
-/* Input Components */
+/* ==========================================================================
+   输入框（kiro2cc input 规格：surface 底 + hairline 边 + brand focus ring）
+   ========================================================================== */
 .input-search {
-  @apply w-full bg-space-900/50 border border-[rgba(39,39,42,0.5)] text-gray-300
-         rounded-lg pl-10 pr-4 py-2
-         focus:outline-none focus:bg-space-800 focus:border-neon-purple/50
-         hover:border-space-border hover:bg-space-800/80
-         transition-all placeholder-gray-600/80;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-search::placeholder {
+  color: var(--ink-3);
+}
+.input-search:hover {
+  border-color: var(--hairline-2);
+}
+.input-search:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
 .input-search-sm {
-  @apply input-search h-8 text-xs font-normal;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  height: 31px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.input-search-sm::placeholder {
+  color: var(--ink-3);
+}
+.input-search-sm:hover {
+  border-color: var(--hairline-2);
+}
+.input-search-sm:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Skeleton Loading (Phase 4.1)                                               */
-/* -------------------------------------------------------------------------- */
-
-/* Skeleton animation */
+/* ==========================================================================
+   Skeleton Loading（保留既有机制，配色换新令牌）
+   ========================================================================== */
 @keyframes skeleton-pulse {
   0%, 100% {
     opacity: 1;
@@ -476,54 +1020,268 @@
   }
 }
 
-/* Base skeleton element */
 .skeleton {
-  @apply bg-gradient-to-r from-space-900/60 via-space-800/40 to-space-900/60;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
   background-size: 200% 100%;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
   border-radius: 0.375rem;
 }
 
-/* Skeleton variants */
 .skeleton-text {
-  @apply skeleton h-4 w-full;
+  height: 1rem;
+  width: 100%;
 }
-
 .skeleton-text-sm {
-  @apply skeleton h-3 w-3/4;
+  height: 0.75rem;
+  width: 75%;
 }
-
 .skeleton-title {
-  @apply skeleton h-6 w-1/2;
+  height: 1.5rem;
+  width: 50%;
 }
-
 .skeleton-circle {
-  @apply skeleton rounded-full;
+  border-radius: 50%;
 }
-
 .skeleton-stat-card {
-  @apply skeleton h-32 w-full rounded-xl;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  height: 8rem;
+  width: 100%;
+  border-radius: 0.75rem;
 }
-
 .skeleton-chart {
-  @apply skeleton h-64 w-full rounded-xl;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  height: 16rem;
+  width: 100%;
+  border-radius: 0.75rem;
 }
-
 .skeleton-table-row {
-  @apply skeleton h-12 w-full mb-2;
+  height: 3rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
 }
 
-/* Fix DaisyUI toggle hover background override */
+/* Fix DaisyUI toggle hover background override（保留兼容，色彩对齐 brand） */
 .toggle-success:checked,
 .toggle-success[aria-checked="true"] {
-  background-color: oklch(var(--su)) !important;
+  background-color: var(--brand) !important;
+  border-color: var(--brand) !important;
 }
 
-/* Desktop Sidebar Collapsed State */
+/* ==========================================================================
+   DaisyUI .btn 细节覆盖（置于文件后部，确保覆盖 daisyui 生成样式）
+   ========================================================================== */
+.btn {
+  text-transform: none;
+  font-family: 'IBM Plex Sans', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+  font-weight: 500;
+}
+.btn-primary {
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: var(--brand-fg) !important;
+}
+.btn-primary:hover {
+  background: var(--brand-hover) !important;
+  border-color: var(--brand-hover) !important;
+}
+
+/* ==========================================================================
+   Desktop Sidebar Collapsed State（保留既有响应式机制）
+   ========================================================================== */
 @media (min-width: 1024px) {
   body .sidebar-collapsed {
     width: 0;
     padding: 0;
     border: none;
+  }
+}
+
+/* ==========================================================================
+   kiro2cc 组件类白名单（design.md 决策 2）：
+   仅以下三类从 admin-ui index.css 原样落地，其余一律 Tailwind 原子类。
+   ========================================================================== */
+@layer components {
+  /* 白名单 1：日志流等宽行 —— 需精确行高、连字关闭与行内 <b> 高亮后代选择器 */
+  .logstream {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--code-bg);
+    padding: 6px 0;
+  }
+  .logrow {
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+    padding: 2.5px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-variant-ligatures: none;
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .logrow:hover {
+    background: var(--surface-3);
+  }
+  .logrow .ts {
+    flex: none;
+    color: var(--ink-3);
+    letter-spacing: -.02em;
+  }
+  .logrow .tgt {
+    flex: none;
+    min-width: 250px;
+    color: var(--ink-3);
+  }
+  .logrow .msg {
+    min-width: 0;
+    color: var(--ink-2);
+  }
+  .logrow .msg b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .logrow.is-err .msg {
+    color: var(--danger);
+  }
+
+  .lv {
+    flex: none;
+    width: 47px;
+    padding: 1px 0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .06em;
+  }
+  .lv.info {
+    color: var(--brand);
+    background: var(--brand-soft);
+    border-color: var(--brand-line);
+  }
+  /* TRACE 与 DEBUG 同档：设计稿仅 4 档，后端日志流另有 TRACE 级别 */
+  .lv.debug,
+  .lv.trace {
+    color: var(--ink-3);
+    background: var(--surface-3);
+    border-color: var(--hairline-2);
+  }
+  .lv.warn {
+    color: var(--warn);
+    background: var(--warn-soft);
+    border-color: var(--warn-line);
+  }
+  .lv.error {
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-color: var(--danger-line);
+  }
+
+  /* 白名单 2：图表绘图层 —— 百分比绝对定位坐标系 + 后代选择器 */
+  .plot-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .plot-grid i {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .plot-grid i.base {
+    background: var(--hairline-2);
+  }
+  .plot-y {
+    position: absolute;
+    left: -44px;
+    width: 36px;
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+  .plot-band {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 0;
+    background: var(--surface-3);
+    border-left: 1px dashed var(--hairline-2);
+  }
+  .plot-x {
+    position: relative;
+    height: 24px;
+    margin-top: 8px;
+    margin-left: 44px;
+    border-top: 1px solid var(--hairline);
+  }
+  .plot-x span {
+    position: absolute;
+    top: 7px;
+    transform: translateX(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .plot-x span.on {
+    color: var(--brand);
+    font-weight: 600;
+  }
+
+  /* 白名单 3：时间线竖线与节点圆点 —— ::before 贯穿伪元素 */
+  .tl-main {
+    margin-left: 14px;
+    padding-left: 22px;
+    border-left: 1px solid var(--hairline);
+  }
+  .rel {
+    position: relative;
+    padding-bottom: 22px;
+  }
+  .rel::before {
+    content: "";
+    position: absolute;
+    left: -27px;
+    top: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--hairline-2);
+  }
+  .rel.is-new::before {
+    background: var(--brand);
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3.5px var(--brand-soft);
+  }
+  .rel-li::before {
+    content: "";
+    flex: none;
+    margin-top: 8px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--hairline-2);
+  }
+}
+
+/* ==========================================================================
+   Utilities：侧栏点阵纹理（kiro2cc .bg-grid-dot，16px 网格）
+   ========================================================================== */
+@layer utilities {
+  .bg-grid-dot {
+    background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+    background-size: 16px 16px;
   }
 }

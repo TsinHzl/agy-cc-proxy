@@ -8,7 +8,7 @@
  *
  * @param {string} field - config.env key (e.g. 'ANTHROPIC_MODEL')
  * @param {string} labelKey - i18n key for the label
- * @param {string} accentColor - 'cyan' or 'purple' (maps to Tailwind border classes)
+ * @param {string} accentColor - legacy accent variant (retained for call-site compat; styling now uses brand token)
  *
  * Requires parent scope to provide: config, selectModel(), gemini1mSuffix
  */
@@ -68,9 +68,7 @@ window.Components.modelDropdown = (field, labelKey, accentColor) => ({
     },
 
     get focusBorderClass() {
-        return this.accentColor === 'purple'
-            ? 'focus:!border-neon-purple'
-            : 'focus:!border-neon-cyan';
+        return 'focus:border-brand';
     },
 
     openDropdown() {
