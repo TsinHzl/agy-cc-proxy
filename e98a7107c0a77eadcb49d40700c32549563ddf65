@@ -1,0 +1,23 @@
+src/format/content-converter.js
+  b2499b74a0f50844 87-96,99,152-157,175-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "e98a7107c0a77eadcb49d40700c32549563ddf65",
+  "prompts": {
+    "b2499b74a0f50844": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "441f0c64-a1ad-4e7d-a523-6fe0e987ba69",
+        "model": "deepseek_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 1,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    }
+  }
+}
