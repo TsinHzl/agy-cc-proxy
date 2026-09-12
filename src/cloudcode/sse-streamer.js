@@ -90,6 +90,24 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                     lastGroundingMeta = groundingMeta;
                 }
 
+                // [WS-DIAG] Temporary instrumentation (remove after root-cause
+                // verification): shapes of every part and the content-level
+                // grounding metadata, to confirm why the web_search pair
+                // emission points never fire.
+                {
+                    const partShapes = parts.map(p => ({
+                        thought: p.thought === true ? 1 : undefined,
+                        hasText: p.text !== undefined,
+                        textLen: p.text !== undefined ? String(p.text).length : undefined,
+                        fcName: p.functionCall?.name,
+                        fcArgs: p.functionCall?.args ? JSON.stringify(p.functionCall.args).slice(0, 120) : undefined,
+                        gmKeys: p.groundingMetadata ? Object.keys(p.groundingMetadata).join('+') : undefined,
+                        hasEntry: p.groundingMetadata?.searchEntryPoint ? 1 : undefined,
+                        otherKeys: Object.keys(p).filter(k => !['thought', 'text', 'functionCall', 'groundingMetadata', 'thoughtSignature', 'inlineData'].includes(k)).join(',') || undefined
+                    }));
+                    logger.info(`[WS-DIAG] parts=${parts.length} gmKeys=${groundingMeta && Object.keys(groundingMeta).length > 0 ? Object.keys(groundingMeta).join('+') : 'none'} shapes=${JSON.stringify(partShapes)}`);
+                }
+
                 // Emit message_start on first data
                 // Note: input_tokens = promptTokenCount - cachedContentTokenCount (Antigravity includes cached in total)
                 if (!hasEmittedStart && parts.length > 0) {
@@ -337,6 +355,11 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
             }
         }
     }
+
+    // [WS-DIAG] Temporary instrumentation (remove after root-cause
+    // verification): final counters so we can tell whether the per-part
+    // branch or the GROUNDING-FALLBACK ever fired.
+    logger.info(`[WS-DIAG] stream-end webSearchCount=${webSearchCount} toolUseCount=${toolUseCount} lastGmKeys=${lastGroundingMeta ? Object.keys(lastGroundingMeta).join('+') : 'none'} lastHasEntry=${lastGroundingMeta?.searchEntryPoint ? 1 : 0}`);
 
     // [GROUNDING-FALLBACK] Some backends surface a completed web search only at
     // the content level (groundingMetadata carrying a searchEntryPoint, with no
