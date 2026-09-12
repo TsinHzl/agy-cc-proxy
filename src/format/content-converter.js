@@ -84,9 +84,19 @@ export function convertContentToParts(content, isClaudeModel = false, isGeminiMo
         } else if (block.type === 'tool_use') {
             // Convert tool_use to functionCall (Google format)
             // For Claude models, include the id field
+            // Gemini asserts that `args` (and by extension functionResponse.response)
+            // is a proper JSON object (a Struct). Guard against scalars/arrays/null — a
+            // non-object input/value here surfaces upstream as `Content block is not a
+            // input_json block` (reported for web_search turns in v2.7.8).
+            let toolArgs = block.input;
+            if (toolArgs === null || toolArgs === undefined || typeof toolArgs !== 'object' || Array.isArray(toolArgs)) {
+                logger.debug(`[ContentConverter] Coercing non-object tool_use.input (${typeof toolArgs}) for tool '${block.name}' to {} to satisfy Gemini Struct validation`);
+                toolArgs = {};
+            }
+
             const functionCall = {
                 name: block.name,
-                args: block.input || {}
+                args: toolArgs
             };
 
             if (isClaudeModel && block.id) {
@@ -139,6 +149,12 @@ export function convertContentToParts(content, isClaudeModel = false, isGeminiMo
                     .map(c => c.text)
                     .join('\n');
                 responseContent = { result: texts || (imageParts.length > 0 ? 'Image attached' : '') };
+            } else if (responseContent === null || responseContent === undefined || typeof responseContent !== 'object' || Array.isArray(responseContent)) {
+                // Gemini requires functionResponse.response to be a JSON object (Struct).
+                // Null/undefined/array responses all fail upstream Struct validation with
+                // `Content block is not a input_json block` (seen for web_search turns).
+                logger.debug(`[ContentConverter] Coercing non-object tool_result.content (${typeof responseContent}) to {} to satisfy Gemini Struct validation`);
+                responseContent = {};
             }
 
             const functionResponse = {
@@ -156,6 +172,19 @@ export function convertContentToParts(content, isClaudeModel = false, isGeminiMo
             // Defer images from the tool result to end of parts array (Issue #91)
             // This ensures all functionResponse parts are consecutive
             deferredInlineData.push(...imageParts);
+        } else if (block.type === 'server_tool_result' || block.type === 'server_tool') {
+            // Claude Code emits the result of a web_search server tool as a
+            // `server_tool_result` block (or, occasionally, a bare `server_tool`
+            // envelope). The backend's grounding capability ran server-side, so
+            // there is NO functionCall/functionResponse to echo back here — the
+            // model already saw the grounded context on the assistant turn.
+            // Emitting it as a functionResponse would fabricate a tool call that
+            // the backend has no function to run; emitting unserializable fields
+            // (nested `results.context`, `queries`, etc.) risks surfacing the
+            // upstream `Content block is not a input_json block` Struct error.
+            // Encode it as an opaque text marker so the search turn stays valid.
+            const serverToolName = block.name || (Array.isArray(block?.content) ? (block.content[0]?.name || 'server') : 'server');
+            parts.push({ text: `[${serverToolName} server tool executed]` });
         } else if (block.type === 'thinking') {
             // Handle thinking blocks with signature compatibility check
             if (block.signature && block.signature.length >= MIN_SIGNATURE_LENGTH) {
