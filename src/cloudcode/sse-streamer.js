@@ -9,6 +9,12 @@ import crypto from 'crypto';
 import { MIN_SIGNATURE_LENGTH, getModelFamily } from '../constants.js';
 import { EmptyResponseError } from '../errors.js';
 import { cacheSignature, cacheThinkingSignature } from '../format/signature-cache.js';
+import {
+    converterIsWebSearchResult,
+    converterBuildWebSearchResult,
+    converterExtractSearchQuery,
+    converterExtractGroundingContexts
+} from '../format/search-blocks.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -36,6 +42,9 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     let textChars = 0;
     let toolUseCount = 0;
     let imageCount = 0;
+    // Track the most recent content-level groundingMetadata so a search advertised
+    // only at the content level (no per-part functionCall) can still be emitted.
+    let lastGroundingMeta = null;
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -71,6 +80,10 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                 const firstCandidate = candidates[0] || {};
                 const content = firstCandidate.content || {};
                 const parts = content.parts || [];
+                const groundingMeta = content.groundingMetadata || {};
+                if (groundingMeta && Object.keys(groundingMeta).length > 0) {
+                    lastGroundingMeta = groundingMeta;
+                }
 
                 // Emit message_start on first data
                 // Note: input_tokens = promptTokenCount - cachedContentTokenCount (Antigravity includes cached in total)
@@ -166,6 +179,47 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                             delta: { type: 'text_delta', text: part.text }
                         };
 
+                    } else if (converterIsWebSearchResult(part)) {
+                        // The backend reported a completed web search (googleSearch
+                        // functionCall and/or grounding metadata). Emit it as CC's
+                        // web_search server-tool result so the search is counted and
+                        // CC attaches the found context.
+                        const entrance = part?.groundingMetadata?.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
+                        const query = converterExtractSearchQuery(part, entrance);
+                        const contexts = converterExtractGroundingContexts(part, entrance);
+                        const toolId = part?.functionCall?.id || null;
+                        const recordedQuery = query || contexts[0]?.title || '';
+
+                        if (currentBlockType === 'thinking' && currentThinkingSignature) {
+                            yield {
+                                type: 'content_block_delta',
+                                index: blockIndex,
+                                delta: { type: 'signature_delta', signature: currentThinkingSignature }
+                            };
+                            currentThinkingSignature = '';
+                        }
+                        if (currentBlockType !== null) {
+                            yield { type: 'content_block_stop', index: blockIndex };
+                            blockIndex++;
+                        }
+                        currentBlockType = 'tool_use';
+                        stopReason = 'tool_use';
+                        toolUseCount++;
+
+                        const webSearchBlock = converterBuildWebSearchResult(toolId, recordedQuery, contexts, entrance);
+                        yield {
+                            type: 'content_block_start',
+                            index: blockIndex,
+                            content_block: webSearchBlock
+                        };
+                        yield {
+                            type: 'content_block_delta',
+                            index: blockIndex,
+                            delta: { type: 'input_json_delta', partial_json: '{}' }
+                        };
+                        yield { type: 'content_block_stop', index: blockIndex };
+                        blockIndex++;
+                        currentBlockType = null;
                     } else if (part.functionCall) {
                         // Handle tool use
                         // For Gemini 3+, capture thoughtSignature from the functionCall part
@@ -272,6 +326,30 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
         }
     }
 
+    // [GROUNDING-FALLBACK] Some backends surface a completed web search only at
+    // the content level (groundingMetadata carrying a searchEntryPoint, with no
+    // per-part googleSearch functionCall). Align with response-converter and
+    // sse-parser: emit one server_tool result so CC counts the search even in
+    // that shape. Guard against double counting a per-part result already pushed.
+    if (!toolUseCount && currentBlockType !== 'tool_use' && lastGroundingMeta?.searchEntryPoint) {
+        const entrance = lastGroundingMeta.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
+        const contexts = converterExtractGroundingContexts({ groundingMetadata: lastGroundingMeta }, entrance);
+        const recordedQuery = contexts[0]?.title || entrance || '';
+        if (currentBlockType !== null) {
+            yield { type: 'content_block_stop', index: blockIndex };
+            blockIndex++;
+        }
+        const webSearchBlock = converterBuildWebSearchResult(null, recordedQuery, contexts, entrance);
+        yield {
+            type: 'content_block_start',
+            index: blockIndex,
+            content_block: webSearchBlock
+        };
+        yield { type: 'content_block_stop', index: blockIndex };
+        blockIndex++;
+        stopReason = 'tool_use';
+    }
+
     // [DIAG] Per-response block breakdown — primary signal for diagnosing
     // /compact "summarization produced empty response" failures.
     // The bug surface: stopReason==max_tokens + textChars==0 + thinkingChars>0
@@ -291,7 +369,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     // response produced NO text block, inject a synthetic text block so CC's
     // Uj6() extractor returns a non-empty summary. Without this, CC reports
     // "summarization produced empty response" and /compact fails.
-    //
     // Scope is gated by isCompactFlag (passed in from streaming-handler, which
     // calls isCompactRequest()). This prevents polluting normal responses —
     // e.g. a regular tool-use reply legitimately has textChars=0 and

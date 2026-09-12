@@ -6,6 +6,12 @@
  */
 
 import { convertGoogleToAnthropic } from '../format/index.js';
+import {
+    isWebSearchResult,
+    buildWebSearchResult,
+    extractSearchQuery,
+    extractGroundingContexts
+} from '../format/search-blocks.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -74,6 +80,7 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                 }
 
                 const parts = firstCandidate.content?.parts || [];
+                const groundingMeta = firstCandidate.content?.groundingMetadata || {};
                 for (const part of parts) {
                     if (part.thought === true) {
                         flushText();
@@ -81,6 +88,20 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                         if (part.thoughtSignature) {
                             accumulatedThinkingSignature = part.thoughtSignature;
                         }
+                    } else if (isWebSearchResult(part)) {
+                        // Backend completed a web search (googleSearch functionCall
+                        // and/or grounding metadata). Encode it as CC's web_search
+                        // server result so the search is counted.
+                        flushThinking();
+                        flushText();
+                        const entrance = part?.groundingMetadata?.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
+                        const query = extractSearchQuery(part, entrance);
+                        const contexts = extractGroundingContexts(part, entrance);
+                        const toolId = part?.functionCall?.id || null;
+                        // Prefer the query argument when the model supplied one; otherwise
+                        // use the first grounded chunk's title as the recorded query.
+                        const recordedQuery = query || contexts[0]?.title || '';
+                        finalParts.push(buildWebSearchResult(toolId, recordedQuery, contexts, entrance));
                     } else if (part.functionCall) {
                         flushThinking();
                         flushText();
@@ -95,6 +116,15 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                         flushText();
                         finalParts.push(part);
                     }
+                }
+
+                // A grounding intent announced at the content level (no per-part
+                // functionCall) is still a successful web search.
+                if (groundingMeta?.searchEntryPoint && !finalParts.some(p => p?.type === 'server_tool')) {
+                    const entrance = groundingMeta.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
+                    const contexts = extractGroundingContexts({ groundingMetadata: groundingMeta }, entrance);
+                    const recordedQuery = contexts[0]?.title || entrance || '';
+                    finalParts.push(buildWebSearchResult(null, recordedQuery, contexts, entrance));
                 }
             } catch (e) {
                 logger.debug('[CloudCode] SSE parse warning:', e.message, 'Raw:', jsonText.slice(0, 100));

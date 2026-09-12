@@ -6,6 +6,7 @@
 import crypto from 'crypto';
 import { MIN_SIGNATURE_LENGTH, getModelFamily } from '../constants.js';
 import { cacheSignature, cacheThinkingSignature } from './signature-cache.js';
+import { isWebSearchResult, buildWebSearchResult, extractSearchQuery, extractGroundingContexts } from './search-blocks.js';
 
 /**
  * Convert Google Generative AI response to Anthropic Messages API format
@@ -22,35 +23,48 @@ export function convertGoogleToAnthropic(googleResponse, model) {
     const firstCandidate = candidates[0] || {};
     const content = firstCandidate.content || {};
     const parts = content.parts || [];
+    const groundingMeta = content.groundingMetadata || {};
 
-    // Convert parts to Anthropic content blocks
+    // Anthropic content blocks
     const anthropicContent = [];
     let hasToolCalls = false;
+    let hasServerTool = false;
 
     for (const part of parts) {
-        if (part.text !== undefined) {
+        if (part.thought === true && part.text !== undefined) {
             // Handle thinking blocks
-            if (part.thought === true) {
-                const signature = part.thoughtSignature || '';
+            const signature = part.thoughtSignature || '';
 
-                // Cache thinking signature with model family for cross-model compatibility
-                if (signature && signature.length >= MIN_SIGNATURE_LENGTH) {
-                    const modelFamily = getModelFamily(model);
-                    cacheThinkingSignature(signature, modelFamily);
-                }
-
-                // Include thinking blocks in the response for Claude Code
-                anthropicContent.push({
-                    type: 'thinking',
-                    thinking: part.text,
-                    signature: signature
-                });
-            } else {
-                anthropicContent.push({
-                    type: 'text',
-                    text: part.text
-                });
+            // Cache thinking signature with model family for cross-model compatibility
+            if (signature && signature.length >= MIN_SIGNATURE_LENGTH) {
+                const modelFamily = getModelFamily(model);
+                cacheThinkingSignature(signature, modelFamily);
             }
+
+            // Include thinking blocks in the response for Claude Code
+            anthropicContent.push({
+                type: 'thinking',
+                thinking: part.text,
+                signature: signature
+            });
+        } else if (part.text !== undefined) {
+            anthropicContent.push({
+                type: 'text',
+                text: part.text
+            });
+        } else if (isWebSearchResult(part)) {
+            // A googleSearch functionCall (or a search-shaped agent/dynamicRetrieval
+            // call) is the backend's way of reporting a completed web search using the
+            // Gemini google_search tool. Lift the sibling intent_entry + grounding
+            // metadata into CC's web_search server result so the search is counted.
+            const entrance = part?.groundingMetadata?.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
+            const contexts = extractGroundingContexts(part, entrance);
+            const toolId = part?.functionCall?.id || null;
+            // Prefer the query argument when the model supplied one; otherwise use
+            // the first grounded chunk's title as the recorded query for reliability.
+            const recordedQuery = extractSearchQuery(part, null) || contexts[0]?.title || '';
+            anthropicContent.push(buildWebSearchResult(toolId, recordedQuery, contexts, entrance));
+            hasServerTool = true;
         } else if (part.functionCall) {
             // Convert functionCall to tool_use
             // Use the id from the response if available, otherwise generate one
@@ -84,6 +98,17 @@ export function convertGoogleToAnthropic(googleResponse, model) {
         }
     }
 
+    // A grounding intent announced at the content level (some backends surface
+    // groundingMetadata on content while the model emits only a text part) is
+    // still a successful web search — count it even with no functionCall.
+    if (!hasServerTool && groundingMeta?.searchEntryPoint) {
+        const entrance = groundingMeta.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
+        const contexts = extractGroundingContexts({ groundingMetadata: groundingMeta }, entrance);
+        const recordedQuery = contexts[0]?.title || entrance || '';
+        anthropicContent.push(buildWebSearchResult(null, recordedQuery, contexts, entrance));
+        hasServerTool = true;
+    }
+
     // Determine stop reason
     const finishReason = firstCandidate.finishReason;
     let stopReason = 'end_turn';
@@ -91,7 +116,7 @@ export function convertGoogleToAnthropic(googleResponse, model) {
         stopReason = 'end_turn';
     } else if (finishReason === 'MAX_TOKENS') {
         stopReason = 'max_tokens';
-    } else if (finishReason === 'TOOL_USE' || hasToolCalls) {
+    } else if (finishReason === 'TOOL_USE' || hasToolCalls || hasServerTool) {
         stopReason = 'tool_use';
     }
 
