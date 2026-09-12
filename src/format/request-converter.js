@@ -445,6 +445,13 @@ export function convertAnthropicToGoogle(anthropicRequest) {
             // recognizes the googleSearch tool. Works for whichever model family the
             // account is actually bound to.
             googleRequest.tools = [{ googleSearch: {} }];
+            // Google Search grounding runs as a built-in (server-side) tool. Antigravity's
+            // Gemini path rejects `googleSearch` + functionDeclarations with 400 unless
+            // this flag is set, so enable it whenever the server tool is active.
+            googleRequest.toolConfig = {
+                ...googleRequest.toolConfig,
+                include_server_side_tool_invocations: true
+            };
             logger.debug(`[RequestConverter] Enabling Google Search grounding for ${serverTools.length} server tool(s): ${serverTools.map(t => t.name || t.function?.name || t.custom?.name).join(', ')}`);
         }
 
