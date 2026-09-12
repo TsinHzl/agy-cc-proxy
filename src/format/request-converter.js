@@ -439,7 +439,19 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         const serverTools = tools.filter(isAnthropicServerTool);
         const functionTools = tools.filter(t => !isAnthropicServerTool(t));
 
-        if (serverTools.length > 0) {
+        // Antigravity's v1internal endpoint runs in a restricted environment that does
+        // NOT support mixing server-side (built-in) tools with functionDeclarations in
+        // the same request — sending `googleSearch` + functionDeclarations together
+        // yields a 400 "Please enable tool_config.include_server_side_tool_invocations
+        // to use Built-in tools with Function calling" even when that flag IS present.
+        // This mirrors the decision in lbjlaq/Antigravity-Manager (supports_mixed_tools =
+        // false) and justlovemaki/AIClient2API (stripServerSideToolsWhenFunctionCalling):
+        // when real function tools exist, defer the web_search server tool out of this
+        // request rather than mixing — web_search can still run on turns that carry only
+        // the server tool and no function declarations.
+        const deferServerTools = serverTools.length > 0 && functionTools.length > 0;
+
+        if (serverTools.length > 0 && !deferServerTools) {
             // Enable Gemini Google Search grounding for ANY model family. Antigravity
             // serves both Claude and Gemini through the same v1internal surface and
             // recognizes the googleSearch tool. Works for whichever model family the
@@ -453,6 +465,8 @@ export function convertAnthropicToGoogle(anthropicRequest) {
                 include_server_side_tool_invocations: true
             };
             logger.debug(`[RequestConverter] Enabling Google Search grounding for ${serverTools.length} server tool(s): ${serverTools.map(t => t.name || t.function?.name || t.custom?.name).join(', ')}`);
+        } else if (deferServerTools) {
+            logger.debug(`[RequestConverter] Deferring ${serverTools.length} server tool(s) (web_search) this turn: v1internal cannot mix built-in tools with ${functionTools.length} functionDeclaration(s) without a 400. functionTools=${functionTools.map(t => t.function?.name || t.name || t.custom?.name).join(', ')}`);
         }
 
         if (functionTools.length > 0) {
