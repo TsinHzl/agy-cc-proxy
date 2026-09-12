@@ -1,0 +1,33 @@
+src/format/response-converter.js
+  b2499b74a0f50844 9,66,68-74,116,120-124,127
+src/cloudcode/sse-parser.js
+  b2499b74a0f50844 11,104,122-126,130
+src/format/search-blocks.js
+  b2499b74a0f50844 25-35,37-39,42,44-56,94
+src/cloudcode/sse-streamer.js
+  b2499b74a0f50844 14,184-187,210-213,217,219-224,348,352-355,359,363-366
+src/format/content-converter.js
+  b2499b74a0f50844 175-188
+src/format/request-converter.js
+  b2499b74a0f50844 157-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "31e41ff598412ea620a92b957f1177ba46035334",
+  "prompts": {
+    "b2499b74a0f50844": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "441f0c64-a1ad-4e7d-a523-6fe0e987ba69",
+        "model": "deepseek_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 106,
+      "total_deletions": 72,
+      "accepted_lines": 103,
+      "overriden_lines": 0
+    }
+  }
+}
