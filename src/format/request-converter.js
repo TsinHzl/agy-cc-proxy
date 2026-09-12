@@ -238,7 +238,8 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
     const googleRequest = {
         contents: [],
-        generationConfig: {}
+        generationConfig: {},
+        tools: []
     };
 
     // Handle system instruction
