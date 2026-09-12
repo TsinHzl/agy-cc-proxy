@@ -172,18 +172,20 @@ export function convertContentToParts(content, isClaudeModel = false, isGeminiMo
             // Defer images from the tool result to end of parts array (Issue #91)
             // This ensures all functionResponse parts are consecutive
             deferredInlineData.push(...imageParts);
-        } else if (block.type === 'server_tool_result' || block.type === 'server_tool') {
-            // Claude Code emits the result of a web_search server tool as a
-            // `server_tool_result` block (or, occasionally, a bare `server_tool`
-            // envelope). The backend's grounding capability ran server-side, so
-            // there is NO functionCall/functionResponse to echo back here — the
-            // model already saw the grounded context on the assistant turn.
-            // Emitting it as a functionResponse would fabricate a tool call that
-            // the backend has no function to run; emitting unserializable fields
-            // (nested `results.context`, `queries`, etc.) risks surfacing the
-            // upstream `Content block is not a input_json block` Struct error.
-            // Encode it as an opaque text marker so the search turn stays valid.
-            const serverToolName = block.name || (Array.isArray(block?.content) ? (block.content[0]?.name || 'server') : 'server');
+        } else if (block.type === 'web_search_tool_result' || block.type === 'server_tool_result' || block.type === 'server_tool' || block.type === 'server_tool_use') {
+            // Claude Code replays completed web_search server-tool turns back in
+            // the assistant history: the official protocol shape is a
+            // `server_tool_use` block paired via tool_use_id with a
+            // `web_search_tool_result` block (older proxy builds emitted a bare
+            // `server_tool` / `server_tool_result` envelope instead — still
+            // accepted for backward compatibility). The backend's grounding ran
+            // server-side, so there is NO functionCall/functionResponse to echo
+            // back here — the model already saw the grounded context on the
+            // assistant turn. Emitting it as a functionResponse would fabricate
+            // a tool call the backend has no function to run; emit an opaque
+            // text marker so the search turn stays valid.
+            const serverToolName = block.name
+                || (Array.isArray(block?.content) ? (block.content[0]?.name || 'web_search') : 'web_search');
             parts.push({ text: `[${serverToolName} server tool executed]` });
         } else if (block.type === 'thinking') {
             // Handle thinking blocks with signature compatibility check

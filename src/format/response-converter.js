@@ -6,7 +6,7 @@
 import crypto from 'crypto';
 import { MIN_SIGNATURE_LENGTH, getModelFamily } from '../constants.js';
 import { cacheSignature, cacheThinkingSignature } from './signature-cache.js';
-import { isWebSearchResult, buildWebSearchResult, extractSearchQuery, extractGroundingContexts } from './search-blocks.js';
+import { isWebSearchResult, buildWebSearchBlocks, extractSearchQuery, extractGroundingContexts } from './search-blocks.js';
 
 /**
  * Convert Google Generative AI response to Anthropic Messages API format
@@ -63,7 +63,15 @@ export function convertGoogleToAnthropic(googleResponse, model) {
             // Prefer the query argument when the model supplied one; otherwise use
             // the first grounded chunk's title as the recorded query for reliability.
             const recordedQuery = extractSearchQuery(part, null) || contexts[0]?.title || '';
-            anthropicContent.push(buildWebSearchResult(toolId, recordedQuery, contexts, entrance));
+            anthropicContent.push(...buildWebSearchBlocks(toolId, recordedQuery, contexts, entrance));
+            hasServerTool = true;
+        } else if (part?.type === 'server_tool_use' || part?.type === 'web_search_tool_result') {
+            // Pre-built web_search server-tool blocks (pushed as a use/result pair
+            // by sse-parser's thinking-model accumulation path) are already in
+            // Anthropic shape — pass them through untouched; re-normalizing here
+            // would strip the pairing. Count them so stop_reason resolves to
+            // tool_use instead of end_turn.
+            anthropicContent.push(part);
             hasServerTool = true;
         } else if (part.functionCall) {
             // Convert functionCall to tool_use
@@ -105,16 +113,18 @@ export function convertGoogleToAnthropic(googleResponse, model) {
         const entrance = groundingMeta.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
         const contexts = extractGroundingContexts({ groundingMetadata: groundingMeta }, entrance);
         const recordedQuery = contexts[0]?.title || entrance || '';
-        anthropicContent.push(buildWebSearchResult(null, recordedQuery, contexts, entrance));
+        anthropicContent.push(...buildWebSearchBlocks(null, recordedQuery, contexts, entrance));
         hasServerTool = true;
     }
 
-    // Determine stop reason
+    // Determine stop reason. Tool presence wins over a plain STOP finish:
+    // the streaming path (sse-streamer) forces stopReason='tool_use' as soon
+    // as it emits a functionCall or web_search pair, so the non-streaming
+    // path must agree — a STOP-only early return would mark a turn that ends
+    // in tool calls as end_turn.
     const finishReason = firstCandidate.finishReason;
     let stopReason = 'end_turn';
-    if (finishReason === 'STOP') {
-        stopReason = 'end_turn';
-    } else if (finishReason === 'MAX_TOKENS') {
+    if (finishReason === 'MAX_TOKENS') {
         stopReason = 'max_tokens';
     } else if (finishReason === 'TOOL_USE' || hasToolCalls || hasServerTool) {
         stopReason = 'tool_use';

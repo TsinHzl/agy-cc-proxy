@@ -22,38 +22,38 @@ export function isWebSearchResult(part) {
     return /googleSearch|dynamicRetrieval|server:search|webSearch|web_search/i.test(name);
 }
 
-// Build the Anthropic web_search server-tool result CC expects for a successful
-// ground. CC counts a search as successful when the assistant turn's content
-// carries a `web_search` server-tool result with a non-empty title/snippet.
-export function buildWebSearchResult(toolId, query, contexts, entrance) {
-    // Normalize the tool id once so the outer `id` and `invocation_id` always match.
-    // Non-string ids (e.g. Gemini's numeric functionCall.id) fall back to a fresh
-    // toolu_ id rather than an unmatched stringified number.
+// Build the Anthropic web_search server-tool blocks CC expects for a
+// successful ground. Per the official protocol a completed search is a
+// `server_tool_use` block paired — via `tool_use_id` — with a
+// `web_search_tool_result` block whose `content` is a list of
+// `web_search_result` entries. CC counts a search as successful only when
+// that paired result block is present.
+export function buildWebSearchBlocks(toolId, query, contexts, entrance) {
+    // Normalize the tool id once so `server_tool_use.id` and the paired
+    // `web_search_tool_result.tool_use_id` always match. Non-string ids
+    // (e.g. Gemini's numeric functionCall.id) fall back to a fresh toolu_ id
+    // rather than an unmatched stringified number.
     const normalizedId = (toolId && typeof toolId === 'string') ? toolId : `toolu_${crypto.randomBytes(12).toString('hex')}`;
-    return {
-        type: 'server_tool',
+    const normalizedQuery = (query || '').toString();
+    const useBlock = {
+        type: 'server_tool_use',
         id: normalizedId,
         name: WEB_SEARCH_TOOL_NAME,
-        input: {},
-        content: [
-            {
-                type: 'server_tool_result',
-                status: 'success',
-                invocation_id: normalizedId,
-                query: (query || '').toString(),
-                results: {
-                    entrance_query: (query || '').toString(),
-                    context: (contexts || []).map(c => ({
-                        url: c?.url || '',
-                        title: c?.title || c?.url || '',
-                        snippet: c?.snippet ?? ''
-                    })),
-                    entrance: entrance || null,
-                    queries: []
-                }
-            }
-        ]
+        input: { query: normalizedQuery }
     };
+    const resultBlock = {
+        type: 'web_search_tool_result',
+        tool_use_id: normalizedId,
+        content: (contexts || []).map((c, i) => ({
+            type: 'web_search_result',
+            url: c?.url || '',
+            title: c?.title || c?.url || '',
+            // Anthropic result entries carry an opaque index token; we emit a
+            // positional placeholder since grounding chunks carry no token.
+            encrypted_index: String(i)
+        }))
+    };
+    return [useBlock, resultBlock];
 }
 
 // Extract the query the model asked web search to run. Prefers the explicit
@@ -91,6 +91,6 @@ export function extractGroundingContexts(part, entrance) {
 
 // Short aliases used by sse-streamer.js (kept in sync with the canonical names).
 export const converterIsWebSearchResult = isWebSearchResult;
-export const converterBuildWebSearchResult = buildWebSearchResult;
+export const converterBuildWebSearchBlocks = buildWebSearchBlocks;
 export const converterExtractSearchQuery = extractSearchQuery;
 export const converterExtractGroundingContexts = extractGroundingContexts;

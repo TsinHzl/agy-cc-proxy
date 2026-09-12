@@ -154,7 +154,9 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     // Capture up to 6 trailing user-message snippets so we can locate the
     // compact prompt when CC interleaves its own bookkeeping messages
     // (e.g. `<total_tokens>...`) after the prompt.
-    const systemStr = typeof system === 'string' ? system : JSON.stringify(system);
+    // system may be absent (some clients omit it) or a non-string block array;
+    // JSON.stringify(undefined) returns undefined, so guard with ?? ''.
+    const systemStr = typeof system === 'string' ? system : (JSON.stringify(system) ?? '');
     const userTextSnippets = (Array.isArray(messages) && messages.length > 0)
         ? (() => {
             const out = [];

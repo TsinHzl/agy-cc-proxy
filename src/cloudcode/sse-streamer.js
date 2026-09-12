@@ -11,7 +11,7 @@ import { EmptyResponseError } from '../errors.js';
 import { cacheSignature, cacheThinkingSignature } from '../format/signature-cache.js';
 import {
     converterIsWebSearchResult,
-    converterBuildWebSearchResult,
+    converterBuildWebSearchBlocks,
     converterExtractSearchQuery,
     converterExtractGroundingContexts
 } from '../format/search-blocks.js';
@@ -181,9 +181,10 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
 
                     } else if (converterIsWebSearchResult(part)) {
                         // The backend reported a completed web search (googleSearch
-                        // functionCall and/or grounding metadata). Emit it as CC's
-                        // web_search server-tool result so the search is counted and
-                        // CC attaches the found context.
+                        // functionCall and/or grounding metadata). Emit the official
+                        // web_search server-tool pair — a `server_tool_use` block
+                        // paired via tool_use_id with a `web_search_tool_result`
+                        // block — so CC counts the search and attaches the context.
                         const entrance = part?.groundingMetadata?.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
                         const query = converterExtractSearchQuery(part, entrance);
                         const contexts = converterExtractGroundingContexts(part, entrance);
@@ -206,17 +207,22 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                         stopReason = 'tool_use';
                         toolUseCount++;
 
-                        const webSearchBlock = converterBuildWebSearchResult(toolId, recordedQuery, contexts, entrance);
+                        // Two blocks, two complete start/stop cycles. Note: do NOT
+                        // emit input_json_delta — that delta is only valid on
+                        // tool_use blocks; CC rejects it on any other block type.
+                        const [useBlock, resultBlock] = converterBuildWebSearchBlocks(toolId, recordedQuery, contexts, entrance);
                         yield {
                             type: 'content_block_start',
                             index: blockIndex,
-                            content_block: webSearchBlock
+                            content_block: useBlock
                         };
-                        // Note: do NOT emit input_json_delta here — that delta is
-                        // only valid on tool_use blocks. CC rejects it on any other
-                        // block type with "Content block is not a input_json block".
-                        // The server_tool block already carries input: {} and full
-                        // server_tool_result content at content_block_start.
+                        yield { type: 'content_block_stop', index: blockIndex };
+                        blockIndex++;
+                        yield {
+                            type: 'content_block_start',
+                            index: blockIndex,
+                            content_block: resultBlock
+                        };
                         yield { type: 'content_block_stop', index: blockIndex };
                         blockIndex++;
                         currentBlockType = null;
@@ -339,14 +345,25 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
             yield { type: 'content_block_stop', index: blockIndex };
             blockIndex++;
         }
-        const webSearchBlock = converterBuildWebSearchResult(null, recordedQuery, contexts, entrance);
+        const [useBlock, resultBlock] = converterBuildWebSearchBlocks(null, recordedQuery, contexts, entrance);
         yield {
             type: 'content_block_start',
             index: blockIndex,
-            content_block: webSearchBlock
+            content_block: useBlock
         };
         yield { type: 'content_block_stop', index: blockIndex };
         blockIndex++;
+        yield {
+            type: 'content_block_start',
+            index: blockIndex,
+            content_block: resultBlock
+        };
+        yield { type: 'content_block_stop', index: blockIndex };
+        blockIndex++;
+        // Reset so the trailing close-out below does not emit an extra
+        // content_block_stop for a block already fully started+stopped here.
+        currentBlockType = null;
+        toolUseCount++;
         stopReason = 'tool_use';
     }
 

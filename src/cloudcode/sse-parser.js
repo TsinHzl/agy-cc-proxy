@@ -8,7 +8,7 @@
 import { convertGoogleToAnthropic } from '../format/index.js';
 import {
     isWebSearchResult,
-    buildWebSearchResult,
+    buildWebSearchBlocks,
     extractSearchQuery,
     extractGroundingContexts
 } from '../format/search-blocks.js';
@@ -101,7 +101,7 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                         // Prefer the query argument when the model supplied one; otherwise
                         // use the first grounded chunk's title as the recorded query.
                         const recordedQuery = query || contexts[0]?.title || '';
-                        finalParts.push(buildWebSearchResult(toolId, recordedQuery, contexts, entrance));
+                        finalParts.push(...buildWebSearchBlocks(toolId, recordedQuery, contexts, entrance));
                     } else if (part.functionCall) {
                         flushThinking();
                         flushText();
@@ -119,12 +119,15 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                 }
 
                 // A grounding intent announced at the content level (no per-part
-                // functionCall) is still a successful web search.
-                if (groundingMeta?.searchEntryPoint && !finalParts.some(p => p?.type === 'server_tool')) {
+                // functionCall) is still a successful web search. Note: the
+                // search blocks are pushed as a use/result PAIR — the guard must
+                // check for the paired `server_tool_use` block, not a bare
+                // `server_tool` envelope.
+                if (groundingMeta?.searchEntryPoint && !finalParts.some(p => p?.type === 'server_tool_use')) {
                     const entrance = groundingMeta.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
                     const contexts = extractGroundingContexts({ groundingMetadata: groundingMeta }, entrance);
                     const recordedQuery = contexts[0]?.title || entrance || '';
-                    finalParts.push(buildWebSearchResult(null, recordedQuery, contexts, entrance));
+                    finalParts.push(...buildWebSearchBlocks(null, recordedQuery, contexts, entrance));
                 }
             } catch (e) {
                 logger.debug('[CloudCode] SSE parse warning:', e.message, 'Raw:', jsonText.slice(0, 100));
