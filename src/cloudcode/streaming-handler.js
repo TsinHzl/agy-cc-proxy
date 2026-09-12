@@ -155,8 +155,12 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                         p.inlineData ? 'inlineData' : 'text'
                     )
                 }));
-                const toolSummary = (payload.request.tools?.[0]?.functionDeclarations || []).map(f => f.name);
-                logger.info(`[CloudCode] Request → model=${payload.model}, maxTokens=${genCfg.maxOutputTokens}, thinkingCfg=${JSON.stringify(genCfg.thinkingConfig) ?? 'none'}, tools=[${toolSummary.join(',')}], contents=${JSON.stringify(contentSummary)}`);
+                const toolSummary = (payload.request.tools || []).map(t => {
+                    const names = (t?.functionDeclarations || []).map(f => f.name);
+                    const googleSearch = t?.googleSearch ? 'googleSearch' : null;
+                    return [googleSearch, ...names].filter(Boolean).join(',');
+                });
+                logger.info(`[CloudCode] Request → model=${payload.model}, maxTokens=${genCfg.maxOutputTokens}, thinkingCfg=${JSON.stringify(genCfg.thinkingConfig) ?? 'none'}, tools=[${toolSummary.join(';')}], toolConfig=${JSON.stringify(payload.request.toolConfig) ?? 'none'}, contents=${JSON.stringify(contentSummary)}`);
                 if (genCfg.maxOutputTokens > 65536) {
                     logger.warn(`[CloudCode] maxOutputTokens=${genCfg.maxOutputTokens} may exceed Cloud Code API limit for Claude models`);
                 }

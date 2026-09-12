@@ -493,9 +493,15 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         logger.debug(`[RequestConverter] Tools: ${JSON.stringify(googleRequest.tools).substring(0, 300)}`);
 
         // For Claude models, set functionCallingConfig.mode = "VALIDATED"
-        // This ensures strict parameter validation (matches opencode-antigravity-auth)
+        // This ensures strict parameter validation (matches opencode-antigravity-auth).
+        // NOTE: merge (not overwrite) into any existing toolConfig — the server-tool
+        // branch above may already have set include_server_side_tool_invocations: true
+        // for Google Search grounding. Overwriting it there would strip the flag and
+        // surface a 400 "Please enable tool_config.include_server_side_tool_invocations"
+        // whenever web_search + function tools are sent to a Claude model.
         if (isClaudeModel) {
             googleRequest.toolConfig = {
+                ...googleRequest.toolConfig,
                 functionCallingConfig: {
                     mode: 'VALIDATED'
                 }
