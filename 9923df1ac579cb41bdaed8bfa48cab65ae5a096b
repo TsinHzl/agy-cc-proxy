@@ -1,0 +1,25 @@
+src/cloudcode/sse-streamer.js
+  b2499b74a0f50844 48-52,234,346-349,377,460-464
+src/format/response-converter.js
+  b2499b74a0f50844 32-37,74,83,126,161-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "9923df1ac579cb41bdaed8bfa48cab65ae5a096b",
+  "prompts": {
+    "b2499b74a0f50844": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "441f0c64-a1ad-4e7d-a523-6fe0e987ba69",
+        "model": "deepseek_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 27,
+      "total_deletions": 3,
+      "accepted_lines": 27,
+      "overriden_lines": 0
+    }
+  }
+}
