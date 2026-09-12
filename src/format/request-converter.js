@@ -435,6 +435,13 @@ export function convertAnthropicToGoogle(anthropicRequest) {
         const serverToolNames = ['web_search', 'webSearch', 'server:search'];
         const isAnthropicServerTool = (tool) => {
             if (tool?.type === 'server') return true;
+            if (tool?.type === 'web_search_20250305' || tool?.type === 'web_search_20260209') return true;
+            // Function tools are NEVER server tools. Claude Code's lazy-loaded
+            // WebSearch is a real client-executed function tool (type "function",
+            // has input_schema) — name matching alone would strip it from
+            // functionDeclarations, the model would then hallucinate the call and
+            // CC would reject the turn as a malformed tool call.
+            if (tool?.type === 'function' || tool?.input_schema) return false;
             const name = tool?.name || tool?.function?.name || tool?.custom?.name || '';
             return serverToolNames.some(t => String(name).toLowerCase().includes(t.toLowerCase()));
         };

@@ -20,7 +20,13 @@ const WEB_SEARCH_TOOL_NAME = 'web_search';
 export function isWebSearchResult(part) {
     if (part?.groundingMetadata?.searchEntryPoint) return true;
     const name = part?.functionCall?.name || '';
-    return /googleSearch|dynamicRetrieval|server:search|webSearch|web_search/i.test(name);
+    // Only match googleSearch grounding shapes. The broad `webSearch` pattern
+    // is intentionally NOT here: Claude Code lazy-loads a REAL function tool
+    // named "WebSearch", and its functionCall is a normal tool_use round-trip
+    // executed client-side — misclassifying it as a server search would
+    // replace it with a fabricated server_tool_use pair that CC then rejects
+    // as a malformed tool call.
+    return /googleSearch|dynamicRetrieval|server:search/i.test(name);
 }
 
 // Build the Anthropic web_search server-tool blocks CC expects for a
