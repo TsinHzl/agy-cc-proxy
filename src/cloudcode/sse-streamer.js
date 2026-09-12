@@ -212,11 +212,11 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                             index: blockIndex,
                             content_block: webSearchBlock
                         };
-                        yield {
-                            type: 'content_block_delta',
-                            index: blockIndex,
-                            delta: { type: 'input_json_delta', partial_json: '{}' }
-                        };
+                        // Note: do NOT emit input_json_delta here — that delta is
+                        // only valid on tool_use blocks. CC rejects it on any other
+                        // block type with "Content block is not a input_json block".
+                        // The server_tool block already carries input: {} and full
+                        // server_tool_result content at content_block_start.
                         yield { type: 'content_block_stop', index: blockIndex };
                         blockIndex++;
                         currentBlockType = null;
