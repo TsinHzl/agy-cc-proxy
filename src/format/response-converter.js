@@ -29,6 +29,12 @@ export function convertGoogleToAnthropic(googleResponse, model) {
     const anthropicContent = [];
     let hasToolCalls = false;
     let hasServerTool = false;
+    // CC renders "Did N searches" from usage.server_tool_use.web_search_requests
+    // (verified in CC's cli.js: webSearchRequests += usage.server_tool_use?.
+    // web_search_requests ?? 0). Each completed web_search use/result pair we
+    // emit is one search — count them so CC doesn't show "Did 0 searches" and
+    // the model second-guesses its own real grounding results.
+    let webSearchCount = 0;
 
     for (const part of parts) {
         if (part.thought === true && part.text !== undefined) {
@@ -65,6 +71,7 @@ export function convertGoogleToAnthropic(googleResponse, model) {
             const recordedQuery = extractSearchQuery(part, null) || contexts[0]?.title || '';
             anthropicContent.push(...buildWebSearchBlocks(toolId, recordedQuery, contexts, entrance));
             hasServerTool = true;
+            webSearchCount++;
         } else if (part?.type === 'server_tool_use' || part?.type === 'web_search_tool_result') {
             // Pre-built web_search server-tool blocks (pushed as a use/result pair
             // by sse-parser's thinking-model accumulation path) are already in
@@ -73,6 +80,7 @@ export function convertGoogleToAnthropic(googleResponse, model) {
             // tool_use instead of end_turn.
             anthropicContent.push(part);
             hasServerTool = true;
+            if (part.type === 'server_tool_use') webSearchCount++;
         } else if (part.functionCall) {
             // Convert functionCall to tool_use
             // Use the id from the response if available, otherwise generate one
@@ -115,6 +123,7 @@ export function convertGoogleToAnthropic(googleResponse, model) {
         const recordedQuery = contexts[0]?.title || entrance || '';
         anthropicContent.push(...buildWebSearchBlocks(null, recordedQuery, contexts, entrance));
         hasServerTool = true;
+        webSearchCount++;
     }
 
     // Determine stop reason. Tool presence wins over a plain STOP finish:
@@ -149,7 +158,8 @@ export function convertGoogleToAnthropic(googleResponse, model) {
             input_tokens: promptTokens - cachedTokens,
             output_tokens: usageMetadata.candidatesTokenCount || 0,
             cache_read_input_tokens: cachedTokens,
-            cache_creation_input_tokens: 0
+            cache_creation_input_tokens: 0,
+            ...(webSearchCount > 0 ? { server_tool_use: { web_search_requests: webSearchCount } } : {})
         }
     };
 }

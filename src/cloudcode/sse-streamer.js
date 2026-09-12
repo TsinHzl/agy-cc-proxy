@@ -45,6 +45,11 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     // Track the most recent content-level groundingMetadata so a search advertised
     // only at the content level (no per-part functionCall) can still be emitted.
     let lastGroundingMeta = null;
+    // CC renders "Did N searches" from usage.server_tool_use.web_search_requests
+    // (verified in CC's cli.js: webSearchRequests += usage.server_tool_use?.
+    // web_search_requests ?? 0). Count each web_search pair emitted below so the
+    // final message_delta carries the count.
+    let webSearchCount = 0;
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -226,6 +231,7 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                         yield { type: 'content_block_stop', index: blockIndex };
                         blockIndex++;
                         currentBlockType = null;
+                        webSearchCount++;
                     } else if (part.functionCall) {
                         // Handle tool use
                         // For Gemini 3+, capture thoughtSignature from the functionCall part
@@ -337,7 +343,10 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     // per-part googleSearch functionCall). Align with response-converter and
     // sse-parser: emit one server_tool result so CC counts the search even in
     // that shape. Guard against double counting a per-part result already pushed.
-    if (!toolUseCount && currentBlockType !== 'tool_use' && lastGroundingMeta?.searchEntryPoint) {
+    // Gate on webSearchCount (not toolUseCount): a regular functionCall must not
+    // suppress this fallback — non-streaming (response-converter) gates on
+    // hasServerTool the same way, keeping the two paths' search counts aligned.
+    if (webSearchCount === 0 && currentBlockType !== 'tool_use' && lastGroundingMeta?.searchEntryPoint) {
         const entrance = lastGroundingMeta.searchEntryPoint?.renderedContent?.searchIntent?.entrance ?? null;
         const contexts = converterExtractGroundingContexts({ groundingMetadata: lastGroundingMeta }, entrance);
         const recordedQuery = contexts[0]?.title || entrance || '';
@@ -365,6 +374,7 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
         currentBlockType = null;
         toolUseCount++;
         stopReason = 'tool_use';
+        webSearchCount++;
     }
 
     // [DIAG] Per-response block breakdown — primary signal for diagnosing
@@ -447,7 +457,11 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
         usage: {
             output_tokens: outputTokens,
             cache_read_input_tokens: cacheReadTokens,
-            cache_creation_input_tokens: 0
+            cache_creation_input_tokens: 0,
+            // Anthropic's usage.server_tool_use carries server-tool request
+            // counts; CC reads web_search_requests from here to render the
+            // "Did N searches" line. Emit only when a search actually ran.
+            ...(webSearchCount > 0 ? { server_tool_use: { web_search_requests: webSearchCount } } : {})
         }
     };
 
