@@ -183,7 +183,7 @@ export function calculateSmartBackoff(errorText, serverResetMs, consecutiveFailu
     // paths (quota exhausted / unknown) get WARN; high-frequency short-limit paths
     // stay at debug to avoid log flooding.
     const reason0 = parseRateLimitReason(errorText);
-    const noResetMsg = `[CloudCode] No reset time in upstream 429 body; using smart backoff. Body snippet: ${String(errorText || '(empty body)').slice(0, 200)}`;
+    const noResetMsg = `[CloudCode] No reset time in upstream 429 body; using smart backoff. Body snippet: ${String(errorText || '(empty body)').slice(0, 2000)}`;
     if (reason0 === 'QUOTA_EXHAUSTED' || reason0 === 'UNKNOWN') {
         logger.warn(noResetMsg);
     } else {
