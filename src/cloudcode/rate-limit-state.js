@@ -14,9 +14,9 @@ import {
     MIN_BACKOFF_MS,
     CAPACITY_JITTER_MAX_MS
 } from '../constants.js';
-import { generateJitter } from '../utils/helpers.js';
+import { generateJitter, formatDuration } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
-import { parseRateLimitReason } from './rate-limit-parser.js';
+import { parseRateLimitReason, MAX_RESET_CAP_MS } from './rate-limit-parser.js';
 
 /**
  * Rate limit deduplication - prevents thundering herd on concurrent rate limits.
@@ -178,23 +178,51 @@ export function calculateSmartBackoff(errorText, serverResetMs, consecutiveFailu
         return Math.max(serverResetMs, MIN_BACKOFF_MS);
     }
 
-    const reason = parseRateLimitReason(errorText);
+    // When the upstream body carries no parseable reset time, log a snippet so the
+    // real body format can be identified and a parser added later. Only the long-lock
+    // paths (quota exhausted / unknown) get WARN; high-frequency short-limit paths
+    // stay at debug to avoid log flooding.
+    const reason0 = parseRateLimitReason(errorText);
+    const noResetMsg = `[CloudCode] No reset time in upstream 429 body; using smart backoff. Body snippet: ${String(errorText || '(empty body)').slice(0, 200)}`;
+    if (reason0 === 'QUOTA_EXHAUSTED' || reason0 === 'UNKNOWN') {
+        logger.warn(noResetMsg);
+    } else {
+        logger.debug(noResetMsg);
+    }
 
+    const reason = reason0;
+
+    let backoffMs;
     switch (reason) {
         case 'QUOTA_EXHAUSTED':
             // Progressive backoff: [60s, 5m, 30m, 2h]
             const tierIndex = Math.min(consecutiveFailures, QUOTA_EXHAUSTED_BACKOFF_TIERS_MS.length - 1);
-            return QUOTA_EXHAUSTED_BACKOFF_TIERS_MS[tierIndex];
+            backoffMs = QUOTA_EXHAUSTED_BACKOFF_TIERS_MS[tierIndex];
+            break;
         case 'RATE_LIMIT_EXCEEDED':
-            return BACKOFF_BY_ERROR_TYPE.RATE_LIMIT_EXCEEDED;
+            backoffMs = BACKOFF_BY_ERROR_TYPE.RATE_LIMIT_EXCEEDED;
+            break;
         case 'MODEL_CAPACITY_EXHAUSTED':
             // Apply jitter to prevent thundering herd - clients retry at staggered times
-            return BACKOFF_BY_ERROR_TYPE.MODEL_CAPACITY_EXHAUSTED + generateJitter(CAPACITY_JITTER_MAX_MS);
+            backoffMs = BACKOFF_BY_ERROR_TYPE.MODEL_CAPACITY_EXHAUSTED + generateJitter(CAPACITY_JITTER_MAX_MS);
+            break;
         case 'SERVER_ERROR':
-            return BACKOFF_BY_ERROR_TYPE.SERVER_ERROR;
+            backoffMs = BACKOFF_BY_ERROR_TYPE.SERVER_ERROR;
+            break;
         default:
-            return BACKOFF_BY_ERROR_TYPE.UNKNOWN;
+            backoffMs = BACKOFF_BY_ERROR_TYPE.UNKNOWN;
     }
+
+    // Cap the backoff so the account pool is never locked out for hours when the
+    // upstream body lacks a parseable reset time (parseResetTime's cap cannot cover
+    // this path). Optimistic retry (server.js resetAllRateLimits) re-probes upstream.
+    if (backoffMs > MAX_RESET_CAP_MS) {
+        logger.warn(
+            `[CloudCode] Smart backoff ${formatDuration(backoffMs)} exceeds cap, clamping to ${formatDuration(MAX_RESET_CAP_MS)}`
+        );
+        backoffMs = MAX_RESET_CAP_MS;
+    }
+    return backoffMs;
 }
 
 // Periodically clean up stale rate limit state (every 60 seconds)
