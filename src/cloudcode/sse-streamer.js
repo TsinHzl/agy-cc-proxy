@@ -42,8 +42,11 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     let textChars = 0;
     let toolUseCount = 0;
     let imageCount = 0;
-    // Track the most recent content-level groundingMetadata so a search advertised
-    // only at the content level (no per-part functionCall) can still be emitted.
+    // Track the most recent groundingMetadata so a search advertised only at
+    // the metadata level (no per-part functionCall) can still be emitted.
+    // Verified live (WS-DIAG): Antigravity attaches it to the CANDIDATE level
+    // (candidates[0].groundingMetadata) on the final chunk, not the content
+    // level — read both, preferring content level.
     let lastGroundingMeta = null;
     // CC renders "Did N searches" from usage.server_tool_use.web_search_requests
     // (verified in CC's cli.js: webSearchRequests += usage.server_tool_use?.
@@ -85,8 +88,20 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                 const firstCandidate = candidates[0] || {};
                 const content = firstCandidate.content || {};
                 const parts = content.parts || [];
-                const groundingMeta = content.groundingMetadata || {};
-                if (groundingMeta && Object.keys(groundingMeta).length > 0) {
+                // Read grounding metadata from both legal positions: the content
+                // level and the candidate level. Verified live (WS-DIAG):
+                // Antigravity v1internal emits it on candidates[0]
+                // (candGmKeys=webSearchQueries+searchEntryPoint+groundingChunks+groundingSupports)
+                // on the final chunk, with the content level always empty — but
+                // the API spec keeps content-level valid, so prefer it if
+                // non-empty. An empty-object content-level value must not
+                // short-circuit the candidate level.
+                const contentGm = content.groundingMetadata;
+                const candGm = firstCandidate.groundingMetadata;
+                const groundingMeta =
+                    (contentGm && Object.keys(contentGm).length > 0) ? contentGm :
+                    (candGm && Object.keys(candGm).length > 0) ? candGm : {};
+                if (Object.keys(groundingMeta).length > 0) {
                     lastGroundingMeta = groundingMeta;
                 }
 

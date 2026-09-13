@@ -23,7 +23,17 @@ export function convertGoogleToAnthropic(googleResponse, model) {
     const firstCandidate = candidates[0] || {};
     const content = firstCandidate.content || {};
     const parts = content.parts || [];
-    const groundingMeta = content.groundingMetadata || {};
+    // Read grounding metadata from both legal positions: the content level and
+    // the candidate level. Verified live (WS-DIAG): Antigravity v1internal
+    // emits it on candidates[0] on the final chunk, with the content level
+    // always empty — but the API spec keeps content-level valid, so prefer it
+    // if non-empty. An empty-object content-level value must not short-circuit
+    // the candidate level.
+    const contentGm = content.groundingMetadata;
+    const candGm = firstCandidate.groundingMetadata;
+    const groundingMeta =
+        (contentGm && Object.keys(contentGm).length > 0) ? contentGm :
+        (candGm && Object.keys(candGm).length > 0) ? candGm : {};
 
     // Anthropic content blocks
     const anthropicContent = [];
