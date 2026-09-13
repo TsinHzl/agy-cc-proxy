@@ -20,6 +20,7 @@ import { REQUEST_BODY_LIMIT, MODEL_MAP } from './constants.js';
 import { AccountManager } from './account-manager/index.js';
 import { clearThinkingSignatureCache } from './format/signature-cache.js';
 import { formatDuration } from './utils/helpers.js';
+import { MAX_RESET_CAP_MS } from './cloudcode/rate-limit-parser.js';
 import { logger } from './utils/logger.js';
 import usageStats from './modules/usage-stats.js';
 import usageLog from './modules/usage-log.js';
