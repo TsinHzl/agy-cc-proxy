@@ -1,0 +1,23 @@
+public/index.html
+  adbddc3c8abd7b56 157-158,161,163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "03c79c755885a594dcfbbf6fbcba8090658eca1e",
+  "prompts": {
+    "adbddc3c8abd7b56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1ad9398e-1af2-4cd7-beb9-a8c1270282d6",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 9,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
