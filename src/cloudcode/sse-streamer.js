@@ -105,7 +105,14 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                         hasEntry: p.groundingMetadata?.searchEntryPoint ? 1 : undefined,
                         otherKeys: Object.keys(p).filter(k => !['thought', 'text', 'functionCall', 'groundingMetadata', 'thoughtSignature', 'inlineData'].includes(k)).join(',') || undefined
                     }));
-                    logger.info(`[WS-DIAG] parts=${parts.length} gmKeys=${groundingMeta && Object.keys(groundingMeta).length > 0 ? Object.keys(groundingMeta).join('+') : 'none'} shapes=${JSON.stringify(partShapes)}`);
+                    // v2: also probe the candidate level and the response
+                    // envelope — grounding/server-side invocation data may be
+                    // attached there instead of on content.
+                    const candKeys = Object.keys(firstCandidate).join(',') || 'none';
+                    const candGmKeys = firstCandidate.groundingMetadata ? Object.keys(firstCandidate.groundingMetadata).join('+') : 'none';
+                    const respTopKeys = Object.keys(innerResponse).filter(k => k !== 'candidates').join(',') || 'none';
+                    const usageKeys = innerResponse.usageMetadata ? Object.keys(innerResponse.usageMetadata).join(',') : 'none';
+                    logger.info(`[WS-DIAG] parts=${parts.length} gmKeys=${groundingMeta && Object.keys(groundingMeta).length > 0 ? Object.keys(groundingMeta).join('+') : 'none'} candKeys=${candKeys} candGmKeys=${candGmKeys} respTopKeys=${respTopKeys} usageKeys=${usageKeys} shapes=${JSON.stringify(partShapes)}`);
                 }
 
                 // Emit message_start on first data
