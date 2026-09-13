@@ -1,0 +1,471 @@
+<div x-data="apiKeysManager" class="view-container">
+    <!-- PageHead（kiro2cc PageHead 规格） -->
+    <div class="mb-5 flex flex-wrap items-end gap-4">
+        <div class="min-w-0">
+            <div class="mb-[5px] text-[11px] tracking-[.02em] text-ink-3">
+                <span x-text="$store.global.t('systemDesc')">CLAUDE PROXY SYSTEM</span>&nbsp;/&nbsp;<b
+                    class="font-medium text-ink-2" aria-hidden="true" x-text="$store.global.t('apiKeys')">API
+                    Keys</b>
+            </div>
+            <h1 class="text-[19px] font-semibold leading-[1.2] tracking-[-.02em]" x-text="$store.global.t('apiKeys')">
+                API Keys
+            </h1>
+        </div>
+
+        <!-- Search Box（kiro2cc SearchBox 规格） -->
+        <div class="relative ml-auto w-[236px]">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg class="h-3.5 w-3.5 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <input type="text"
+                :placeholder="$store.global.t('searchPlaceholder')"
+                :aria-label="$store.global.t('searchPlaceholder')"
+                class="input-search-sm pr-9"
+                x-model="search">
+            <button x-show="search"
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-75"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    @click="search = ''"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-3 transition-colors hover:text-ink"
+                    :aria-label="$store.global.t('clearSelection')">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Create Button -->
+        <button type="button" class="btn btn-action-primary h-[31px] shrink-0 rounded-[7px] px-3 text-[12.5px]"
+            @click="openCreateModal()">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span x-text="$store.global.t('createKey')">Create Key</span>
+        </button>
+    </div>
+
+    <!-- Panel Title（kiro2cc PANEL_TITLE 规格） -->
+    <h3 class="mb-[7px] text-[10.5px] font-semibold uppercase tracking-[.07em] text-ink-3"
+        x-text="$store.global.t('apiKeys')">API Keys</h3>
+
+    <!-- Main Table（kiro2cc table-kit PANEL 规格） -->
+    <section class="flex min-h-0 flex-col overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
+        <div class="max-h-[70vh] min-h-0 overflow-y-auto">
+            <table class="w-full border-collapse text-[12.5px]">
+                <thead>
+                    <tr>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('keyName')">Name</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('apiKey')">API Key</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('status')">Status</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('validity')">Validity</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('spendingLimit')">Spending Limit</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('lastUsed')">Last Used</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-right text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('actions')">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="[&>tr:last-child>td]:border-b-0">
+                    <!-- Loading（kiro2cc 空态规格） -->
+                    <template x-if="loading && keys.length === 0">
+                        <tr>
+                            <td colspan="7" class="px-3 py-14">
+                                <div class="flex flex-col items-center gap-2.5 text-ink-3">
+                                    <svg class="size-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="3" stroke="currentColor" fill="none"></circle>
+                                        <path class="opacity-75" d="M12 2a10 10 0 0110 10" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round"></path>
+                                    </svg>
+                                    <span class="text-[12.5px]"
+                                        x-text="$store.global.t('establishingUplink')">ESTABLISHING UPLINK...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- Empty State（搜索无命中） -->
+                    <template x-if="!loading && keys.length > 0 && filteredKeys.length === 0">
+                        <tr>
+                            <td colspan="7" class="px-3 py-14">
+                                <div class="flex flex-col items-center gap-2.5 text-ink-3">
+                                    <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <span class="text-[12.5px] font-medium text-ink-2"
+                                        x-text="$store.global.t('noMatchingKeys')">No matching keys</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- Empty State（无任何 Key） -->
+                    <template x-if="!loading && keys.length === 0">
+                        <tr>
+                            <td colspan="7" class="px-3 py-14">
+                                <div class="flex flex-col items-center gap-2.5 text-ink-3">
+                                    <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                    </svg>
+                                    <span class="text-[12.5px] font-medium text-ink-2"
+                                        x-text="$store.global.t('noApiKeys')">No API keys yet</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- Data Rows -->
+                    <template x-for="key in filteredKeys" :key="key.id">
+                        <tr class="transition-colors hover:bg-surface-2">
+                            <!-- Name -->
+                            <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                                <div class="max-w-[160px] truncate text-[12.5px] font-medium text-ink" :title="key.name"
+                                    x-text="key.name"></div>
+                                <div class="text-[10.5px] text-ink-3" x-text="formatTime(key.createdAt)"></div>
+                            </td>
+
+                            <!-- Masked Key -->
+                            <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                                <div class="flex items-center gap-1.5">
+                                    <code class="font-mono text-[11.5px] text-ink-2" x-text="key.maskedKey"></code>
+                                    <button type="button"
+                                        class="grid size-[22px] flex-none place-items-center rounded-[5px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+                                        @click="revealKey(key)" :title="$store.global.t('revealKey')" :aria-label="$store.global.t('revealKey')">
+                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </button>
+                                    <button type="button"
+                                        class="grid size-[22px] flex-none place-items-center rounded-[5px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+                                        @click="revealKey(key, true)" :title="$store.global.t('copyKey')" :aria-label="$store.global.t('copyKey')">
+                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+
+                            <!-- Status Badge -->
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] align-middle">
+                                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.04em]"
+                                    :class="statusBadgeClass(key)"
+                                    x-text="statusText(key)"></span>
+                            </td>
+
+                            <!-- Validity -->
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] align-middle text-[11.5px] text-ink-2">
+                                <div class="flex flex-col gap-px">
+                                    <span x-text="validityText(key)"></span>
+                                    <span class="text-[10.5px] text-ink-3" x-show="key.expiresAt"
+                                        x-text="expiresText(key)"></span>
+                                </div>
+                            </td>
+
+                            <!-- Spending Limit（进度条） -->
+                            <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                                <template x-if="key.spendingLimit">
+                                    <div class="w-[132px]">
+                                        <div class="mb-1 flex items-baseline justify-between gap-2 text-[10.5px]">
+                                            <span class="font-mono tabular-nums text-ink-2"
+                                                x-text="quotaUsedText(key)"></span>
+                                            <span class="shrink-0 text-ink-3" x-text="key.spendingLimit.metric"></span>
+                                        </div>
+                                        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+                                            <div class="h-full rounded-full transition-all"
+                                                :class="quotaBarClass(key)"
+                                                :style="'width:' + quotaPercent(key) + '%'"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="!key.spendingLimit">
+                                    <span class="text-[11.5px] text-ink-3"
+                                        x-text="$store.global.t('noLimit')">Unlimited</span>
+                                </template>
+                            </td>
+
+                            <!-- Last Used -->
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] align-middle text-[11.5px] text-ink-2">
+                                <div class="flex flex-col gap-px">
+                                    <span x-text="key.lastUsedAt ? formatTime(key.lastUsedAt) : '-'"></span>
+                                    <span class="max-w-[120px] truncate font-mono text-[10.5px] text-ink-3"
+                                        :title="key.lastUsedIp" x-show="key.lastUsedIp" x-text="key.lastUsedIp"></span>
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="whitespace-nowrap border-b border-hairline px-3 py-[11px] text-right align-middle">
+                                <div class="flex items-center justify-end gap-1">
+                                    <!-- Toggle enabled -->
+                                    <button type="button"
+                                        class="grid size-[26px] flex-none place-items-center rounded-[6px] transition-colors hover:bg-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                        :class="key.enabled ? 'text-ok' : 'text-ink-3'"
+                                        @click="toggleEnabled(key)"
+                                        :title="key.enabled ? $store.global.t('disableKey') : $store.global.t('enableKey')"
+                                        :disabled="busyKeyId === key.id">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path x-show="key.enabled" stroke-linecap="round" stroke-linejoin="round"
+                                                stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                            <path x-show="!key.enabled" stroke-linecap="round" stroke-linejoin="round"
+                                                stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                    <!-- Edit -->
+                                    <button type="button"
+                                        class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                        @click="openEditModal(key)" :title="$store.global.t('editKey')" :aria-label="$store.global.t('editKey')">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </button>
+                                    <!-- Usage detail -->
+                                    <button type="button"
+                                        class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                        @click="openUsageModal(key)" :title="$store.global.t('keyUsage')" :aria-label="$store.global.t('keyUsage')">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                    </button>
+                                    <!-- Delete -->
+                                    <button type="button"
+                                        class="grid size-[26px] flex-none place-items-center rounded-[6px] text-danger transition-colors hover:bg-danger-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+                                        @click="openDeleteModal(key)" :title="$store.global.t('deleteKey')" :aria-label="$store.global.t('deleteKey')">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Panel Foot（kiro2cc PANEL_FOOT 规格） -->
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t border-hairline bg-surface-2 px-[13px] py-[9px] text-[11.5px] text-ink-3">
+            <span x-text="$store.global.t('totalKeys', { count: filteredKeys.length })">0 keys</span>
+
+            <!-- UpdatedAgo（kiro2cc UpdatedAgo 规格） -->
+            <span class="ml-auto shrink-0 text-[11px] text-ink-3" x-show="lastUpdated > 0"
+                x-text="$store.global.t('updatedAgo', { time: formatAgo(lastUpdated) })"></span>
+
+            <div class="flex shrink-0 items-center gap-1">
+                <button type="button" class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    @click="refreshData" :title="$store.global.t('refreshData')" :disabled="loading">
+                    <svg class="h-3.5 w-3.5" :class="{'animate-spin': loading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Create / Edit Modal -->
+    <dialog id="api_key_form_modal" class="modal backdrop-blur-sm">
+        <div class="modal-box max-w-md w-full bg-surface border border-hairline text-ink shadow-pop p-6">
+            <h3 class="font-bold text-lg text-ink mb-4"
+                x-text="editingId ? $store.global.t('editKey') : $store.global.t('createKey')">Create Key</h3>
+
+            <form @submit.prevent="submitForm()">
+                <!-- Name -->
+                <label class="mb-1 block text-[12px] font-medium text-ink-2" x-text="$store.global.t('keyName')">Name</label>
+                <input type="text" x-model="form.name" required
+                    class="input-search-sm mb-3 w-full text-ink"
+                    :placeholder="$store.global.t('keyNamePlaceholder')">
+
+                <!-- Duration -->
+                <label class="mb-1 block text-[12px] font-medium text-ink-2" x-text="$store.global.t('durationDays')">Validity (days)</label>
+                <input type="number" x-model.number="form.durationDays" min="0" step="1"
+                    class="input-search-sm mb-1 w-full text-ink"
+                    :placeholder="$store.global.t('durationDaysPlaceholder')">
+                <p class="mb-3 text-[11px] text-ink-3" x-text="$store.global.t('durationDaysHint')">0 or empty = never expires</p>
+
+                <!-- Spending Limit -->
+                <div class="mb-1 flex items-center gap-2">
+                    <input type="checkbox" x-model="form.limitEnabled" class="checkbox checkbox-sm checkbox-primary">
+                    <label class="text-[12px] font-medium text-ink-2" x-text="$store.global.t('spendingLimit')">Spending Limit</label>
+                </div>
+                <div class="mb-3 flex items-center gap-2" x-show="form.limitEnabled">
+                    <select x-model="form.limitMetric"
+                        class="input-search-sm w-[120px] shrink-0 text-ink">
+                        <option value="tokens" x-text="$store.global.t('metricTokens')">tokens</option>
+                        <option value="requests" x-text="$store.global.t('metricRequests')">requests</option>
+                    </select>
+                    <input type="number" x-model.number="form.limitValue" min="1" step="1"
+                        class="input-search-sm w-full text-ink"
+                        :placeholder="$store.global.t('limitValuePlaceholder')">
+                </div>
+
+                <div class="modal-action mt-4">
+                    <button type="button" class="btn btn-action-ghost"
+                        onclick="document.getElementById('api_key_form_modal').close()"
+                        x-text="$store.global.t('cancel')">Cancel</button>
+                    <button type="submit" class="btn btn-action-primary" :disabled="saving"
+                        x-text="saving ? $store.global.t('saving') : (editingId ? $store.global.t('saveChanges') : $store.global.t('createKey'))">Create</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>x</button>
+        </form>
+    </dialog>
+
+    <!-- One-time Plaintext Modal -->
+    <dialog id="api_key_plaintext_modal" class="modal backdrop-blur-sm" @close="plaintextValue = ''; copiedPlaintext = false">
+        <div class="modal-box max-w-lg w-full bg-surface border border-hairline text-ink shadow-pop p-6">
+            <h3 class="font-bold text-lg text-ink mb-2" x-text="$store.global.t('keyPlaintextTitle')">API Key Created</h3>
+            <p class="mb-4 text-[12.5px] text-ink-2" x-text="$store.global.t('keyPlaintextHint')">Copy it now — it will not be shown again.</p>
+            <div class="mb-4 flex items-center gap-2 rounded-[7px] border border-hairline bg-surface-2 p-3">
+                <code class="min-w-0 flex-1 break-all font-mono text-[12px] text-ink" x-text="plaintextValue"></code>
+                <button type="button"
+                    class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+                    @click="copyPlaintext()" :title="$store.global.t('copyKey')" :aria-label="$store.global.t('copyKey')">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            :d="copiedPlaintext ? 'M5 13l4 4L19 7' : 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z'" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-action">
+                <button type="button" class="btn btn-action-primary"
+                    onclick="document.getElementById('api_key_plaintext_modal').close()"
+                    x-text="$store.global.t('done')">Done</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>x</button>
+        </form>
+    </dialog>
+
+    <!-- Delete Confirmation Modal -->
+    <dialog id="delete_key_modal" class="modal">
+        <div class="modal-box bg-surface border border-hairline shadow-pop">
+            <h3 class="font-bold text-lg text-danger flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span x-text="$store.global.t('dangerousOperation')">Dangerous Operation</span>
+            </h3>
+            <p class="py-4 text-ink-2">
+                <span x-text="$store.global.t('confirmDeleteKeyPrompt')">Are you sure you want to delete key</span>
+                <strong class="text-ink font-mono" x-text="deleteTarget ? deleteTarget.name : ''"></strong>?
+            </p>
+            <div class="bg-danger-soft border border-danger-line rounded-[6px] p-3 mb-4">
+                <p class="text-sm text-danger flex items-start gap-2">
+                    <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span x-text="$store.global.t('deleteKeyWarning')">This action cannot be undone. Clients using this key will get 401 immediately.</span>
+                </p>
+            </div>
+            <div class="modal-action">
+                <button class="btn btn-action-ghost" onclick="document.getElementById('delete_key_modal').close()"
+                    x-text="$store.global.t('cancel')">Cancel</button>
+                <button class="btn bg-danger hover:bg-danger border-none text-white"
+                        @click="executeDelete()"
+                        :disabled="deleting"
+                        :class="{ 'loading': deleting }">
+                    <span x-text="$store.global.t('confirmDeleteKey')">Confirm Delete</span>
+                </button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button x-text="$store.global.t('close')">close</button>
+        </form>
+    </dialog>
+
+    <!-- Usage Detail Modal -->
+    <dialog id="api_key_usage_modal" class="modal backdrop-blur-sm">
+        <div class="modal-box max-w-2xl w-full bg-surface border border-hairline text-ink shadow-pop p-6">
+            <h3 class="font-bold text-xl text-ink mb-2 flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span x-text="usageTarget ? usageTarget.name : ''"></span>
+            </h3>
+
+            <!-- Summary -->
+            <div class="mb-4 grid grid-cols-3 gap-2" x-show="usageSummary">
+                <div class="rounded-[7px] border border-hairline bg-surface-2 p-2.5">
+                    <div class="text-[10.5px] uppercase tracking-[.07em] text-ink-3" x-text="$store.global.t('requests')">Requests</div>
+                    <div class="font-mono text-[15px] font-semibold tabular-nums text-ink"
+                        x-text="(usageSummary && usageSummary.usage) ? (usageSummary.usage.requests ?? 0).toLocaleString('en-US') : '-'"></div>
+                </div>
+                <div class="rounded-[7px] border border-hairline bg-surface-2 p-2.5">
+                    <div class="text-[10.5px] uppercase tracking-[.07em] text-ink-3" x-text="$store.global.t('inputTokens')">Input Tokens</div>
+                    <div class="font-mono text-[15px] font-semibold tabular-nums text-ink"
+                        x-text="(usageSummary && usageSummary.usage) ? (usageSummary.usage.inputTokens ?? 0).toLocaleString('en-US') : '-'"></div>
+                </div>
+                <div class="rounded-[7px] border border-hairline bg-surface-2 p-2.5">
+                    <div class="text-[10.5px] uppercase tracking-[.07em] text-ink-3" x-text="$store.global.t('outputTokens')">Output Tokens</div>
+                    <div class="font-mono text-[15px] font-semibold tabular-nums text-ink"
+                        x-text="(usageSummary && usageSummary.usage) ? (usageSummary.usage.outputTokens ?? 0).toLocaleString('en-US') : '-'"></div>
+                </div>
+            </div>
+
+            <div class="mb-3 flex items-center justify-between" x-show="usageSummary">
+                <button type="button" class="btn btn-action-ghost h-[26px] rounded-[6px] px-2 text-[11.5px]"
+                    @click="resetUsage()" :disabled="usageSummary && usageSummary.usage.requests === 0">
+                    <span x-text="$store.global.t('resetUsage')">Reset Usage</span>
+                </button>
+                <span class="text-[11px] text-ink-3" x-show="usageSummary && usageSummary.lastUsedAt"
+                    x-text="usageSummary && usageSummary.lastUsedAt ? $store.global.t('lastUsed') + ': ' + formatTime(usageSummary.lastUsedAt) : ''"></span>
+            </div>
+
+            <!-- Recent Records -->
+            <div class="max-h-[40vh] overflow-y-auto rounded-[7px] border border-hairline">
+                <table class="w-full border-collapse text-[12px]">
+                    <thead>
+                        <tr>
+                            <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-2.5 py-2 text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                                x-text="$store.global.t('time')">Time</th>
+                            <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-2.5 py-2 text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                                x-text="$store.global.t('model')">Model</th>
+                            <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-2.5 py-2 text-right text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                                x-text="$store.global.t('totalTokens')">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="[&>tr:last-child>td]:border-b-0">
+                        <template x-if="!usageLoading && recentRecords.length === 0">
+                            <tr>
+                                <td colspan="3" class="px-2.5 py-8 text-center text-[12px] text-ink-3"
+                                    x-text="$store.global.t('noUsageRecords')">No usage records</td>
+                            </tr>
+                        </template>
+                        <template x-for="(rec, idx) in recentRecords" :key="rec.timestamp + '|' + idx">
+                            <tr class="transition-colors hover:bg-surface-2">
+                                <td class="whitespace-nowrap border-b border-hairline px-2.5 py-2 text-[11px] text-ink-2"
+                                    x-text="formatTime(rec.timestamp)"></td>
+                                <td class="border-b border-hairline px-2.5 py-2 font-mono text-[11px] text-brand"
+                                    x-text="rec.model"></td>
+                                <td class="whitespace-nowrap border-b border-hairline px-2.5 py-2 text-right font-mono text-[11px] tabular-nums text-ink-2"
+                                    x-text="(rec.totalTokens ?? 0).toLocaleString('en-US')"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-action mt-4">
+                <button type="button" class="btn btn-action-primary"
+                    onclick="document.getElementById('api_key_usage_modal').close()"
+                    x-text="$store.global.t('close')">Close</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>x</button>
+        </form>
+    </dialog>
+</div>

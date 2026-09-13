@@ -7,6 +7,7 @@
 import './utils/proxy.js';
 
 import app, { accountManager } from './server.js';
+import { initApiKeysManager } from './api-keys/manager.js';
 import { DEFAULT_PORT } from './constants.js';
 import { logger } from './utils/logger.js';
 import { config } from './config.js';
@@ -63,6 +64,18 @@ if (process.env.HOST) {
 // Home directory for account storage
 const HOME_DIR = os.homedir();
 const CONFIG_DIR = path.join(HOME_DIR, '.antigravity-claude-proxy');
+
+// Initialize managed API keys store (must be ready before first /v1 request).
+// A non-ENOENT load failure (EACCES, EISDIR, ...) aborts startup: continuing
+// would run with an empty in-memory key list and let the next save overwrite
+// the real api-keys.json with nothing (permanent data loss).
+try {
+    await initApiKeysManager();
+} catch (error) {
+    logger.error('[Startup] Failed to initialize API keys manager:', error.message);
+    logger.error('[Startup] Refusing to start with an unloadable API keys store (empty state could overwrite the real keys file). Fix the file permissions/path and retry.');
+    process.exit(1);
+}
 
 const server = app.listen(PORT, HOST, () => {
     // Get actual bound address

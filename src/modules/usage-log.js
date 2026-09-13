@@ -87,6 +87,7 @@ function maskEmail(email) {
  * @param {string} entry.model - Model ID
  * @param {string} entry.apiKey - Account email (will be masked)
  * @param {string} [entry.clientIp] - Client IP address
+ * @param {string|null} [entry.keyId] - Managed API key id (null = primary key)
  * @param {number} entry.inputTokens
  * @param {number} entry.outputTokens
  * @param {number} entry.cacheReadTokens
@@ -100,6 +101,7 @@ function record(entry) {
         model = 'unknown',
         apiKey = '-',
         clientIp = '-',
+        keyId = null,
         inputTokens = 0,
         outputTokens = 0,
         cacheReadTokens = 0,
@@ -116,6 +118,7 @@ function record(entry) {
         model,
         apiKey: maskEmail(apiKey),
         clientIp,
+        keyId: keyId || null,
         inputTokens,
         outputTokens,
         cacheReadTokens,

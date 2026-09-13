@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel, resolveModel } from './cloudcode/index.js';
 import { mountWebUI } from './webui/index.js';
 import { config, verifyApiKey } from './config.js';
+import { initApiKeysManager, findKeyBySecret, checkAndActivate, isExpired, checkQuota, recordUsage } from './api-keys/manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +95,8 @@ app.use('/v1', (req, res, next) => {
 });
 
 // API Key authentication middleware for /v1/* endpoints
+// Primary key (config.apiKey) is checked first (id: null, zero regression),
+// then managed keys from the api-keys store.
 app.use('/v1', (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const xApiKey = req.headers['x-api-key'];
@@ -105,7 +108,7 @@ app.use('/v1', (req, res, next) => {
         providedKey = xApiKey.trim();
     }
 
-    if (!providedKey || !verifyApiKey(providedKey, config.apiKey)) {
+    if (!providedKey) {
         logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
         return res.status(401).json({
             type: 'error',
@@ -116,6 +119,59 @@ app.use('/v1', (req, res, next) => {
         });
     }
 
+    // Primary key match - behaves exactly as before this feature existed
+    if (verifyApiKey(providedKey, config.apiKey)) {
+        req._apiKeyId = null;
+        return next();
+    }
+
+    // Managed key match + state checks (order: enabled -> lazy activation -> expiry -> quota)
+    const keyRecord = findKeyBySecret(providedKey);
+    if (!keyRecord) {
+        logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'Invalid or missing API key'
+            }
+        });
+    }
+
+    if (!keyRecord.enabled) {
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'API key has been disabled'
+            }
+        });
+    }
+
+    // Lazy activation: first use starts the validity window; this request passes
+    checkAndActivate(keyRecord);
+
+    if (isExpired(keyRecord)) {
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'API key has expired'
+            }
+        });
+    }
+
+    if (checkQuota(keyRecord)) {
+        return res.status(429).json({
+            type: 'error',
+            error: {
+                type: 'rate_limit_error',
+                message: 'API key spending limit exceeded'
+            }
+        });
+    }
+
+    req._apiKeyId = keyRecord.id;
     next();
 });
 
@@ -179,8 +235,14 @@ function parseError(error) {
         }
         // Surface a Retry-After header so clients back off intelligently
         // instead of tight-looping. Prefer the upstream reset hint, fall back
-        // to a conservative 60s default.
-        retryAfterMs = parseResetDuration(resetMatch?.[1]) ?? 60000;
+        // to a conservative 60s default. Cap at 5 minutes (matches
+        // MAX_RESET_CAP_MS in rate-limit-parser.js) so downstream clients
+        // (e.g. AIChatApp with a short retry budget) never receive a
+        // multi-hour backoff hint.
+        const parsedRetryAfterMs = parseResetDuration(resetMatch?.[1]);
+        retryAfterMs = parsedRetryAfterMs !== null
+            ? Math.min(parsedRetryAfterMs, MAX_RESET_CAP_MS)
+            : 60000;
     } else if (error.message.includes('invalid_request_error') || error.message.includes('INVALID_ARGUMENT')) {
         errorType = 'invalid_request_error';
         statusCode = 400;
@@ -930,6 +992,7 @@ app.post('/v1/messages', async (req, res) => {
                     model: modelId,
                     apiKey: validationAccount?.email || '-',
                     clientIp: req._clientIp || req.ip || '-',
+                    keyId: req._apiKeyId || null,
                     inputTokens: usageInputTokens,
                     outputTokens: usageOutputTokens,
                     cacheReadTokens: usageCacheReadTokens,
@@ -937,6 +1000,10 @@ app.post('/v1/messages', async (req, res) => {
                     timeToFirstToken: usageTimeToFirstToken,
                     streaming: true,
                 });
+                recordUsage(req._apiKeyId, {
+                    inputTokens: usageInputTokens,
+                    outputTokens: usageOutputTokens,
+                }, req._clientIp || req.ip || '-');
 
             } catch (error) {
                 // If we haven't sent headers yet, we can send a proper error status
@@ -981,6 +1048,7 @@ app.post('/v1/messages', async (req, res) => {
                 model: modelId,
                 apiKey: validationAccount?.email || '-',
                 clientIp: req._clientIp || req.ip || '-',
+                keyId: req._apiKeyId || null,
                 inputTokens: u.input_tokens || 0,
                 outputTokens: u.output_tokens || 0,
                 cacheReadTokens: u.cache_read_input_tokens || 0,
@@ -988,6 +1056,10 @@ app.post('/v1/messages', async (req, res) => {
                 timeToFirstToken: null,
                 streaming: false,
             });
+            recordUsage(req._apiKeyId, {
+                inputTokens: u.input_tokens || 0,
+                outputTokens: u.output_tokens || 0,
+            }, req._clientIp || req.ip || '-');
         }
 
     } catch (error) {

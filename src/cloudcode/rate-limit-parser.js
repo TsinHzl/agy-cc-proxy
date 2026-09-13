@@ -181,10 +181,23 @@ export function parseResetTime(responseOrError, errorText = '') {
         }
         // Note: No longer enforcing 2s minimum - this was causing cascading failures
         // when all accounts had short rate limits simultaneously
+        // Cap long reset windows (e.g. "Quota will reset after 1h59m54s") so the
+        // whole account pool is never locked out for hours. Optimistic retry
+        // (server.js resetAllRateLimits) will re-probe the upstream on the next
+        // request instead of trusting a multi-hour penalty window.
+        else if (resetMs > MAX_RESET_CAP_MS) {
+            logger.warn(
+                `[CloudCode] Reset time ${formatDuration(resetMs)} exceeds cap, clamping to ${formatDuration(MAX_RESET_CAP_MS)}`
+            );
+            resetMs = MAX_RESET_CAP_MS;
+        }
     }
 
     return resetMs;
 }
+
+/** Upper bound for upstream-reported reset times (5 minutes). */
+export const MAX_RESET_CAP_MS = 5 * 60 * 1000;
 
 /**
  * Parse the rate limit reason from error text

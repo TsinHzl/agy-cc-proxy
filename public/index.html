@@ -166,6 +166,15 @@
                     </button>
                     <button
                         class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
+                        :class="{'active': $store.global.activeTab === 'apiKeys'}" @click="$store.global.activeTab = 'apiKeys'">
+                        <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <span x-text="$store.global.t('apiKeys')">API Keys</span>
+                    </button>
+                    <button
+                        class="nav-item mb-0.5 flex h-[33px] w-full items-center gap-[9px] rounded-[7px] px-2.5 text-[12.5px]"
                         :class="{'active': $store.global.activeTab === 'logs'}" @click="$store.global.activeTab = 'logs'">
                         <svg class="w-[15px] h-[15px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -235,6 +244,11 @@
             <div x-show="$store.global.activeTab === 'usageLog'" x-load-view="'usage-log'"
                 x-transition:enter="fade-enter-active" x-transition:enter-start="fade-enter-from"
                 class="w-full h-full"></div>
+
+            <!-- API Keys -->
+            <div x-show="$store.global.activeTab === 'apiKeys'" x-load-view="'api-keys'"
+                x-transition:enter="fade-enter-active" x-transition:enter-start="fade-enter-from"
+                class="w-full"></div>
 
             <!-- Logs -->
             <div x-show="$store.global.activeTab === 'logs'" x-load-view="'logs'" x-transition:enter="fade-enter-active"
@@ -415,6 +429,7 @@
     <script src="js/components/dashboard.js"></script>
     <script src="js/components/models.js"></script>
     <script src="js/components/account-manager.js"></script>
+    <script src="js/components/api-keys-manager.js"></script>
     <script src="js/components/claude-config.js"></script>
     <script src="js/components/model-dropdown.js"></script>
     <script src="js/components/usage-log-viewer.js"></script>
