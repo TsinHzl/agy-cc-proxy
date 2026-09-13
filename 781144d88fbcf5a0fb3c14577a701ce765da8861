@@ -1,0 +1,29 @@
+public/views/logs.html
+  9c71807d0be30dab 117-124
+public/js/translations/zh.js
+  9c71807d0be30dab 487
+public/js/translations/en.js
+  9c71807d0be30dab 482
+public/js/components/logs-viewer.js
+  9c71807d0be30dab 21,178-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "781144d88fbcf5a0fb3c14577a701ce765da8861",
+  "prompts": {
+    "9c71807d0be30dab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8aa170b7-88c6-4ae1-9003-b3e0d46616bf",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 52,
+      "total_deletions": 1,
+      "accepted_lines": 51,
+      "overriden_lines": 0
+    }
+  }
+}
