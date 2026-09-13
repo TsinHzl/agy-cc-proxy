@@ -18,6 +18,7 @@ document.addEventListener('visibilitychange', () => {
 window.Components.logsViewer = () => ({
     logs: [],
     isAutoScroll: true,
+    copied: false,
     eventSource: null,
     _reconnectTimer: null,
     _isTabActive: false,
@@ -172,6 +173,46 @@ window.Components.logsViewer = () => ({
 
     isLevelAll() {
         return this.filters.INFO && this.filters.SUCCESS && this.filters.WARN && this.filters.ERROR;
+    },
+
+    copyLogs() {
+        if (this.logs.length === 0) return;
+
+        const shouldRedact = Alpine.store('settings')?.redactMode && window.Redact;
+        const lines = this.logs.map(log => {
+            const ts = new Date(log.timestamp).toISOString();
+            const message = shouldRedact ? window.Redact.logMessage(log.message) : log.message;
+            return `[${ts}] [${log.level}] ${message}`;
+        });
+        const text = lines.join('\n');
+
+        // Use textarea fallback — navigator.clipboard requires secure context (HTTPS/localhost)
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            // execCommand returns false on policy rejection instead of throwing
+            if (!document.execCommand('copy')) throw new Error('copy rejected');
+            this.copied = true;
+            Alpine.store('global').showToast(
+                Alpine.store('global').t('copied') + ' (' + this.logs.length + ')',
+                'success'
+            );
+            setTimeout(() => { this.copied = false; }, 2000);
+        } catch (e) {
+            if (window.UILogger) window.UILogger.error('Copy failed:', e.message);
+            Alpine.store('global').showToast(
+                Alpine.store('global').t('copyFailed'),
+                'error'
+            );
+        } finally {
+            document.body.removeChild(ta);
+        }
     },
 
     exportLogs() {

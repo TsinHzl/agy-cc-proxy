@@ -484,6 +484,7 @@ window.translations.zh = {
     totalRecords: "{count} 条记录",
     copyAll: "复制全部日志",
     copied: "已复制",
+    copyFailed: "复制失败",
     packageDeduction: "套餐抵扣",
     defaultKey: "默认密钥",
     inputTokens: "输入 Tokens",

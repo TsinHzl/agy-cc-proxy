@@ -479,6 +479,7 @@ window.translations.en = {
     totalRecords: "{count} records",
     copyAll: "Copy All Records",
     copied: "Copied!",
+    copyFailed: "Copy failed",
     packageDeduction: "Package Deduction",
     defaultKey: "Default Key",
     inputTokens: "Input Tokens",
