@@ -1,0 +1,81 @@
+openspec/changes/archive/2026-09-13-api-keys-management/tasks.md
+  1c1b1e7a501e74dc 1-34
+public/js/translations/en.js
+  adbddc3c8abd7b56 497-540,545-549
+src/webui/index.js
+  adbddc3c8abd7b56 26-27,1377-1540
+openspec/specs/api-keys/spec.md
+  1c1b1e7a501e74dc 1-119
+openspec/changes/archive/2026-09-13-api-keys-management/design.md
+  1c1b1e7a501e74dc 1-65
+openspec/changes/archive/2026-09-13-api-keys-management/specs/api-keys/spec.md
+  1c1b1e7a501e74dc 1-119
+src/constants.js
+  adbddc3c8abd7b56 152-157
+src/modules/usage-log.js
+  adbddc3c8abd7b56 90,104,121
+src/api-keys/manager.js
+  adbddc3c8abd7b56 1-315
+public/views/api-keys.html
+  adbddc3c8abd7b56 1-471
+public/js/store.js
+  adbddc3c8abd7b56 10
+src/api-keys/storage.js
+  adbddc3c8abd7b56 1-136
+public/index.html
+  adbddc3c8abd7b56 169-175,248-252,432
+openspec/changes/archive/2026-09-13-api-keys-management/proposal.md
+  1c1b1e7a501e74dc 1-52
+public/js/translations/pt.js
+  adbddc3c8abd7b56 412-424,426-458,463-474
+public/js/components/api-keys-manager.js
+  adbddc3c8abd7b56 1-435
+public/app.js
+  adbddc3c8abd7b56 14
+public/js/translations/zh.js
+  adbddc3c8abd7b56 502-546,551-555
+public/js/translations/tr.js
+  adbddc3c8abd7b56 459-471,473-505,510-521
+src/server.js
+  adbddc3c8abd7b56 14,98-99,122-174,995,1003-1006,1051,1059-1062
+  1c1b1e7a501e74dc 238-245
+public/js/translations/id.js
+  adbddc3c8abd7b56 513-525,527-558,563-574
+src/cloudcode/rate-limit-parser.js
+  1c1b1e7a501e74dc 184-193,199-200
+src/index.js
+  adbddc3c8abd7b56 10,68-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "c10ea73d4d59b1fe1cd7810e5bcb0a3efe103590",
+  "prompts": {
+    "1c1b1e7a501e74dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d84bf198-ad6e-4ffb-a405-90219cfc7215",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 410,
+      "total_deletions": 2,
+      "accepted_lines": 410,
+      "overriden_lines": 0
+    },
+    "adbddc3c8abd7b56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1ad9398e-1af2-4cd7-beb9-a8c1270282d6",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 2328,
+      "total_deletions": 115,
+      "accepted_lines": 2170,
+      "overriden_lines": 8
+    }
+  }
+}
