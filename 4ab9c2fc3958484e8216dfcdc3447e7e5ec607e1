@@ -1,0 +1,49 @@
+src/server.js
+  1c1b1e7a501e74dc 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "4ab9c2fc3958484e8216dfcdc3447e7e5ec607e1",
+  "prompts": {
+    "1c1b1e7a501e74dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d84bf198-ad6e-4ffb-a405-90219cfc7215",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "9ec9971639743c72": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89578515-0012-4555-b767-6340b589adcf",
+        "model": "glm-5.3"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 129,
+      "total_deletions": 37,
+      "accepted_lines": 101,
+      "overriden_lines": 0
+    },
+    "adbddc3c8abd7b56": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1ad9398e-1af2-4cd7-beb9-a8c1270282d6",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 2328,
+      "total_deletions": 115,
+      "accepted_lines": 2170,
+      "overriden_lines": 8
+    }
+  }
+}
