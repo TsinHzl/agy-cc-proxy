@@ -21,6 +21,41 @@ import { parseRateLimitReason, MAX_RESET_CAP_MS } from './rate-limit-parser.js';
 /** Backoff when a 429 looks like quota exhaustion but carries no parseable reset time. */
 export const QUOTA_EXHAUSTED_NO_RESET_BACKOFF_MS = 30000;
 
+/** Max doublings of the no-reset quota backoff (30s * 2^4 = 480s, then clamped to the 5m cap). */
+const QUOTA_EXHAUSTED_NO_RESET_MAX_DOUBLINGS = 4;
+
+/**
+ * Model-level single-flight probe registry.
+ * When an upstream 429 carries no reset time and every account is backing off,
+ * only ONE in-flight request per model may act as a "probe" (short cooldown so it
+ * re-hits upstream soon); all other concurrent requests share the full backoff
+ * window instead of each hammering the upstream N-fold.
+ * Maps model -> probe claim expiry (Date.now() ms).
+ */
+const modelProbeUntil = new Map();
+
+/**
+ * Try to claim the single-flight probe slot for a model.
+ * @param {string} model - Model ID
+ * @param {number} backoffMs - Backoff window the claim covers
+ * @returns {boolean} True if this request is elected as the probe
+ */
+export function tryClaimModelProbe(model, backoffMs) {
+    const now = Date.now();
+    const until = modelProbeUntil.get(model) || 0;
+    if (now < until) return false;
+    modelProbeUntil.set(model, now + Math.max(backoffMs, 0));
+    return true;
+}
+
+/**
+ * Release the model probe slot after a successful upstream response.
+ * @param {string} model - Model ID
+ */
+export function clearModelProbe(model) {
+    modelProbeUntil.delete(model);
+}
+
 /**
  * Rate limit deduplication - prevents thundering herd on concurrent rate limits.
  * Tracks rate limit state per account+model including consecutive429 count and timestamps.
@@ -201,11 +236,14 @@ export function calculateSmartBackoff(errorText, serverResetMs, consecutiveFailu
             // No parseable reset time in the upstream body. Real quota exhaustion
             // almost always carries quotaResetDelay/quotaResetTimeStamp, which is
             // handled by the serverResetMs pass-through above. Here the 429 is
-            // usually a transient/short limit, so do NOT escalate through the
-            // [60s, 5m, 30m, 2h] tiers — that locked out accounts with plenty of
-            // quota remaining. Use a fixed short backoff; optimistic retry
-            // (server.js resetAllRateLimits) re-probes upstream soon after.
-            backoffMs = QUOTA_EXHAUSTED_NO_RESET_BACKOFF_MS;
+            // usually a transient/short limit, so escalate gently (30s doubling
+            // per consecutive failure, clamped to the 5m cap) instead of a fixed
+            // value that keeps re-hitting a persistently limited upstream every
+            // 30s. Optimistic retry (server.js resetAllRateLimits) re-probes.
+            backoffMs = Math.min(
+                QUOTA_EXHAUSTED_NO_RESET_BACKOFF_MS * Math.pow(2, Math.min(consecutiveFailures, QUOTA_EXHAUSTED_NO_RESET_MAX_DOUBLINGS)),
+                MAX_RESET_CAP_MS
+            );
             break;
         case 'RATE_LIMIT_EXCEEDED':
             backoffMs = BACKOFF_BY_ERROR_TYPE.RATE_LIMIT_EXCEEDED;

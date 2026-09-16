@@ -29,6 +29,8 @@ import { getFallbackModel } from '../fallback-config.js';
 import {
     getRateLimitBackoff,
     clearRateLimitState,
+    tryClaimModelProbe,
+    clearModelProbe,
     isPermanentAuthFailure,
     isModelCapacityExhausted,
     isValidationRequired,
@@ -262,9 +264,14 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                                 continue;
                             } else if (smartBackoffMs > DEFAULT_COOLDOWN_MS) {
                                 // Long-term quota exhaustion (> 10s) - wait SWITCH_ACCOUNT_DELAY_MS then switch
-                                logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
+                                // Single-flight: only one probe request per model may re-hit the upstream
+                                // with a short cooldown; everyone else shares the full smart backoff window.
+                                // Prevents N concurrent requests from amplifying a no-reset 429 into a storm.
+                                const isProbe = tryClaimModelProbe(model, smartBackoffMs);
+                                const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
+                                logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);
-                                accountManager.markRateLimited(account.email, smartBackoffMs, model);
+                                accountManager.markRateLimited(account.email, cooldownMs, model);
                                 throw new Error(`QUOTA_EXHAUSTED: ${errorText}`);
                             } else {
                                 // Short-term rate limit but not first attempt - use exponential backoff delay
@@ -351,6 +358,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                             logger.debug('[CloudCode] Stream completed');
                             // Clear rate limit state on success
                             clearRateLimitState(account.email, model);
+                            clearModelProbe(model);
                             accountManager.notifySuccess(account, model);
                             return;
                         } catch (streamError) {

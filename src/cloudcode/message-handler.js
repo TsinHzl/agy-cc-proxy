@@ -29,6 +29,8 @@ import { getFallbackModel } from '../fallback-config.js';
 import {
     getRateLimitBackoff,
     clearRateLimitState,
+    tryClaimModelProbe,
+    clearModelProbe,
     isPermanentAuthFailure,
     isModelCapacityExhausted,
     isValidationRequired,
@@ -242,9 +244,12 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                                 continue;
                             } else if (smartBackoffMs > DEFAULT_COOLDOWN_MS) {
                                 // Long-term quota exhaustion (> 10s) - wait SWITCH_ACCOUNT_DELAY_MS then switch
-                                logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
+                                // Single-flight probe (see streaming-handler.js) - same amplification guard
+                                const isProbe = tryClaimModelProbe(model, smartBackoffMs);
+                                const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
+                                logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);
-                                accountManager.markRateLimited(account.email, smartBackoffMs, model);
+                                accountManager.markRateLimited(account.email, cooldownMs, model);
                                 throw new Error(`QUOTA_EXHAUSTED: ${errorText}`);
                             } else {
                                 // Short-term rate limit but not first attempt - use exponential backoff delay
@@ -322,6 +327,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                         const result = await parseThinkingSSEResponse(response, anthropicRequest.model);
                         // Clear rate limit state on success
                         clearRateLimitState(account.email, model);
+                        clearModelProbe(model);
                         accountManager.notifySuccess(account, model);
                         return result;
                     }
@@ -331,6 +337,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                     logger.debug('[CloudCode] Response received');
                     // Clear rate limit state on success
                     clearRateLimitState(account.email, model);
+                    clearModelProbe(model);
                     accountManager.notifySuccess(account, model);
                     return convertGoogleToAnthropic(data, anthropicRequest.model);
 
