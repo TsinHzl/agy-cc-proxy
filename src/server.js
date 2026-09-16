@@ -6,6 +6,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel, resolveModel } from './cloudcode/index.js';
@@ -81,6 +82,28 @@ async function ensureInitialized() {
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
+
+// Request body dump switch (diagnostics, default OFF — zero overhead when unset).
+// Enable with ANTIGRAVITY_DUMP_REQUEST_BODY=1 to write each /v1/messages body
+// to /tmp/agy-dump/<timestamp>-<seq>-<model>.json for upstream 429 debugging.
+const DUMP_REQUEST_BODY = process.env.ANTIGRAVITY_DUMP_REQUEST_BODY === '1';
+if (DUMP_REQUEST_BODY) {
+    let dumpSeq = 0;
+    const dumpDir = '/tmp/agy-dump';
+    fs.mkdirSync(dumpDir, { recursive: true });
+    app.use('/v1/messages', (req, res, next) => {
+        if (req.method !== 'POST') return next();
+        try {
+            const seq = String(++dumpSeq).padStart(4, '0');
+            const model = String(req.body?.model || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
+            const file = `${dumpDir}/${Date.now()}-${seq}-${model}.json`;
+            fs.writeFileSync(file, JSON.stringify(req.body, null, 2));
+        } catch (err) {
+            logger.warn(`[Dump] Failed to dump request body: ${err.message}`);
+        }
+        next();
+    });
+}
 
 // Trust proxy headers (for X-Forwarded-For behind reverse proxies)
 app.set('trust proxy', true);
