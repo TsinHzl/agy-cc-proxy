@@ -1,0 +1,23 @@
+src/server.js
+  1fc11c7e14c104db 9,86-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "b0d2245e740a40006fe2d536e7c44bbcffac4c20",
+  "prompts": {
+    "1fc11c7e14c104db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93144f96-c7bd-4652-9734-cebba2de6e0f",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 26,
+      "total_deletions": 3,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}
