@@ -1,0 +1,23 @@
+src/cloudcode/rate-limit-state.js
+  1fc11c7e14c104db 13,21-23,201-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "3f3579961bf28b6f66ea9e6b2954a4e124767076",
+  "prompts": {
+    "1fc11c7e14c104db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93144f96-c7bd-4652-9734-cebba2de6e0f",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 6,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    }
+  }
+}
