@@ -1,0 +1,25 @@
+src/cloudcode/message-handler.js
+  1fc11c7e14c104db 248
+src/cloudcode/streaming-handler.js
+  1fc11c7e14c104db 270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "2f81ae81853dde9a8fe1be45924e3ed20d963754",
+  "prompts": {
+    "1fc11c7e14c104db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93144f96-c7bd-4652-9734-cebba2de6e0f",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
