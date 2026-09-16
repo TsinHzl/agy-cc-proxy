@@ -272,6 +272,13 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                                 logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);
                                 accountManager.markRateLimited(account.email, cooldownMs, model);
+                                // Try the next endpoint (daily → prod) before rotating accounts —
+                                // the real CLI works while daily 429s, so endpoint-level limits
+                                // must be exhausted via fallback, not account rotation.
+                                if (endpointIndex < ANTIGRAVITY_ENDPOINT_FALLBACKS.length - 1) {
+                                    endpointIndex++;
+                                    continue;
+                                }
                                 throw new Error(`QUOTA_EXHAUSTED: ${errorText}`);
                             } else {
                                 // Short-term rate limit but not first attempt - use exponential backoff delay
