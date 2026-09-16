@@ -10,13 +10,16 @@ import {
     RATE_LIMIT_STATE_RESET_MS,
     FIRST_RETRY_DELAY_MS,
     BACKOFF_BY_ERROR_TYPE,
-    QUOTA_EXHAUSTED_BACKOFF_TIERS_MS,
+    QUOTA_EXHAUSTED_BACKOFF_TIERS_MS, // eslint-disable-line no-unused-vars -- no longer used here; reset-time pass-through replaced tier escalation
     MIN_BACKOFF_MS,
     CAPACITY_JITTER_MAX_MS
 } from '../constants.js';
 import { generateJitter, formatDuration } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 import { parseRateLimitReason, MAX_RESET_CAP_MS } from './rate-limit-parser.js';
+
+/** Backoff when a 429 looks like quota exhaustion but carries no parseable reset time. */
+export const QUOTA_EXHAUSTED_NO_RESET_BACKOFF_MS = 30000;
 
 /**
  * Rate limit deduplication - prevents thundering herd on concurrent rate limits.
@@ -195,9 +198,14 @@ export function calculateSmartBackoff(errorText, serverResetMs, consecutiveFailu
     let backoffMs;
     switch (reason) {
         case 'QUOTA_EXHAUSTED':
-            // Progressive backoff: [60s, 5m, 30m, 2h]
-            const tierIndex = Math.min(consecutiveFailures, QUOTA_EXHAUSTED_BACKOFF_TIERS_MS.length - 1);
-            backoffMs = QUOTA_EXHAUSTED_BACKOFF_TIERS_MS[tierIndex];
+            // No parseable reset time in the upstream body. Real quota exhaustion
+            // almost always carries quotaResetDelay/quotaResetTimeStamp, which is
+            // handled by the serverResetMs pass-through above. Here the 429 is
+            // usually a transient/short limit, so do NOT escalate through the
+            // [60s, 5m, 30m, 2h] tiers — that locked out accounts with plenty of
+            // quota remaining. Use a fixed short backoff; optimistic retry
+            // (server.js resetAllRateLimits) re-probes upstream soon after.
+            backoffMs = QUOTA_EXHAUSTED_NO_RESET_BACKOFF_MS;
             break;
         case 'RATE_LIMIT_EXCEEDED':
             backoffMs = BACKOFF_BY_ERROR_TYPE.RATE_LIMIT_EXCEEDED;
