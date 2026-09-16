@@ -267,7 +267,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                                 // Single-flight: only one probe request per model may re-hit the upstream
                                 // with a short cooldown; everyone else shares the full smart backoff window.
                                 // Prevents N concurrent requests from amplifying a no-reset 429 into a storm.
-                                const isProbe = tryClaimModelProbe(model, smartBackoffMs);
+                                const isProbe = tryClaimModelProbe(model, DEFAULT_COOLDOWN_MS);
                                 const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
                                 logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);

@@ -245,7 +245,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                             } else if (smartBackoffMs > DEFAULT_COOLDOWN_MS) {
                                 // Long-term quota exhaustion (> 10s) - wait SWITCH_ACCOUNT_DELAY_MS then switch
                                 // Single-flight probe (see streaming-handler.js) - same amplification guard
-                                const isProbe = tryClaimModelProbe(model, smartBackoffMs);
+                                const isProbe = tryClaimModelProbe(model, DEFAULT_COOLDOWN_MS);
                                 const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
                                 logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);
