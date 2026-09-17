@@ -127,6 +127,40 @@ import { logger } from '../utils/logger.js';
  * @param {Object} anthropicRequest - Anthropic format request
  * @returns {Object} Request body for Cloud Code API
  */
+/**
+ * Remove the Claude Code billing-header metadata line from a system prompt.
+ *
+ * CC v2.1+ prepends `x-anthropic-billing-header: ...` to the system prompt.
+ * The upstream endpoint rate-limits (429) any request containing that marker,
+ * so drop every line starting with it — both for plain-string systems and for
+ * block-array systems (only `text` blocks can carry the line).
+ *
+ * @param {string|Array<Object>|undefined} system - Anthropic system prompt
+ * @returns {string|Array<Object>|undefined} system with billing lines removed
+ */
+function stripBillingHeaderLine(system) {
+    const BILLING_LINE_RE = /^\s*x-anthropic-billing-header:.*$/gm;
+    if (typeof system === 'string') {
+        const cleaned = system.replace(BILLING_LINE_RE, '');
+        return cleaned;
+    }
+    if (Array.isArray(system)) {
+        return system
+            .map((block) => {
+                if (block && block.type === 'text' && typeof block.text === 'string') {
+                    const cleaned = block.text.replace(BILLING_LINE_RE, '');
+                    return { ...block, text: cleaned };
+                }
+                return block;
+            })
+            // Drop text blocks left empty by the strip (a system made solely of
+            // the billing line would otherwise send an empty instruction).
+            .filter((block) => !(block && block.type === 'text' && block.text === ''));
+        return system.length > 0 ? system : undefined;
+    }
+    return system;
+}
+
 export function convertAnthropicToGoogle(anthropicRequest) {
     // [CRITICAL FIX] Pre-clean all cache_control fields from messages (Issue #189)
     // Claude Code CLI sends cache_control on various content blocks, but Cloud Code API
@@ -134,7 +168,18 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     // before any other processing, following the pattern from Antigravity-Manager.
     const messages = cleanCacheControl(anthropicRequest.messages || []);
 
-    const { system, max_tokens, temperature, top_p, top_k, stop_sequences, tools, tool_choice, thinking } = anthropicRequest;
+    // [CRITICAL FIX] Strip Claude Code's billing-header metadata line from the
+    // system prompt (production incident, Sep 2026): CC v2.1+ injects
+    // `x-anthropic-billing-header: cc_version=...; ...` as the first system
+    // line, and the upstream Cloud Code endpoint returns 429
+    // RESOURCE_EXHAUSTED for any request whose system prompt contains that
+    // marker (verified by bisecting a dumped CC request body — a 60-char
+    // system consisting of only that line reproduces the 429, a benign
+    // system of equal shape returns 200). Stripping it restores CC access
+    // without touching any other system content.
+    const rawSystem = anthropicRequest.system;
+    const system = stripBillingHeaderLine(rawSystem);
+    const { max_tokens, temperature, top_p, top_k, stop_sequences, tools, tool_choice, thinking } = anthropicRequest;
     const modelName = anthropicRequest.model || '';
     const modelFamily = getModelFamily(modelName);
     const isClaudeModel = modelFamily === 'claude';
