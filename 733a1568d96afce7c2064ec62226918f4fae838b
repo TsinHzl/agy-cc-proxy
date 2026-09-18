@@ -1,0 +1,37 @@
+src/server.js
+  1fc11c7e14c104db 86-87,95-100
+  f9db5157459ff94d 822-830,832-870,873-892,894-899,901-910
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "733a1568d96afce7c2064ec62226918f4fae838b",
+  "prompts": {
+    "1fc11c7e14c104db": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93144f96-c7bd-4652-9734-cebba2de6e0f",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "f9db5157459ff94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06283bdd-a23d-4204-ad7a-bfede4ef1b17",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 90,
+      "total_deletions": 12,
+      "accepted_lines": 86,
+      "overriden_lines": 0
+    }
+  }
+}
