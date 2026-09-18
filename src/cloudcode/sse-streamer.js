@@ -24,7 +24,64 @@ import { logger } from '../utils/logger.js';
  * @param {string} originalModel - The original model name
  * @yields {Object} Anthropic-format SSE events
  */
+// [TRUNCATED-TOOLUSE] Sentinel: the inner generator yields this once the
+// stream is provably NOT a truncated micro-response, so the wrapper can stop
+// buffering and switch to pass-through streaming.
+const SAFE_SENTINEL = { __sseSafeMarker: true };
+
+// A response is treated as a truncated micro-response (retried like an empty
+// response) only when it matches the observed [COMPACT-SUSPECT] failure shape:
+// no text, exactly one tool_use, substantial thinking, and an outputTokens
+// count implausibly small for the emitted thinking — on a large input.
+// The thinkingChars floor + outputTokens-to-thinking ratio guard legitimate
+// short tool-call turns (low thinking + tiny tool args) from being retried.
+const TRUNCATED_MAX_OUTPUT_TOKENS = 64;
+const TRUNCATED_MIN_INPUT_TOKENS = 10000;
+const TRUNCATED_MIN_THINKING_CHARS = 200;
+// ~4 chars/token ⇒ outputTokens must be less than a fifth of the thinking
+// characters for the token count to read as implausibly low.
+const TRUNCATED_OUTPUT_TO_THINKING_RATIO = 0.2;
+
+/**
+ * Stream SSE response and yield Anthropic-format events
+ *
+ * Wraps streamSSEResponseInner with truncated-response detection: events are
+ * buffered until the stream is provably non-truncated, then pass through
+ * directly. If the stream ends while still matching the truncation shape,
+ * throws EmptyResponseError so streaming-handler's existing empty-response
+ * retry loop re-fetches a fresh upstream response.
+ *
+ * @param {Response} response - The HTTP response with SSE body
+ * @param {string} originalModel - The original model name
+ * @yields {Object} Anthropic-format SSE events
+ */
 export async function* streamSSEResponse(response, originalModel, isCompactFlag = false) {
+    const iterator = streamSSEResponseInner(response, originalModel, isCompactFlag)[Symbol.asyncIterator]();
+    let pending = true;
+    const buffered = [];
+    let summary = null;
+    while (true) {
+        const { value, done } = await iterator.next();
+        if (done) { summary = value ?? null; break; }
+        if (value === SAFE_SENTINEL) {
+            if (pending) {
+                pending = false;
+                for (const ev of buffered) yield ev;
+                buffered.length = 0;
+            }
+            continue;
+        }
+        if (pending) buffered.push(value);
+        else yield value;
+    }
+    if (summary?.truncated) {
+        logger.warn(`[CloudCode] [TRUNCATED-TOOLUSE] retrying truncated tool-use-only response: ${summary.blockSummary}`);
+        throw new EmptyResponseError(`Truncated tool-use-only response: ${summary.blockSummary}`);
+    }
+    for (const ev of buffered) yield ev;
+}
+
+async function* streamSSEResponseInner(response, originalModel, isCompactFlag = false) {
     const messageId = `msg_${crypto.randomBytes(16).toString('hex')}`;
     let hasEmittedStart = false;
     let blockIndex = 0;
@@ -372,6 +429,13 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                     }
                 }
 
+                // [TRUNCATED-TOOLUSE] Pass-through gate: any visible text, a
+                // second tool_use, or an image proves this is not the
+                // truncation shape — stop buffering and stream live.
+                if (textChars > 0 || toolUseCount >= 2 || imageCount > 0) {
+                    yield SAFE_SENTINEL;
+                }
+
             } catch (parseError) {
                 logger.warn('[CloudCode] SSE parse error:', parseError.message);
             }
@@ -427,7 +491,26 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     // The bug surface: stopReason==max_tokens + textChars==0 + thinkingChars>0
     // means Gemini emitted thinking-only output, leaving the downstream
     // Uj6() extractor with no text block to return as the summary.
+    // [TRUNCATED-TOOLUSE] Post-stream classification. A stream that produced
+    // zero text, exactly one tool_use, only thinking, and a token profile
+    // matching the observed failure (tiny outputTokens despite substantial
+    // thinking, on a large input) is treated as a truncated response: the
+    // generator returns a summary (instead of yielding further events) and the
+    // wrapper throws EmptyResponseError to trigger the existing retry loop.
+    const truncated = !hasEmittedStart
+        ? false // no-start is already handled by the EmptyResponseError below
+        : textChars === 0
+            && toolUseCount === 1
+            && thinkingChars >= TRUNCATED_MIN_THINKING_CHARS
+            && outputTokens > 0
+            && outputTokens <= TRUNCATED_MAX_OUTPUT_TOKENS
+            && outputTokens < thinkingChars * TRUNCATED_OUTPUT_TO_THINKING_RATIO
+            && inputTokens >= TRUNCATED_MIN_INPUT_TOKENS;
     const blockSummary = `model=${originalModel} outputTokens=${outputTokens} inputTokens=${inputTokens} stopReason=${stopReason || 'unset'} blocks(thinking=${thinkingChars}c, text=${textChars}c, toolUse=${toolUseCount}, image=${imageCount})`;
+    if (truncated) {
+        logger.warn(`[CloudCode] [COMPACT-SUSPECT] ${blockSummary}`);
+        return { truncated: true, blockSummary };
+    }
     if (textChars === 0 && thinkingChars > 0) {
         // [COMPACT-SUSPECT] — strong indicator that a summarization-style
         // request was processed but produced only thinking. Most likely root
@@ -436,7 +519,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     } else if (textChars > 0 || thinkingChars > 0 || toolUseCount > 0) {
         logger.debug(`[CloudCode] block-summary ${blockSummary}`);
     }
-
     // [COMPACT-FALLBACK] If this is a confirmed /compact request AND the
     // response produced NO text block, inject a synthetic text block so CC's
     // Uj6() extractor returns a non-empty summary. Without this, CC reports
