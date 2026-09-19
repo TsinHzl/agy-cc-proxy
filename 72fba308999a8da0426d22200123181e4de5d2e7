@@ -1,0 +1,25 @@
+src/cloudcode/model-api.js
+  f9db5157459ff94d 52-57,64-69,333-342,350-351,429-434
+src/server.js
+  f9db5157459ff94d 943-950
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "72fba308999a8da0426d22200123181e4de5d2e7",
+  "prompts": {
+    "f9db5157459ff94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06283bdd-a23d-4204-ad7a-bfede4ef1b17",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 5,
+      "accepted_lines": 38,
+      "overriden_lines": 0
+    }
+  }
+}
