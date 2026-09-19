@@ -6,6 +6,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel, resolveModel } from './cloudcode/index.js';
@@ -83,21 +84,20 @@ app.use(cors());
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 
 // Request body dump switch (diagnostics, default OFF — zero overhead when unset).
-// Enable with ANTIGRAVITY_DUMP_REQUEST_BODY=1 to log each /v1/messages body
-// summary to console for upstream 429 debugging.
+// Enable with ANTIGRAVITY_DUMP_REQUEST_BODY=1 to write each /v1/messages body
+// to /tmp/agy-dump/<timestamp>-<seq>-<model>.json for upstream 429 debugging.
 const DUMP_REQUEST_BODY = process.env.ANTIGRAVITY_DUMP_REQUEST_BODY === '1';
 if (DUMP_REQUEST_BODY) {
     let dumpSeq = 0;
+    const dumpDir = '/tmp/agy-dump';
+    fs.mkdirSync(dumpDir, { recursive: true });
     app.use('/v1/messages', (req, res, next) => {
         if (req.method !== 'POST') return next();
         try {
             const seq = String(++dumpSeq).padStart(4, '0');
-            const b = req.body || {};
-            const toolCount = Array.isArray(b.tools) ? b.tools.length : 0;
-            const msgCount = Array.isArray(b.messages) ? b.messages.length : 0;
-            const thinkingCfg = b.thinking ? JSON.stringify(b.thinking) : 'none';
-            const bodySize = JSON.stringify(b).length;
-            logger.info(`[Dump] #${seq} model=${b.model || '-'} max_tokens=${b.max_tokens ?? '-'} thinking=${thinkingCfg} tools=${toolCount} messages=${msgCount} stream=${b.stream ?? '-'} bodyBytes=${bodySize}`);
+            const model = String(req.body?.model || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '_');
+            const file = `${dumpDir}/${Date.now()}-${seq}-${model}.json`;
+            fs.writeFileSync(file, JSON.stringify(req.body, null, 2));
         } catch (err) {
             logger.warn(`[Dump] Failed to dump request body: ${err.message}`);
         }
@@ -819,95 +819,17 @@ app.get('/v1/models', async (req, res) => {
 });
 
 /**
- * Estimate token count for a message content field.
- * Uses a cheap heuristic instead of a real tokenizer: ~4 bytes per token for
- * ASCII-heavy English text, with a correction factor for CJK content, which
- * tokenizes at roughly 1-1.5 chars/token. The estimate only feeds Claude Code's
- * context-budget/auto-compact trigger, so a ±20% margin is acceptable — the
- * previous 501 response broke that chain entirely and led to
- * "Context limit reached" with no auto-compact ever firing.
- * @param {string|Array<{type?: string, text?: string}>} content
- * @returns {number} estimated token count
- */
-function estimateContentTokens(content) {
-    let text = '';
-    if (typeof content === 'string') {
-        text = content;
-    } else if (Array.isArray(content)) {
-        for (const block of content) {
-            if (block?.type === 'text' && typeof block.text === 'string') {
-                text += block.text + '\n';
-            } else if (block?.type === 'tool_use') {
-                text += JSON.stringify(block.input ?? {});
-            } else if (block?.type === 'tool_result') {
-                const inner = block.content;
-                if (typeof inner === 'string') text += inner;
-                else if (Array.isArray(inner)) {
-                    for (const sub of inner) {
-                        if (sub?.type === 'text' && typeof sub.text === 'string') text += sub.text;
-                    }
-                }
-            } else if (block?.type === 'thinking' && typeof block.thinking === 'string') {
-                text += block.thinking;
-            }
-        }
-    }
-    if (!text) return 0;
-    // CJK chars count ~1 token each; non-CJK averages ~4 chars/token.
-    const cjkChars = (text.match(/[　-鿿豈-﫿＀-￯]/g) || []).length;
-    const otherChars = text.length - cjkChars;
-    return Math.max(1, Math.ceil(cjkChars * 1.1 + otherChars / 4));
-}
-
-/**
- * Local token estimation for /v1/messages/count_tokens.
- *
- * Why estimate instead of 501: Claude Code calls this endpoint to compute its
- * context budget and decide when to auto-compact. A 501 makes the client fall
- * back to worst-case assumptions; in production (logs 2026-09-17/18) that
- * chain broke and sessions hit a hard "Context limit reached" with auto-compact
- * never triggering. A heuristic estimate (±20%) is fully sufficient for the
- * compaction threshold decision.
+ * Count tokens endpoint - Anthropic Messages API compatible
+ * Uses local tokenization with official tokenizers (@anthropic-ai/tokenizer for Claude, @lenml/tokenizer-gemini for Gemini)
  */
 app.post('/v1/messages/count_tokens', (req, res) => {
-    const { model, messages, system, tools } = req.body || {};
-
-    if (!messages || !Array.isArray(messages)) {
-        return res.status(400).json({
-            type: 'error',
-            error: {
-                type: 'invalid_request_error',
-                message: 'messages is required and must be an array'
-            }
-        });
-    }
-
-    let total = 0;
-    // System prompt contributes fully. Guard non-string/non-array shapes
-    // (malformed client payload) instead of letting .filter throw a 500.
-    if (system) {
-        if (typeof system === 'string') {
-            total += estimateContentTokens(system);
-        } else if (Array.isArray(system)) {
-            total += estimateContentTokens(system.filter(b => b?.type === 'text'));
+    res.status(501).json({
+        type: 'error',
+        error: {
+            type: 'not_implemented',
+            message: 'Token counting is not implemented. Use /v1/messages with max_tokens or configure your client to skip token counting.'
         }
-    }
-    // Tool schemas: approximate from their JSON definitions (~3 chars/token for
-    // dense JSON keys/enum values).
-    if (Array.isArray(tools)) {
-        for (const tool of tools) {
-            total += Math.ceil(JSON.stringify(tool ?? {}).length / 3);
-        }
-    }
-    // Per-message overhead: role framing + block boundaries.
-    for (const msg of messages) {
-        total += 4;
-        total += estimateContentTokens(msg?.content);
-    }
-
-    logger.debug(`[CountTokens] model=${model || '-'} estimated=${total} messages=${messages.length}`);
-
-    res.json({ input_tokens: total });
+    });
 });
 
 /**
