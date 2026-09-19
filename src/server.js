@@ -940,14 +940,6 @@ app.post('/v1/messages', async (req, res) => {
 
         // Resolve model mapping if configured
         let requestedModel = model || 'claude-3-5-sonnet-20241022';
-        // Strip the Claude Code "[1m]" context-window suffix: /v1/models advertises
-        // model ids with "[1m]" so CC assumes a 1M window for unknown models instead
-        // of hard-blocking at 200k ("Context limit reached"). The raw upstream id
-        // never contains the suffix, so remove it before alias/mapping resolution.
-        if (typeof requestedModel === 'string' && requestedModel.endsWith('[1m]')) {
-            logger.info(`[Server] Stripping [1m] context-window suffix from model: ${requestedModel}`);
-            requestedModel = requestedModel.slice(0, -4);
-        }
         // Apply hardcoded aliases/mapping first
         if (MODEL_MAP[requestedModel]) {
             logger.info(`[Server] Alias mapping ${requestedModel} -> ${MODEL_MAP[requestedModel]}`);

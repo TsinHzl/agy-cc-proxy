@@ -49,24 +49,15 @@ export async function listModels(token) {
     const modelList = Object.entries(data.models)
         .filter(([modelId]) => isSupportedModel(modelId))
         .map(([modelId, modelData]) => ({
-            // Advertise the "[1m]" suffix so Claude Code assumes a 1M context
-            // window for these (unknown-to-CC) model ids. Without it CC hard-blocks
-            // requests at an assumed 200k window with "Context limit reached" even
-            // when actual usage is far below that. The suffix is stripped from
-            // incoming requests in server.js before model resolution.
-            id: `${modelId}[1m]`,
+            id: modelId,
             object: 'model',
             created: Math.floor(Date.now() / 1000),
             owned_by: 'anthropic',
             description: modelData.displayName || modelId
         }));
 
-    // Warm the model validation cache with the RAW (suffix-free) ids so it stays
-    // consistent with populateModelCache() — suffix tolerance is handled in
-    // isValidModel()/resolveModel()
-    modelCache.validModels = new Set(
-        Object.keys(data.models).filter(modelId => isSupportedModel(modelId))
-    );
+    // Warm the model validation cache
+    modelCache.validModels = new Set(modelList.map(m => m.id));
     modelCache.lastFetched = Date.now();
 
     return {
@@ -330,16 +321,6 @@ async function populateModelCache(token, projectId = null) {
  * @param {string} [projectId] - Optional project ID
  * @returns {Promise<boolean>} True if model is valid
  */
-/**
- * Check if a model ID is valid (exists in the available models list)
- * Uses a cached model list with TTL-based refresh.
- * Tolerates the "[1m]" context-window suffix advertised by listModels() —
- * Claude Code sends ids like "gemini-3.8-flash-tiered[1m]" back verbatim.
- * @param {string} modelId - Model ID to validate
- * @param {string} token - OAuth access token for cache population
- * @param {string} [projectId] - Optional project ID
- * @returns {Promise<boolean>} True if model is valid
- */
 export async function isValidModel(modelId, token, projectId = null) {
     try {
         // Populate cache if needed
@@ -347,8 +328,7 @@ export async function isValidModel(modelId, token, projectId = null) {
 
         // If cache is populated, validate against it
         if (modelCache.validModels.size > 0) {
-            return modelCache.validModels.has(modelId)
-                || (modelId.endsWith('[1m]') && modelCache.validModels.has(modelId.slice(0, -4)));
+            return modelCache.validModels.has(modelId);
         }
 
         // Cache empty (fetch failed) - fail open, let API validate
@@ -425,12 +405,6 @@ async function findBestAvailableModel(modelId, token, projectId = null) {
 export async function resolveModel(modelId, token, projectId = null) {
     try {
         await populateModelCache(token, projectId);
-
-        // Tolerate the "[1m]" suffix advertised by listModels()
-        if (modelCache.validModels.size > 0 && modelId.endsWith('[1m]')
-            && modelCache.validModels.has(modelId.slice(0, -4))) {
-            return { resolved: modelId.slice(0, -4), autoMapped: false };
-        }
 
         // Model is directly valid — no remapping needed
         if (modelCache.validModels.size > 0 && modelCache.validModels.has(modelId)) {
