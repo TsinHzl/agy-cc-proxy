@@ -1,0 +1,36 @@
+src/constants.js
+  98b24aa3d29fc0f2 252-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "2ef11f79377fd58601d78ae814fc5c3279d5ebb3",
+  "prompts": {
+    "5a10f45dfd95a240": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9193e1f-ab80-4a12-8980-9ca09327b509",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 288,
+      "total_deletions": 47,
+      "accepted_lines": 239,
+      "overriden_lines": 0
+    },
+    "98b24aa3d29fc0f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e15a4a99-5b32-4b9e-9114-522847cafb5a",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 16,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  }
+}
