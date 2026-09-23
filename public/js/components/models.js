@@ -6,6 +6,21 @@
 window.Components = window.Components || {};
 
 window.Components.models = () => ({
+    refreshing: false,
+
+    /**
+     * Refresh model quotas and account data (identical to re-entering the models tab)
+     */
+    async refresh() {
+        if (this.refreshing) return;
+        this.refreshing = true;
+        try {
+            await Alpine.store('data').fetchData();
+        } finally {
+            this.refreshing = false;
+        }
+    },
+
     // Color palette for per-account threshold markers (new semantic tokens)
     thresholdColors: [
         { bg: '#9A6300', shadow: 'rgba(154,99,0,0.5)' },      // warn

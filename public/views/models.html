@@ -11,29 +11,45 @@
             </h1>
         </div>
 
-        <!-- Search Bar（kiro2cc SearchBox 规格：h-31px + rounded-[7px] + brand focus） -->
-        <div class="relative ml-auto w-[236px]">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <svg class="h-3.5 w-3.5 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <!-- Actions: Search + Refresh -->
+        <div class="ml-auto flex items-center gap-2">
+            <!-- Search Bar（kiro2cc SearchBox 规格：h-31px + rounded-[7px] + brand focus） -->
+            <div class="relative w-[236px]">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <svg class="h-3.5 w-3.5 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text"
+                    :placeholder="$store.global.t('searchPlaceholder')"
+                    :aria-label="$store.global.t('searchPlaceholder')"
+                    class="input-search-sm pr-9"
+                    x-model.debounce="$store.data.filters.search"
+                    @input="$store.data.computeQuotaRows()">
+                <button x-show="$store.data.filters.search"
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="opacity-0 scale-75"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        @click="$store.data.filters.search = ''; $store.data.computeQuotaRows()"
+                        class="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-3 transition-colors hover:text-ink"
+                        :aria-label="$store.global.t('searchPlaceholder')">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-            <input type="text"
-                :placeholder="$store.global.t('searchPlaceholder')"
-                :aria-label="$store.global.t('searchPlaceholder')"
-                class="input-search-sm pr-9"
-                x-model.debounce="$store.data.filters.search"
-                @input="$store.data.computeQuotaRows()">
-            <button x-show="$store.data.filters.search"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 scale-75"
-                    x-transition:enter-end="opacity-100 scale-100"
-                    @click="$store.data.filters.search = ''; $store.data.computeQuotaRows()"
-                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-3 transition-colors hover:text-ink"
-                    :aria-label="$store.global.t('searchPlaceholder')">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+
+            <!-- Refresh Button -->
+            <button type="button"
+                class="inline-flex h-[31px] w-[31px] shrink-0 items-center justify-center rounded-[7px] border border-hairline bg-surface text-ink-2 shadow-hair transition-colors hover:bg-surface-3 hover:text-ink disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                @click="refresh()"
+                :disabled="refreshing"
+                :title="$store.global.t('refreshData')"
+                :aria-label="$store.global.t('refreshData')">
+                <svg class="h-3.5 w-3.5" :class="{ 'animate-spin': refreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
         </div>
