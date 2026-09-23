@@ -1,0 +1,23 @@
+src/constants.js
+  570f270397ef6681 255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "e2ecc9e75db2c55b9269c541de5f2e1e82aca62e",
+  "prompts": {
+    "570f270397ef6681": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdb69365-66cc-41ed-bbd1-c77cd4dd5e2f",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
