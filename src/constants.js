@@ -249,6 +249,10 @@ export function isThinkingModel(modelName) {
     const lower = (modelName || '').toLowerCase();
     // Claude thinking models have "thinking" in the name
     if (lower.includes('claude') && lower.includes('thinking')) return true;
+    // claude-sonnet-4-6 supports deep thinking — treat as thinking model even
+    // without a "thinking" suffix (default budget 32000, overridable via
+    // thinking.budget_tokens / CC ultrathink keywords)
+    if (lower.includes('claude-sonnet-4-6')) return true;
     // Gemini thinking models: explicit "thinking" in name, OR gemini version 3+
     if (lower.includes('gemini')) {
         if (lower.includes('thinking')) return true;
