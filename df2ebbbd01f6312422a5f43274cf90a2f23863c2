@@ -1,0 +1,25 @@
+public/views/models.html
+  570f270397ef6681 14-40,42-52
+public/js/components/models.js
+  570f270397ef6681 9-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "df2ebbbd01f6312422a5f43274cf90a2f23863c2",
+  "prompts": {
+    "570f270397ef6681": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdb69365-66cc-41ed-bbd1-c77cd4dd5e2f",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 53,
+      "total_deletions": 22,
+      "accepted_lines": 53,
+      "overriden_lines": 0
+    }
+  }
+}
