@@ -1,0 +1,27 @@
+public/views/accounts.html
+  96b4e0a90a398ef5 68,112
+public/views/settings.html
+  96b4e0a90a398ef5 87,312,1020,1177,1292,1633
+public/views/models.html
+  96b4e0a90a398ef5 692
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "a4c871050e912f4d689a9f517570a7f43f4aab4d",
+  "prompts": {
+    "96b4e0a90a398ef5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "285909c7-9f28-46e3-88c5-16ad637e0266",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 9,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    }
+  }
+}
