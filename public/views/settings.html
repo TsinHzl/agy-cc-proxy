@@ -84,7 +84,7 @@
                             </div>
                             <div class="ml-auto flex flex-none items-center gap-2">
                                 <select
-                                    class="h-[31px] min-w-[120px] rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 text-[12px] text-ink-2 focus:border-brand focus:outline-none"
+                                    class="h-8 min-w-[120px] rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 text-[12px] leading-none text-ink-2 focus:border-brand focus:outline-none"
                                     :value="$store.global.lang" @change="$store.global.setLang($event.target.value)">
                                     <option value="en">English</option>
                                     <option value="zh">中文</option>
@@ -309,7 +309,7 @@
                     </div>
                     <div class="flex gap-2 px-4 pt-[13px]">
                         <select
-                            class="h-[31px] min-w-[96px] flex-1 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] text-ink-2 focus:border-brand focus:outline-none"
+                            class="h-8 min-w-[96px] flex-1 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] leading-none text-ink-2 focus:border-brand focus:outline-none"
                             :disabled="presets.length === 0" :value="selectedPresetName"
                             @change="onPresetSelect($event.target.value)" aria-label="Select preset">
                             <option value="" disabled x-show="presets.length === 0">No presets available</option>
@@ -1017,7 +1017,7 @@
                                         </div>
                                         <div x-show="isEditing(modelId)" class="flex items-center gap-1">
                                             <select x-model="newMapping" :x-ref="'input-' + modelId"
-                                                class="h-[31px] w-full flex-1 min-h-0 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] text-ink-2 transition-colors focus:border-brand focus:outline-none"
+                                                class="h-8 w-full flex-1 min-h-0 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] leading-none text-ink-2 transition-colors focus:border-brand focus:outline-none"
                                                 @keydown.enter="await updateModelConfig(modelId, { mapping: newMapping }); stopEditing()"
                                                 @keydown.escape="newMapping = config.mapping || ''; stopEditing()">
                                                 <option value="" x-text="$store.global.t('none')">None</option>
@@ -1174,7 +1174,7 @@
                     </div>
                     <div class="flex gap-2 px-4 pt-[13px]">
                         <select
-                            class="h-[31px] min-w-[96px] flex-1 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] text-ink-2 focus:border-brand focus:outline-none"
+                            class="h-8 min-w-[96px] flex-1 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] leading-none text-ink-2 focus:border-brand focus:outline-none"
                             :disabled="serverPresets.length === 0 || loadingPreset || editingPresetConfig"
                             :value="selectedServerPreset"
                             @change="selectedServerPreset = $event.target.value"
@@ -1289,7 +1289,7 @@
                                     <!-- Strategy dropdown (editing) -->
                                     <div class="mb-2" x-show="editingPresetConfig">
                                         <label class="text-[10px] uppercase tracking-wider text-ink-3 font-semibold">Strategy</label>
-                                        <select class="h-[31px] w-full rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] text-ink-2 mt-0.5 focus:border-brand focus:outline-none"
+                                        <select class="h-8 w-full rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] leading-none text-ink-2 mt-0.5 focus:border-brand focus:outline-none"
                                             x-model="editingConfigDraft.accountSelection.strategy">
                                             <option value="sticky" x-text="$store.global.t('strategyStickyLabel') || 'Sticky'"></option>
                                             <option value="round-robin" x-text="$store.global.t('strategyRoundRobinLabel') || 'Round Robin'"></option>
@@ -1630,7 +1630,7 @@
                                     accounts are selected for requests</span>
                             </div>
                             <select
-                                class="h-[31px] min-w-[96px] w-64 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] text-ink-2 focus:border-brand focus:outline-none"
+                                class="h-8 min-w-[96px] w-64 rounded-[7px] border border-hairline-2 bg-surface-2 py-0 pl-2.5 pr-8 font-mono text-[12px] leading-none text-ink-2 focus:border-brand focus:outline-none"
                                 :value="serverConfig.accountSelection?.strategy || 'hybrid'"
                                 @change="toggleStrategy($el.value)" aria-label="Account selection strategy">
                                 <option value="hybrid" x-text="$store.global.t('strategyHybridLabel')">Hybrid (Smart
