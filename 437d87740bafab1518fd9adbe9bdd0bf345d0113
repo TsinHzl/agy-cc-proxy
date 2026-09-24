@@ -1,0 +1,23 @@
+public/views/settings.html
+  96b4e0a90a398ef5 87,312,1020,1177,1292,1633
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "437d87740bafab1518fd9adbe9bdd0bf345d0113",
+  "prompts": {
+    "96b4e0a90a398ef5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "285909c7-9f28-46e3-88c5-16ad637e0266",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 6,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
