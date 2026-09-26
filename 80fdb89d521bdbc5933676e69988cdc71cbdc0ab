@@ -1,0 +1,63 @@
+src/webui/index.js
+  5dbc39e63f66104e 2-5,9,11-24,27,36-37,44-54
+src/webui/routes/strategy.js
+  5dbc39e63f66104e 1-34
+src/server/middleware.js
+  5dbc39e63f66104e 1-162
+src/server/routes-misc.js
+  5dbc39e63f66104e 1-101
+src/webui/routes/accounts.js
+  5dbc39e63f66104e 1-303
+src/webui/routes/server-presets.js
+  5dbc39e63f66104e 1-110
+src/webui/routes/models.js
+  5dbc39e63f66104e 1-42
+src/server/routes-messages.js
+  5dbc39e63f66104e 1-306
+src/server.js
+  5dbc39e63f66104e 5-7,18-24,79-80,82-83,115-119,142
+src/webui/routes/claude.js
+  5dbc39e63f66104e 1-217
+src/server/routes-health.js
+  5dbc39e63f66104e 1-413
+src/webui/routes/config.js
+  5dbc39e63f66104e 1-153
+src/webui/session.js
+  5dbc39e63f66104e 1-52
+src/webui/routes/oauth.js
+  5dbc39e63f66104e 1-157
+src/webui/routes/api-keys.js
+  5dbc39e63f66104e 1-172
+src/webui/routes/auth.js
+  5dbc39e63f66104e 1-42
+src/webui/routes/logs.js
+  5dbc39e63f66104e 1-48
+src/server/parse-error.js
+  5dbc39e63f66104e 1-97
+src/webui/validate-config.js
+  5dbc39e63f66104e 1-117
+src/webui/auth.js
+  5dbc39e63f66104e 1-42
+src/webui/account-ops.js
+  5dbc39e63f66104e 1-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "80fdb89d521bdbc5933676e69988cdc71cbdc0ab",
+  "prompts": {
+    "5dbc39e63f66104e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30bf2c97-1986-432c-ade3-375a2e0d8117",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 2878,
+      "total_deletions": 2598,
+      "accepted_lines": 2833,
+      "overriden_lines": 0
+    }
+  }
+}
