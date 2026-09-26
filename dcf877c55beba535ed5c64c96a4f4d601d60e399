@@ -1,0 +1,27 @@
+public/js/config/constants.js
+  5dbc39e63f66104e 12
+src/errors.js
+  5dbc39e63f66104e 185
+src/constants.js
+  5dbc39e63f66104e 38-39,68,70,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "dcf877c55beba535ed5c64c96a4f4d601d60e399",
+  "prompts": {
+    "5dbc39e63f66104e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30bf2c97-1986-432c-ade3-375a2e0d8117",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 234,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  }
+}
