@@ -1,0 +1,39 @@
+src/server.js
+  4d377afd70457e2d 15,965,1065
+src/webui/index.js
+  4d377afd70457e2d 1398,1427,1431,1450
+src/api-keys/storage.js
+  4d377afd70457e2d 36-38
+src/cloudcode/message-handler.js
+  4d377afd70457e2d 55,58-60,71,77,85-86,106,121
+public/views/api-keys.html
+  4d377afd70457e2d 72,196-201,318-335
+src/api-keys/manager.js
+  4d377afd70457e2d 113-132,136,139,145,156,177,196-198,221-223,345-356
+src/account-manager/index.js
+  4d377afd70457e2d 120-121,129-149,165-166,197,205-207,210,339-340
+src/cloudcode/streaming-handler.js
+  4d377afd70457e2d 56,58-60,71,77,85-86,97,107,122,542
+public/js/components/api-keys-manager.js
+  4d377afd70457e2d 16-18,40,94-103,108,119-121,154-157,453-467
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "6afcb7a6034aa81be98e9e9e3bc782b15e930c22",
+  "prompts": {
+    "4d377afd70457e2d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6a129ab8-fc28-4d77-b610-7a3729274a34",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 173,
+      "total_deletions": 41,
+      "accepted_lines": 172,
+      "overriden_lines": 0
+    }
+  }
+}
