@@ -69,6 +69,8 @@
                         <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
                             x-text="$store.global.t('spendingLimit')">Spending Limit</th>
                         <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                            x-text="$store.global.t('boundAccounts')">Bound Accounts</th>
+                        <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
                             x-text="$store.global.t('lastUsed')">Last Used</th>
                         <th class="sticky top-0 z-[2] whitespace-nowrap border-b border-hairline bg-surface-2 px-3 py-[9px] text-right text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
                             x-text="$store.global.t('actions')">Actions</th>
@@ -78,7 +80,7 @@
                     <!-- Loading（kiro2cc 空态规格） -->
                     <template x-if="loading && keys.length === 0">
                         <tr>
-                            <td colspan="7" class="px-3 py-14">
+                            <td colspan="8" class="px-3 py-14">
                                 <div class="flex flex-col items-center gap-2.5 text-ink-3">
                                     <svg class="size-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="3" stroke="currentColor" fill="none"></circle>
@@ -93,7 +95,7 @@
                     <!-- Empty State（搜索无命中） -->
                     <template x-if="!loading && keys.length > 0 && filteredKeys.length === 0">
                         <tr>
-                            <td colspan="7" class="px-3 py-14">
+                            <td colspan="8" class="px-3 py-14">
                                 <div class="flex flex-col items-center gap-2.5 text-ink-3">
                                     <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -108,7 +110,7 @@
                     <!-- Empty State（无任何 Key） -->
                     <template x-if="!loading && keys.length === 0">
                         <tr>
-                            <td colspan="7" class="px-3 py-14">
+                            <td colspan="8" class="px-3 py-14">
                                 <div class="flex flex-col items-center gap-2.5 text-ink-3">
                                     <svg class="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -189,6 +191,12 @@
                                     <span class="text-[11.5px] text-ink-3"
                                         x-text="$store.global.t('noLimit')">Unlimited</span>
                                 </template>
+                            </td>
+
+                            <!-- Bound Accounts -->
+                            <td class="border-b border-hairline px-3 py-[11px] align-middle">
+                                <span class="inline-block max-w-[180px] truncate font-mono text-[10.5px] text-ink-3"
+                                    :title="boundAccountsTitle(key)" x-text="boundAccountsText(key)"></span>
                             </td>
 
                             <!-- Last Used -->
@@ -305,6 +313,25 @@
                     <input type="number" x-model.number="form.limitValue" min="1" step="1"
                         class="input-search-sm w-full text-ink"
                         :placeholder="$store.global.t('limitValuePlaceholder')">
+                </div>
+
+                <!-- Bound Accounts -->
+                <div class="mb-1 flex items-center gap-2">
+                    <input type="checkbox" x-model="form.accountsEnabled" class="checkbox checkbox-sm checkbox-primary">
+                    <label class="text-[12px] font-medium text-ink-2" x-text="$store.global.t('boundAccounts')">Bound Accounts</label>
+                </div>
+                <p class="mb-2 text-[11px] text-ink-3" x-text="$store.global.t('boundAccountsHint')"></p>
+                <div class="mb-3 flex flex-col gap-1 rounded-[8px] border border-hairline bg-surface-2 p-2" x-show="form.accountsEnabled">
+                    <template x-if="accountEmails.length === 0">
+                        <span class="px-1 py-1 text-[11px] text-ink-3" x-text="$store.global.t('noAccountsAvailable')"></span>
+                    </template>
+                    <template x-for="email in accountEmails" :key="email">
+                        <label class="flex cursor-pointer items-center gap-2 px-1 py-0.5 text-[11.5px] text-ink-2">
+                            <input type="checkbox" class="checkbox checkbox-xs checkbox-primary"
+                                :value="email" x-model="form.accountsSelected">
+                            <span class="truncate font-mono" :title="email" x-text="email"></span>
+                        </label>
+                    </template>
                 </div>
 
                 <div class="modal-action mt-4">

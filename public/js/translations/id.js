@@ -561,6 +561,10 @@ window.translations.id = {
     invalidDurationDays: "Masa berlaku (hari) harus 0 atau bilangan bulat positif",
     invalidLimitValue: "Batas penggunaan harus berupa angka positif",
     keyNameRequired: "Nama key wajib diisi",
+    boundAccounts: "Akun Terikat",
+    boundAccountsHint: "Tidak dicentang = semua akun diizinkan; jika dicentang, key ini hanya bisa memakai akun yang dipilih",
+    allAccounts: "Semua akun",
+    noAccountsAvailable: "Tidak ada akun tersedia",
     deleteKeyWarning: "Tindakan ini tidak dapat dibatalkan. Klien yang memakai key ini akan langsung menerima 401.",
 
     // Usage detail (shared keys used by API Keys usage modal)

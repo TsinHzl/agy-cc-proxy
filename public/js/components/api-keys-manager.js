@@ -13,7 +13,9 @@ window.Components.apiKeysManager = () => ({
 
     // Create / edit modal
     editingId: null,
-    form: { name: '', durationDays: '', limitEnabled: false, limitMetric: 'tokens', limitValue: '' },
+    form: { name: '', durationDays: '', limitEnabled: false, limitMetric: 'tokens', limitValue: '', accountsEnabled: false, accountsSelected: [] },
+    // Available accounts for binding (emails from /api/accounts)
+    accountEmails: [],
     saving: false,
 
     // One-time plaintext modal
@@ -35,6 +37,7 @@ window.Components.apiKeysManager = () => ({
 
     async init() {
         await this.refreshData();
+        this.fetchAccounts();
 
         this.$watch('$store.global.activeTab', (tab) => {
             // Re-fetch when the tab becomes visible and data may be stale
@@ -88,11 +91,21 @@ window.Components.apiKeysManager = () => ({
         }
     },
 
+    /** Fetch account emails available for binding (non-fatal on failure). */
+    async fetchAccounts() {
+        try {
+            const res = await fetch('/api/accounts', { signal: AbortSignal.timeout(15000) });
+            if (!res.ok) return;
+            const data = await res.json();
+            this.accountEmails = (data.accounts || []).map(a => a.email).filter(e => typeof e === 'string' && e);
+        } catch (_) { /* binding list is optional — table still renders */ }
+    },
+
     // ─── Create / Edit ───────────────────────────────────────────────────────
 
     openCreateModal() {
         this.editingId = null;
-        this.form = { name: '', durationDays: '', limitEnabled: false, limitMetric: 'tokens', limitValue: '' };
+        this.form = { name: '', durationDays: '', limitEnabled: false, limitMetric: 'tokens', limitValue: '', accountsEnabled: false, accountsSelected: [] };
         document.getElementById('api_key_form_modal').showModal();
     },
 
@@ -103,7 +116,9 @@ window.Components.apiKeysManager = () => ({
             durationDays: key.durationDays != null ? String(key.durationDays) : '',
             limitEnabled: !!key.spendingLimit,
             limitMetric: key.spendingLimit ? key.spendingLimit.metric : 'tokens',
-            limitValue: key.spendingLimit ? String(key.spendingLimit.limit) : ''
+            limitValue: key.spendingLimit ? String(key.spendingLimit.limit) : '',
+            accountsEnabled: Array.isArray(key.allowedAccounts) && key.allowedAccounts.length > 0,
+            accountsSelected: Array.isArray(key.allowedAccounts) ? [...key.allowedAccounts] : []
         };
         document.getElementById('api_key_form_modal').showModal();
     },
@@ -136,6 +151,10 @@ window.Components.apiKeysManager = () => ({
         } else {
             payload.spendingLimit = null;
         }
+
+        payload.allowedAccounts = this.form.accountsEnabled
+            ? [...this.form.accountsSelected]
+            : null;
         return payload;
     },
 
@@ -431,5 +450,20 @@ window.Components.apiKeysManager = () => ({
         if (pct >= 100) return 'bg-danger';
         if (pct >= 80) return 'bg-warning';
         return 'bg-brand';
+    },
+
+    // 绑定账号展示：空/未知 → 不限；过长列表截断
+    boundAccountsText(key) {
+        if (!Array.isArray(key.allowedAccounts) || key.allowedAccounts.length === 0) {
+            return Alpine.store('global').t('allAccounts');
+        }
+        const emails = key.allowedAccounts;
+        if (emails.length <= 2) return emails.join(', ');
+        return `${emails[0]} +${emails.length - 1}`;
+    },
+
+    boundAccountsTitle(key) {
+        if (!Array.isArray(key.allowedAccounts) || key.allowedAccounts.length === 0) return '';
+        return key.allowedAccounts.join('\n');
     }
 });

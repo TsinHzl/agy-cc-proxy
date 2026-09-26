@@ -110,17 +110,39 @@ function validateDurationDays(durationDays) {
 }
 
 /**
+ * Validate and normalize an allowedAccounts payload: null (unrestricted) or
+ * a non-empty array of account email strings.
+ *
+ * @param {string[]|null} allowedAccounts
+ * @returns {string[]|null} Normalized list or null
+ * @throws {Error} On invalid shape
+ */
+function normalizeAllowedAccounts(allowedAccounts) {
+    if (allowedAccounts == null) return null;
+    if (!Array.isArray(allowedAccounts) || allowedAccounts.length === 0) {
+        throw new Error('allowedAccounts must be null or a non-empty array of account emails');
+    }
+    const emails = allowedAccounts.map(e => String(e).trim()).filter(Boolean);
+    if (emails.length === 0) {
+        throw new Error('allowedAccounts must contain at least one valid account email');
+    }
+    // Dedupe while preserving order
+    return [...new Set(emails)];
+}
+
+/**
  * Create a new managed API key.
  *
- * @param {Object} opts - {name, durationDays?, spendingLimit?}
+ * @param {Object} opts - {name, durationDays?, spendingLimit?, allowedAccounts?}
  * @returns {Object} The created key record (contains plaintext key)
  */
-export function createKey({ name, durationDays = null, spendingLimit = null }) {
+export function createKey({ name, durationDays = null, spendingLimit = null, allowedAccounts = null }) {
     if (!name || typeof name !== 'string' || !name.trim()) {
         throw new Error('name is required');
     }
     validateDurationDays(durationDays);
     const normalizedLimit = normalizeSpendingLimit(spendingLimit);
+    const normalizedAccounts = normalizeAllowedAccounts(allowedAccounts);
 
     const key = {
         id: generateKeyId(),
@@ -131,6 +153,7 @@ export function createKey({ name, durationDays = null, spendingLimit = null }) {
         activatedAt: null,
         expiresAt: null,
         spendingLimit: normalizedLimit,
+        allowedAccounts: normalizedAccounts,
         usage: emptyUsage(),
         createdAt: Date.now(),
         lastUsedAt: null,
@@ -151,7 +174,7 @@ export function createKey({ name, durationDays = null, spendingLimit = null }) {
  * Keys not yet activated keep activatedAt/expiresAt null until first use.
  *
  * @param {string} id - Key id
- * @param {Object} patch - {name?, enabled?, durationDays?, spendingLimit?, resetUsage?}
+ * @param {Object} patch - {name?, enabled?, durationDays?, spendingLimit?, allowedAccounts?, resetUsage?}
  * @returns {Object|null} Updated key record, or null when not found
  * @throws {Error} On invalid patch values
  */
@@ -169,6 +192,9 @@ export function updateKey(id, patch) {
     }
     if (patch.spendingLimit !== undefined) {
         normalizeSpendingLimit(patch.spendingLimit);
+    }
+    if (patch.allowedAccounts !== undefined) {
+        normalizeAllowedAccounts(patch.allowedAccounts);
     }
 
     if (patch.resetUsage === true) {
@@ -191,6 +217,9 @@ export function updateKey(id, patch) {
     }
     if (patch.spendingLimit !== undefined) {
         key.spendingLimit = normalizeSpendingLimit(patch.spendingLimit);
+    }
+    if (patch.allowedAccounts !== undefined) {
+        key.allowedAccounts = normalizeAllowedAccounts(patch.allowedAccounts);
     }
 
     markDirty();
@@ -312,4 +341,16 @@ export async function flushApiKeys() {
  */
 export function getKeyById(id) {
     return state.keys.find(k => k.id === id);
+}
+
+/**
+ * Get the account-binding filter for a key id.
+ *
+ * @param {string|null} keyId - Managed key id (null = primary key, unrestricted)
+ * @returns {string[]|null} Allowed account emails, or null when unrestricted
+ */
+export function getAllowedAccounts(keyId) {
+    if (keyId == null) return null;
+    const key = state.keys.find(k => k.id === keyId);
+    return key?.allowedAccounts ?? null;
 }

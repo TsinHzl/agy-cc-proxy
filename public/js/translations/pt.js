@@ -461,6 +461,10 @@ window.translations.pt = {
     invalidDurationDays: "Validade (dias) deve ser 0 ou um inteiro positivo",
     invalidLimitValue: "O limite de consumo deve ser um número positivo",
     keyNameRequired: "O nome da key é obrigatório",
+    boundAccounts: "Contas Vinculadas",
+    boundAccountsHint: "Desmarcado = todas as contas permitidas; quando marcado, esta key fica restrita às contas selecionadas",
+    allAccounts: "Todas as contas",
+    noAccountsAvailable: "Nenhuma conta disponível",
     deleteKeyWarning: "Esta ação não pode ser desfeita. Clientes usando esta key receberão 401 imediatamente.",
 
     // Usage detail (shared keys used by API Keys usage modal)

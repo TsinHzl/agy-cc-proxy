@@ -33,6 +33,9 @@ function normalizeKey(rec) {
         activatedAt: rec.activatedAt ?? null,
         expiresAt: rec.expiresAt ?? null,
         spendingLimit: rec.spendingLimit ?? null,
+        allowedAccounts: Array.isArray(rec.allowedAccounts)
+            ? rec.allowedAccounts.filter(e => typeof e === 'string' && e.trim())
+            : null,
         usage: {
             requests: rec.usage?.requests ?? 0,
             inputTokens: rec.usage?.inputTokens ?? 0,

@@ -549,6 +549,10 @@ window.translations.zh = {
     invalidDurationDays: "有效期（天）必须为 0 或正整数",
     invalidLimitValue: "消费额度必须为正数",
     keyNameRequired: "Key 名称不能为空",
+    boundAccounts: "绑定账号",
+    boundAccountsHint: "不勾选 = 可用全部账号；勾选后该 Key 仅能使用所选账号",
+    allAccounts: "全部账号",
+    noAccountsAvailable: "暂无可用账号",
     deleteKeyWarning: "此操作不可撤销。使用该 Key 的客户端将立即收到 401。",
 
     // 用量明细（API Keys 用量弹窗引用的共享词条）

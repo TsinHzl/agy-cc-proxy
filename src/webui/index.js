@@ -1395,6 +1395,7 @@ export function mountWebUI(app, dirname, accountManager) {
             activatedAt: key.activatedAt,
             expiresAt: key.expiresAt,
             spendingLimit: key.spendingLimit,
+            allowedAccounts: key.allowedAccounts ?? null,
             usage: key.usage,
             createdAt: key.createdAt,
             lastUsedAt: key.lastUsedAt,
@@ -1423,11 +1424,11 @@ export function mountWebUI(app, dirname, accountManager) {
      */
     app.post('/api/keys', (req, res) => {
         try {
-            const { name, durationDays, spendingLimit } = req.body || {};
+            const { name, durationDays, spendingLimit, allowedAccounts } = req.body || {};
             if (!name || !String(name).trim()) {
                 return res.status(400).json({ status: 'error', error: 'name is required' });
             }
-            const key = createKey({ name, durationDays, spendingLimit });
+            const key = createKey({ name, durationDays, spendingLimit, allowedAccounts });
             logger.info(`[WebUI] API key created: ${key.id} (${key.name})`);
             res.json({
                 status: 'ok',
@@ -1446,7 +1447,7 @@ export function mountWebUI(app, dirname, accountManager) {
         try {
             const { id } = req.params;
             const patch = req.body || {};
-            const allowed = ['name', 'enabled', 'durationDays', 'spendingLimit', 'resetUsage'];
+            const allowed = ['name', 'enabled', 'durationDays', 'spendingLimit', 'allowedAccounts', 'resetUsage'];
             const hasKnown = allowed.some(field => patch[field] !== undefined);
             if (!hasKnown) {
                 return res.status(400).json({ status: 'error', error: 'No updatable fields provided' });

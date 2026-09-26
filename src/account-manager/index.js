@@ -117,8 +117,8 @@ export class AccountManager {
      * @param {string} [modelId] - Optional model ID
      * @returns {boolean} True if all accounts are rate-limited
      */
-    isAllRateLimited(modelId = null) {
-        return checkAllRateLimited(this.#accounts, modelId);
+    isAllRateLimited(modelId = null, allowedEmails = null) {
+        return checkAllRateLimited(this.#filterByAllowedEmails(allowedEmails), modelId);
     }
 
     /**
@@ -126,8 +126,27 @@ export class AccountManager {
      * @param {string} [modelId] - Optional model ID
      * @returns {Array<Object>} Array of available account objects
      */
-    getAvailableAccounts(modelId = null) {
-        return getAvailable(this.#accounts, modelId);
+    getAvailableAccounts(modelId = null, allowedEmails = null) {
+        const accounts = this.#filterByAllowedEmails(allowedEmails);
+        return getAvailable(accounts, modelId);
+    }
+
+    /**
+     * Filter accounts by an allowed-emails list (API key account binding).
+     * @param {string[]|null} allowedEmails - Allowed account emails, null = unrestricted
+     * @returns {Array<Object>} Filtered account list (same references, no copy of account objects)
+     */
+    #filterByAllowedEmails(allowedEmails) {
+        if (!Array.isArray(allowedEmails) || allowedEmails.length === 0) return this.#accounts;
+        const allowed = new Set(allowedEmails);
+        const filtered = this.#accounts.filter(acc => allowed.has(acc.email));
+        // Unknown emails may mean stale bindings after account deletion/rename;
+        // fall back to unrestricted rather than dead-ending the key.
+        if (filtered.length === 0) {
+            logger.warn(`[AccountManager] API key binding stale (no match for ${allowedEmails.join(', ')}), falling back to unrestricted accounts`);
+            return this.#accounts;
+        }
+        return filtered;
     }
 
     /**
@@ -143,8 +162,8 @@ export class AccountManager {
      * Unlike rate limits, invalid accounts won't self-recover — waiting is pointless.
      * @returns {boolean} True if every enabled account is invalid
      */
-    isAllAccountsInvalid() {
-        const enabled = this.#accounts.filter(a => a.enabled !== false);
+    isAllAccountsInvalid(allowedEmails = null) {
+        const enabled = this.#filterByAllowedEmails(allowedEmails).filter(a => a.enabled !== false);
         return enabled.length > 0 && enabled.every(a => a.isInvalid);
     }
 
@@ -175,6 +194,7 @@ export class AccountManager {
      * @param {string} [modelId] - Model ID for the request
      * @param {Object} [options] - Additional options
      * @param {string} [options.sessionId] - Session ID for cache continuity
+     * @param {string[]} [options.allowedEmails] - Restrict selection to these account emails (API key binding)
      * @returns {{account: Object|null, waitMs: number}} Account to use and optional wait time
      */
     selectAccount(modelId = null, options = {}) {
@@ -182,10 +202,12 @@ export class AccountManager {
             throw new Error('AccountManager not initialized. Call initialize() first.');
         }
 
-        const result = this.#strategy.selectAccount(this.#accounts, modelId, {
+        const { allowedEmails, ...restOptions } = options;
+        const accounts = this.#filterByAllowedEmails(allowedEmails);
+        const result = this.#strategy.selectAccount(accounts, modelId, {
             currentIndex: this.#currentIndex,
             onSave: () => this.saveToDisk(),
-            ...options
+            ...restOptions
         });
 
         this.#currentIndex = result.index;
@@ -314,8 +336,8 @@ export class AccountManager {
      * @param {string} [modelId] - Optional model ID
      * @returns {number} Wait time in milliseconds
      */
-    getMinWaitTimeMs(modelId = null) {
-        return getMinWait(this.#accounts, modelId);
+    getMinWaitTimeMs(modelId = null, allowedEmails = null) {
+        return getMinWait(this.#filterByAllowedEmails(allowedEmails), modelId);
     }
 
     /**

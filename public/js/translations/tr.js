@@ -508,6 +508,10 @@ window.translations.tr = {
     invalidDurationDays: "Geçerlilik (gün) 0 veya pozitif bir tam sayı olmalıdır",
     invalidLimitValue: "Harcama limiti pozitif bir sayı olmalıdır",
     keyNameRequired: "Key adı gereklidir",
+    boundAccounts: "Bağlı Hesaplar",
+    boundAccountsHint: "İşaretsiz = tüm hesaplara izin verilir; işaretlendiğinde bu key yalnızca seçilen hesapları kullanabilir",
+    allAccounts: "Tüm hesaplar",
+    noAccountsAvailable: "Kullanılabilir hesap yok",
     deleteKeyWarning: "Bu işlem geri alınamaz. Bu keyi kullanan istemciler anında 401 alır.",
 
     // Kullanım detayı (API Keys modalında kullanılır)

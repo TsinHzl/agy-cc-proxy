@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import { sendMessage, sendMessageStream, listModels, getModelQuotas, getSubscriptionTier, isValidModel, resolveModel } from './cloudcode/index.js';
 import { mountWebUI } from './webui/index.js';
 import { config, verifyApiKey } from './config.js';
-import { initApiKeysManager, findKeyBySecret, checkAndActivate, isExpired, checkQuota, recordUsage } from './api-keys/manager.js';
+import { initApiKeysManager, findKeyBySecret, checkAndActivate, isExpired, checkQuota, recordUsage, getAllowedAccounts } from './api-keys/manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -962,7 +962,7 @@ app.post('/v1/messages', async (req, res) => {
 
             try {
                 // Initialize the generator
-                const generator = sendMessageStream(request, accountManager, FALLBACK_ENABLED);
+                const generator = sendMessageStream(request, accountManager, FALLBACK_ENABLED, { allowedEmails: getAllowedAccounts(req._apiKeyId) });
 
                 // BUFFERING STRATEGY:
                 // Pull the first event *before* sending headers.
@@ -1062,7 +1062,7 @@ app.post('/v1/messages', async (req, res) => {
         } else {
             // Handle non-streaming response
             const nonStreamStartTime = Date.now();
-            const response = await sendMessage(request, accountManager, FALLBACK_ENABLED);
+            const response = await sendMessage(request, accountManager, FALLBACK_ENABLED, { allowedEmails: getAllowedAccounts(req._apiKeyId) });
             res.json(response);
 
             // Record usage for non-streaming request

@@ -543,6 +543,10 @@ window.translations.en = {
     invalidDurationDays: "Validity (days) must be 0 or a positive integer",
     invalidLimitValue: "Spending limit must be a positive number",
     keyNameRequired: "Key name is required",
+    boundAccounts: "Bound Accounts",
+    boundAccountsHint: "Unchecked = all accounts allowed; when checked, this key is restricted to the selected accounts",
+    allAccounts: "All accounts",
+    noAccountsAvailable: "No accounts available",
     deleteKeyWarning: "This action cannot be undone. Clients using this key will get 401 immediately.",
 
     // Usage detail (shared keys used by API Keys usage modal)

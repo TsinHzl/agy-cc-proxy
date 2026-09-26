@@ -52,9 +52,12 @@ import {
  * @returns {Promise<Object>} Anthropic-format response object
  * @throws {Error} If max retries exceeded or no accounts available
  */
-export async function sendMessage(anthropicRequest, accountManager, fallbackEnabled = false) {
+export async function sendMessage(anthropicRequest, accountManager, fallbackEnabled = false, accountFilter = null) {
     const model = anthropicRequest.model;
     const isThinking = isThinkingModel(model);
+    // API key account binding: restrict selection to these account emails (null = unrestricted)
+    const allowedEmails = accountFilter?.allowedEmails ?? null;
+    const selectionOptions = allowedEmails ? { allowedEmails } : {};
 
     // Retry loop with account failover
     // Ensure we try at least as many times as there are accounts to cycle through everyone
@@ -65,13 +68,13 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
         accountManager.clearExpiredLimits();
 
         // Get available accounts for this model
-        const availableAccounts = accountManager.getAvailableAccounts(model);
+        const availableAccounts = accountManager.getAvailableAccounts(model, allowedEmails);
 
         // If no accounts available, check if we should wait or throw error
         if (availableAccounts.length === 0) {
             // All accounts invalid? Fail immediately — they need user intervention (WebUI FIX button)
             // Invalid accounts won't self-recover, so waiting would be an infinite loop
-            if (accountManager.isAllAccountsInvalid()) {
+            if (accountManager.isAllAccountsInvalid(allowedEmails)) {
                 const invalidAccounts = accountManager.getInvalidAccounts();
                 const reasons = [...new Set(invalidAccounts.map(a => a.invalidReason).filter(Boolean))];
                 throw new Error(
@@ -79,8 +82,8 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                 );
             }
 
-            if (accountManager.isAllRateLimited(model)) {
-                const minWaitMs = accountManager.getMinWaitTimeMs(model);
+            if (accountManager.isAllRateLimited(model, allowedEmails)) {
+                const minWaitMs = accountManager.getMinWaitTimeMs(model, allowedEmails);
                 const resetTime = new Date(Date.now() + minWaitMs).toISOString();
 
                 // If wait time is too long (> 2 minutes), try fallback first, then throw error
@@ -91,7 +94,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                         if (fallbackModel) {
                             logger.warn(`[CloudCode] All accounts exhausted for ${model} (${formatDuration(minWaitMs)} wait). Attempting fallback to ${fallbackModel}`);
                             const fallbackRequest = { ...anthropicRequest, model: fallbackModel };
-                            return await sendMessage(fallbackRequest, accountManager, false);
+                            return await sendMessage(fallbackRequest, accountManager, false, accountFilter);
                         }
                     }
                     throw new Error(
@@ -100,8 +103,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                 }
 
                 // Wait for shortest reset time
-                const accountCount = accountManager.getAccountCount();
-                logger.warn(`[CloudCode] All ${accountCount} account(s) rate-limited. Waiting ${formatDuration(minWaitMs)}...`);
+                logger.warn(`[CloudCode] All ${availableAccounts.length || 'bound'} account(s) rate-limited. Waiting ${formatDuration(minWaitMs)}...`);
                 await sleep(minWaitMs + 500); // Add 500ms buffer
                 accountManager.clearExpiredLimits();
 
@@ -116,7 +118,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
         }
 
         // Select account using configured strategy
-        const { account, waitMs } = accountManager.selectAccount(model);
+        const { account, waitMs } = accountManager.selectAccount(model, selectionOptions);
 
         // If strategy returns a wait time without an account, sleep and retry
         if (!account && waitMs > 0) {
@@ -447,7 +449,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
         if (fallbackModel) {
             logger.warn(`[CloudCode] All retries exhausted for ${model}. Attempting fallback to ${fallbackModel}`);
             const fallbackRequest = { ...anthropicRequest, model: fallbackModel };
-            return await sendMessage(fallbackRequest, accountManager, false);
+            return await sendMessage(fallbackRequest, accountManager, false, accountFilter);
         }
     }
 
