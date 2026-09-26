@@ -18,12 +18,3 @@ export { MODEL_FALLBACK_MAP };
 export function getFallbackModel(model) {
     return MODEL_FALLBACK_MAP[model] || null;
 }
-
-/**
- * Check if a model has a fallback configured
- * @param {string} model - Model ID to check
- * @returns {boolean} True if fallback exists
- */
-export function hasFallback(model) {
-    return model in MODEL_FALLBACK_MAP;
-}

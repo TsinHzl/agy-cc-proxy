@@ -57,10 +57,3 @@ export function deriveSessionId(anthropicRequest, accountEmail) {
 function generateBinaryStyleId() {
     return crypto.randomUUID() + Date.now().toString();
 }
-
-/**
- * Clears all session IDs (e.g. useful for testing or explicit reset)
- */
-export function clearSessionStore() {
-    runtimeSessionStore.clear();
-}

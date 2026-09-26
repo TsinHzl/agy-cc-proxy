@@ -10,7 +10,6 @@ import {
     RATE_LIMIT_STATE_RESET_MS,
     FIRST_RETRY_DELAY_MS,
     BACKOFF_BY_ERROR_TYPE,
-    QUOTA_EXHAUSTED_BACKOFF_TIERS_MS, // eslint-disable-line no-unused-vars -- no longer used here; reset-time pass-through replaced tier escalation
     MIN_BACKOFF_MS,
     CAPACITY_JITTER_MAX_MS
 } from '../constants.js';

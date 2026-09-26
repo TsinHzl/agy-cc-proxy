@@ -35,30 +35,14 @@ export function getPlatformUserAgent() {
     return generateSmartUserAgent();
 }
 
-// IDE Type enum (numeric values as expected by Cloud Code API)
-// Reference: Antigravity binary analysis - google.internal.cloud.code.v1internal.ClientMetadata.IdeType
-export const IDE_TYPE = {
-    UNSPECIFIED: 0,
-    JETSKI: 10,        // Internal codename for Gemini CLI
-    ANTIGRAVITY: 9,
-    PLUGINS: 7
-};
-
-// Platform enum (as specified in Antigravity binary)
-export const PLATFORM = {
+// Platform enum values (as specified in Antigravity binary: ClientMetadata.Platform)
+const PLATFORM = {
     UNSPECIFIED: 0,
     DARWIN_AMD64: 1,
     DARWIN_ARM64: 2,
     LINUX_AMD64: 3,
     LINUX_ARM64: 4,
     WINDOWS_AMD64: 5
-};
-
-// Plugin type enum (as specified in Antigravity binary)
-export const PLUGIN_TYPE = {
-    UNSPECIFIED: 0,
-    CLOUD_CODE: 1,
-    GEMINI: 2
 };
 
 /**
@@ -81,10 +65,11 @@ function getPlatformEnum() {
 
 // Centralized client metadata (used in request bodies for loadCodeAssist, onboardUser, etc.)
 // Using numeric enum values as expected by the Cloud Code API
+// (matches google.internal.cloud.code.v1internal.ClientMetadata: ideType ANTIGRAVITY=9, pluginType GEMINI=2)
 export const CLIENT_METADATA = {
-    ideType: IDE_TYPE.ANTIGRAVITY,   // 6 - identifies as Antigravity client
+    ideType: 9,                       // Antigravity client
     platform: getPlatformEnum(),      // Runtime platform detection
-    pluginType: PLUGIN_TYPE.GEMINI    // 2
+    pluginType: 2                     // Gemini
 };
 
 // Cloud Code API endpoints (in fallback order)
@@ -188,9 +173,6 @@ export const BACKOFF_BY_ERROR_TYPE = {
     SERVER_ERROR: 20000,             // 20 seconds
     UNKNOWN: 60000                   // 1 minute
 };
-
-// Progressive backoff tiers for QUOTA_EXHAUSTED (60s, 5m, 30m, 2h)
-export const QUOTA_EXHAUSTED_BACKOFF_TIERS_MS = [60000, 300000, 1800000, 7200000];
 
 // Minimum backoff floor to prevent "Available in 0s" loops (matches opencode-antigravity-auth)
 export const MIN_BACKOFF_MS = 2000;
@@ -499,56 +481,3 @@ export const DEFAULT_SERVER_PRESETS = [
         }
     }
 ];
-
-export default {
-    IDE_TYPE,
-    PLATFORM,
-    PLUGIN_TYPE,
-    CLIENT_METADATA,
-    ANTIGRAVITY_ENDPOINT_FALLBACKS,
-    ANTIGRAVITY_HEADERS,
-    LOAD_CODE_ASSIST_ENDPOINTS,
-    ONBOARD_USER_ENDPOINTS,
-    LOAD_CODE_ASSIST_HEADERS,
-    DEFAULT_PROJECT_ID,
-    TOKEN_REFRESH_INTERVAL_MS,
-    REQUEST_BODY_LIMIT,
-    ANTIGRAVITY_AUTH_PORT,
-    DEFAULT_PORT,
-    ACCOUNT_CONFIG_PATH,
-    ANTIGRAVITY_DB_PATH,
-    DEFAULT_COOLDOWN_MS,
-    MAX_RETRIES,
-    MAX_EMPTY_RESPONSE_RETRIES,
-    MAX_ACCOUNTS,
-    MAX_WAIT_BEFORE_ERROR_MS,
-    RATE_LIMIT_DEDUP_WINDOW_MS,
-    RATE_LIMIT_STATE_RESET_MS,
-    FIRST_RETRY_DELAY_MS,
-    SWITCH_ACCOUNT_DELAY_MS,
-    MAX_CONSECUTIVE_FAILURES,
-    EXTENDED_COOLDOWN_MS,
-    CAPACITY_BACKOFF_TIERS_MS,
-    MAX_CAPACITY_RETRIES,
-    BACKOFF_BY_ERROR_TYPE,
-    QUOTA_EXHAUSTED_BACKOFF_TIERS_MS,
-    MIN_BACKOFF_MS,
-    CAPACITY_JITTER_MAX_MS,
-    MIN_SIGNATURE_LENGTH,
-    GEMINI_MAX_OUTPUT_TOKENS,
-    CLAUDE_MAX_OUTPUT_TOKENS,
-    GEMINI_SKIP_SIGNATURE,
-    GEMINI_SIGNATURE_CACHE_TTL_MS,
-    MODEL_VALIDATION_CACHE_TTL_MS,
-    getModelFamily,
-    isThinkingModel,
-    OAUTH_CONFIG,
-    OAUTH_REDIRECT_URI,
-    STRATEGY_LABELS,
-    MODEL_MAP,
-    MODEL_FALLBACK_MAP,
-    TEST_MODELS,
-    DEFAULT_PRESETS,
-    DEFAULT_SERVER_PRESETS,
-    ANTIGRAVITY_SYSTEM_INSTRUCTION
-};

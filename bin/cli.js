@@ -20,13 +20,6 @@ const PID_FILE = join(CONFIG_DIR, 'server.pid');
 const args = process.argv.slice(2);
 const command = args[0];
 
-// Ensure config directory exists
-function ensureConfigDir() {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-  }
-}
-
 /**
  * Check if the service is running by reading PID file and verifying process
  */

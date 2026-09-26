@@ -51,9 +51,6 @@ if (isFallbackEnabled) {
     logger.info('Model fallback mode enabled');
 }
 
-// Export fallback flag for server to use
-export const FALLBACK_ENABLED = isFallbackEnabled;
-
 const PORT = process.env.PORT || DEFAULT_PORT;
 const HOST = process.env.HOST || '0.0.0.0';
 

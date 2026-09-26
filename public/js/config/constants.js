@@ -8,17 +8,8 @@ window.AppConstants = window.AppConstants || {};
  * Time intervals (in milliseconds)
  */
 window.AppConstants.INTERVALS = {
-    // Dashboard refresh interval (5 minutes)
-    DASHBOARD_REFRESH: 300000,
-
-    // OAuth message handler timeout (5 minutes)
-    OAUTH_MESSAGE_TIMEOUT: 300000,
-
     // Server config debounce delay
-    CONFIG_DEBOUNCE: 500,
-
-    // General short delay (for UI transitions)
-    SHORT_DELAY: 2000
+    CONFIG_DEBOUNCE: 500
 };
 
 /**
@@ -28,12 +19,6 @@ window.AppConstants.LIMITS = {
     // Default log limit
     DEFAULT_LOG_LIMIT: 2000,
 
-    // Minimum quota value
-    MIN_QUOTA: 100,
-
-    // Percentage base (for calculations)
-    PERCENTAGE_BASE: 100,
-
     // Max per-account breakdown rows before showing "+N more" toggle
     ACCOUNT_BREAKDOWN_LIMIT: 10
 };
@@ -42,10 +27,6 @@ window.AppConstants.LIMITS = {
  * Validation ranges
  */
 window.AppConstants.VALIDATION = {
-    // Port range
-    PORT_MIN: 1,
-    PORT_MAX: 65535,
-
     // Timeout range (0 - 5 minutes)
     TIMEOUT_MIN: 0,
     TIMEOUT_MAX: 300000,
@@ -151,15 +132,4 @@ window.AppConstants.VALIDATION = {
     W_QUOTA_MAX: 20,
     W_LRU_MIN: 0,
     W_LRU_MAX: 5
-};
-
-/**
- * UI Constants
- */
-window.AppConstants.UI = {
-    // Toast auto-dismiss duration
-    TOAST_DURATION: 3000,
-
-    // Loading spinner delay
-    LOADING_DELAY: 200
 };

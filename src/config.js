@@ -51,11 +51,6 @@ export async function verifyPassword(plain, stored) {
     return timingSafeEqual(actual, expected);
 }
 
-/** Return true if the stored password value is a legacy plaintext (not hashed). */
-export function isLegacyPassword(stored) {
-    return !!stored && !stored.startsWith('scrypt:');
-}
-
 function isObject(item) {
     return (item && typeof item === 'object' && !Array.isArray(item));
 }

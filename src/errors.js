@@ -72,53 +72,6 @@ export class AuthError extends AntigravityError {
 }
 
 /**
- * No accounts available error
- */
-export class NoAccountsError extends AntigravityError {
-    /**
-     * @param {string} message - Error message
-     * @param {boolean} allRateLimited - Whether all accounts are rate limited
-     */
-    constructor(message = 'No accounts available', allRateLimited = false) {
-        super(message, 'NO_ACCOUNTS', allRateLimited, { allRateLimited });
-        this.name = 'NoAccountsError';
-        this.allRateLimited = allRateLimited;
-    }
-}
-
-/**
- * Max retries exceeded error
- */
-export class MaxRetriesError extends AntigravityError {
-    /**
-     * @param {string} message - Error message
-     * @param {number} attempts - Number of attempts made
-     */
-    constructor(message = 'Max retries exceeded', attempts = 0) {
-        super(message, 'MAX_RETRIES', false, { attempts });
-        this.name = 'MaxRetriesError';
-        this.attempts = attempts;
-    }
-}
-
-/**
- * API error from upstream service
- */
-export class ApiError extends AntigravityError {
-    /**
-     * @param {string} message - Error message
-     * @param {number} statusCode - HTTP status code
-     * @param {string} errorType - Type of API error
-     */
-    constructor(message, statusCode = 500, errorType = 'api_error') {
-        super(message, errorType.toUpperCase(), statusCode >= 500, { statusCode, errorType });
-        this.name = 'ApiError';
-        this.statusCode = statusCode;
-        this.errorType = errorType;
-    }
-}
-
-/**
  * Native module error (version mismatch, rebuild required)
  */
 export class NativeModuleError extends AntigravityError {
@@ -146,23 +99,6 @@ export class EmptyResponseError extends AntigravityError {
     constructor(message = 'No content received from API') {
         super(message, 'EMPTY_RESPONSE', true, {});
         this.name = 'EmptyResponseError';
-    }
-}
-
-/**
- * Capacity exhausted error - Google's model is at capacity (not user quota)
- * Should retry on same account with shorter delay, not switch accounts immediately
- * Different from QUOTA_EXHAUSTED which indicates user's daily/hourly limit
- */
-export class CapacityExhaustedError extends AntigravityError {
-    /**
-     * @param {string} message - Error message
-     * @param {number|null} retryAfterMs - Suggested retry delay in ms
-     */
-    constructor(message = 'Model capacity exhausted', retryAfterMs = null) {
-        super(message, 'CAPACITY_EXHAUSTED', true, { retryAfterMs });
-        this.name = 'CapacityExhaustedError';
-        this.retryAfterMs = retryAfterMs;
     }
 }
 
@@ -236,36 +172,15 @@ export function isEmptyResponseError(error) {
         error?.name === 'EmptyResponseError';
 }
 
-/**
- * Check if an error is a capacity exhausted error (model overload, not user quota)
- * This is different from quota exhaustion - capacity issues are temporary infrastructure
- * limits that should be retried on the SAME account with shorter delays
- * @param {Error} error - Error to check
- * @returns {boolean}
- */
-export function isCapacityExhaustedError(error) {
-    if (error instanceof CapacityExhaustedError) return true;
-    const msg = (error.message || '').toLowerCase();
-    return msg.includes('model_capacity_exhausted') ||
-        msg.includes('capacity_exhausted') ||
-        msg.includes('model is currently overloaded') ||
-        msg.includes('service temporarily unavailable');
-}
-
 export default {
     AntigravityError,
     RateLimitError,
     AuthError,
     AccountForbiddenError,
-    NoAccountsError,
-    MaxRetriesError,
-    ApiError,
     NativeModuleError,
     EmptyResponseError,
-    CapacityExhaustedError,
     isRateLimitError,
     isAuthError,
     isAccountForbiddenError,
-    isEmptyResponseError,
-    isCapacityExhaustedError
+    isEmptyResponseError
 };
