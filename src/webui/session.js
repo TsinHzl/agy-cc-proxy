@@ -24,9 +24,16 @@ export function parseCookies(req) {
     return Object.fromEntries(
         header.split(';').map(pair => {
             const idx = pair.indexOf('=');
-            return idx === -1
-                ? [pair.trim(), '']
-                : [pair.slice(0, idx).trim(), decodeURIComponent(pair.slice(idx + 1).trim())];
+            if (idx === -1) return [pair.trim(), ''];
+            const value = pair.slice(idx + 1).trim();
+            // Tolerate malformed percent-encoding from client-controlled Cookie headers
+            let decoded = value;
+            try {
+                decoded = decodeURIComponent(value);
+            } catch {
+                // keep raw value
+            }
+            return [pair.slice(0, idx).trim(), decoded];
         })
     );
 }

@@ -8,6 +8,7 @@ import { listModels } from '../cloudcode/index.js';
 import { forceRefresh } from '../auth/token-extractor.js';
 import { clearThinkingSignatureCache } from '../format/signature-cache.js';
 import { logger } from '../utils/logger.js';
+import { apiKeyAuth } from './middleware.js';
 
 export function registerMiscRoutes(app, ctx) {
     const { accountManager, ensureInitialized } = ctx;
@@ -31,20 +32,19 @@ export function registerMiscRoutes(app, ctx) {
     });
 
     /**
-     * Force token refresh endpoint
+     * Force token refresh endpoint (API key protected)
      */
-    app.post('/refresh-token', async (req, res) => {
+    app.post('/refresh-token', apiKeyAuth, async (req, res) => {
         try {
             await ensureInitialized();
             // Clear all caches
             accountManager.clearTokenCache();
             accountManager.clearProjectCache();
             // Force refresh default token
-            const token = await forceRefresh();
+            await forceRefresh();
             res.json({
                 status: 'ok',
-                message: 'Token caches cleared and refreshed',
-                tokenPrefix: token.substring(0, 10) + '...'
+                message: 'Token caches cleared and refreshed'
             });
         } catch (error) {
             res.status(500).json({

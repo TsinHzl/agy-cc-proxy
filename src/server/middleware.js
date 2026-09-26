@@ -16,6 +16,88 @@ import { findKeyBySecret, checkAndActivate, isExpired, checkQuota } from '../api
 import usageStats from '../modules/usage-stats.js';
 import usageLog from '../modules/usage-log.js';
 
+/**
+ * API key auth middleware (shared by /v1 routes and POST /refresh-token).
+ */
+export function apiKeyAuth(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const xApiKey = req.headers['x-api-key'];
+
+    let providedKey = '';
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        providedKey = authHeader.substring(7).trim();
+    } else if (xApiKey && typeof xApiKey === 'string') {
+        providedKey = xApiKey.trim();
+    }
+
+    if (!providedKey) {
+        logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'Invalid or missing API key'
+            }
+        });
+    }
+
+    // Primary key (config.apiKey) is checked first (id: null, zero regression),
+    // then managed keys from the api-keys store.
+    if (verifyApiKey(providedKey, config.apiKey)) {
+        req._apiKeyId = null;
+        return next();
+    }
+
+    // Managed key match + state checks (order: enabled -> lazy activation -> expiry -> quota)
+    const keyRecord = findKeyBySecret(providedKey);
+    if (!keyRecord) {
+        logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'Invalid or missing API key'
+            }
+        });
+    }
+
+    if (!keyRecord.enabled) {
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'API key has been disabled'
+            }
+        });
+    }
+
+    // Lazy activation: first use starts the validity window; this request passes
+    checkAndActivate(keyRecord);
+
+    if (isExpired(keyRecord)) {
+        return res.status(401).json({
+            type: 'error',
+            error: {
+                type: 'authentication_error',
+                message: 'API key has expired'
+            }
+        });
+    }
+
+    if (checkQuota(keyRecord)) {
+        return res.status(429).json({
+            type: 'error',
+            error: {
+                type: 'rate_limit_error',
+                message: 'API key spending limit exceeded'
+            }
+        });
+    }
+
+    req._apiKeyId = keyRecord.id;
+    next();
+}
+
 export function registerCoreMiddleware(app) {
     // Middleware
     app.use(cors());
@@ -56,86 +138,8 @@ export function registerCoreMiddleware(app) {
         next();
     });
 
-    // API Key authentication middleware for /v1/* endpoints
-    // Primary key (config.apiKey) is checked first (id: null, zero regression),
-    // then managed keys from the api-keys store.
-    app.use('/v1', (req, res, next) => {
-        const authHeader = req.headers['authorization'];
-        const xApiKey = req.headers['x-api-key'];
-
-        let providedKey = '';
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            providedKey = authHeader.substring(7).trim();
-        } else if (xApiKey && typeof xApiKey === 'string') {
-            providedKey = xApiKey.trim();
-        }
-
-        if (!providedKey) {
-            logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
-            return res.status(401).json({
-                type: 'error',
-                error: {
-                    type: 'authentication_error',
-                    message: 'Invalid or missing API key'
-                }
-            });
-        }
-
-        // Primary key match - behaves exactly as before this feature existed
-        if (verifyApiKey(providedKey, config.apiKey)) {
-            req._apiKeyId = null;
-            return next();
-        }
-
-        // Managed key match + state checks (order: enabled -> lazy activation -> expiry -> quota)
-        const keyRecord = findKeyBySecret(providedKey);
-        if (!keyRecord) {
-            logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
-            return res.status(401).json({
-                type: 'error',
-                error: {
-                    type: 'authentication_error',
-                    message: 'Invalid or missing API key'
-                }
-            });
-        }
-
-        if (!keyRecord.enabled) {
-            return res.status(401).json({
-                type: 'error',
-                error: {
-                    type: 'authentication_error',
-                    message: 'API key has been disabled'
-                }
-            });
-        }
-
-        // Lazy activation: first use starts the validity window; this request passes
-        checkAndActivate(keyRecord);
-
-        if (isExpired(keyRecord)) {
-            return res.status(401).json({
-                type: 'error',
-                error: {
-                    type: 'authentication_error',
-                    message: 'API key has expired'
-                }
-            });
-        }
-
-        if (checkQuota(keyRecord)) {
-            return res.status(429).json({
-                type: 'error',
-                error: {
-                    type: 'rate_limit_error',
-                    message: 'API key spending limit exceeded'
-                }
-            });
-        }
-
-        req._apiKeyId = keyRecord.id;
-        next();
-    });
+    // API Key authentication for /v1/* endpoints (shared apiKeyAuth middleware)
+    app.use('/v1', apiKeyAuth);
 
     // Setup usage statistics middleware
     usageStats.setupMiddleware(app);
