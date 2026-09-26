@@ -1,0 +1,40 @@
+src/server/routes-misc.js
+  5dbc39e63f66104e 11,35,37,44,47
+src/server/middleware.js
+  5dbc39e63f66104e 19-100,141-142
+src/webui/session.js
+  5dbc39e63f66104e 27-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "5833e325a081904df64a50b461accb82285684b2",
+  "prompts": {
+    "5dbc39e63f66104e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30bf2c97-1986-432c-ade3-375a2e0d8117",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 103,
+      "total_deletions": 92,
+      "accepted_lines": 101,
+      "overriden_lines": 0
+    },
+    "a0e465f730895716": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2744944b-e229-4333-971b-94487d30bd71",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 307,
+      "total_deletions": 39,
+      "accepted_lines": 268,
+      "overriden_lines": 0
+    }
+  }
+}
