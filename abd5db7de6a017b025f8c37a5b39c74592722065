@@ -1,0 +1,23 @@
+agy-cc-proxy_源码全景解析.md
+  dbe7f9cd517f6049 1-494
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "abd5db7de6a017b025f8c37a5b39c74592722065",
+  "prompts": {
+    "dbe7f9cd517f6049": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed52d095-11ba-402e-bcb7-528ca560e02c",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 494,
+      "total_deletions": 0,
+      "accepted_lines": 494,
+      "overriden_lines": 0
+    }
+  }
+}
