@@ -325,7 +325,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                         // IP flags, etc.) that self-resolves. Treat as a 5-minute cooldown so the
                         // account recovers automatically without user intervention.
                         if (response.status === 403 && isValidationRequired(errorText)) {
-                            const VALIDATION_COOLDOWN_MS = 60 * 1000; // 60 seconds — transient Google security check, clears quickly
+                            const VALIDATION_COOLDOWN_MS = 10 * 1000; // 10 seconds — transient Google security check, clears quickly
                             logger.warn(`[CloudCode] 403 VALIDATION_REQUIRED for ${account.email}, applying ${formatDuration(VALIDATION_COOLDOWN_MS)} cooldown and rotating account...`);
                             accountManager.markRateLimited(account.email, VALIDATION_COOLDOWN_MS, model);
                             throw new AccountForbiddenError(errorText, account.email);
