@@ -1,0 +1,29 @@
+src/cloudcode/request-builder.js
+  e644b41b09964e83 29-33
+package.json
+  e644b41b09964e83 41-42
+tests/test-403-account-rotation.cjs
+  e644b41b09964e83 29,97-100,103-106
+tests/test-request-builder.cjs
+  e644b41b09964e83 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "3234323effc5099402f67688a4f9e8486be6f4c2",
+  "prompts": {
+    "e644b41b09964e83": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6150b13-a52a-47cc-919f-89138d801ce3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 110,
+      "total_deletions": 11,
+      "accepted_lines": 110,
+      "overriden_lines": 0
+    }
+  }
+}
