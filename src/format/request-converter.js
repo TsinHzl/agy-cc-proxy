@@ -304,6 +304,7 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
         if (systemParts.length > 0) {
             googleRequest.systemInstruction = {
+                role: 'user',
                 parts: systemParts
             };
         }
@@ -313,7 +314,10 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     if (!isCompact && isClaudeModel && isThinking && tools && tools.length > 0) {
         const hint = 'Interleaved thinking is enabled. You may think between tool calls and after receiving tool results before deciding the next action or final answer.';
         if (!googleRequest.systemInstruction) {
-            googleRequest.systemInstruction = { parts: [{ text: hint }] };
+            googleRequest.systemInstruction = {
+                role: 'user',
+                parts: [{ text: hint }]
+            };
         } else {
             const lastPart = googleRequest.systemInstruction.parts[googleRequest.systemInstruction.parts.length - 1];
             if (lastPart && lastPart.text) {

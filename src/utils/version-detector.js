@@ -19,7 +19,8 @@ import { existsSync, readFileSync } from 'fs';
  */
 
 // Fallback for User-Agent version (ideVersion in product.json)
-const FALLBACK_USER_AGENT_VERSION = process.env.FALLBACK_ANTIGRAVITY_VERSION || '2.0.3';
+const FALLBACK_USER_AGENT_VERSION = process.env.FALLBACK_ANTIGRAVITY_VERSION || '1.2.12';
+const FALLBACK_USER_AGENT_BUILD = process.env.ANTIGRAVITY_CLI_BUILD || '989022288';
 
 // Fallback for X-Client-Version (top-level "version" in product.json)
 // Can be overridden via ANTIGRAVITY_CLIENT_VERSION_FALLBACK env var
@@ -179,8 +180,7 @@ function getUserAgentVersionConfig() {
 }
 
 /**
- * Generate a simplified User-Agent string used by the Antigravity binary.
- * Format: "antigravity/version os/arch"
+ * Generate the native Antigravity CLI User-Agent format.
  * @returns {string} The User-Agent string
  */
 export function generateSmartUserAgent() {
@@ -188,11 +188,12 @@ export function generateSmartUserAgent() {
 
     const { version } = getUserAgentVersionConfig();
     const os = platform();
-    const architecture = process.arch;
-
     const osName = os === 'darwin' ? 'darwin' : (os === 'win32' ? 'win32' : 'linux');
+    const architecture = process.arch === 'x64' ? 'amd64' : process.arch;
 
-    cachedUserAgent = `antigravity/${version} ${osName}/${architecture}`;
+    cachedUserAgent =
+        `antigravity/cli/${version} (aidev_client; os_type=${osName}; ` +
+        `arch=${architecture}; cl=${FALLBACK_USER_AGENT_BUILD}; auth_method=consumer)`;
     return cachedUserAgent;
 }
 

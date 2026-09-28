@@ -25,11 +25,7 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
     const model = anthropicRequest.model;
     const googleRequest = convertAnthropicToGoogle(anthropicRequest);
 
-    // Gemini Cloud Code requests must not carry session identifiers.
-    // Keep the stable session ID for other model families and cache continuity.
-    if (getModelFamily(model) !== 'gemini') {
-        googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
-    }
+    googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
 
     const payload = {
         project: projectId,
@@ -37,7 +33,7 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
         request: googleRequest,
         userAgent: 'antigravity',
         requestType: 'agent',  // CLIProxyAPI v6.6.89 compatibility
-        requestId: 'agent-' + crypto.randomUUID()
+        requestId: 'agent/' + crypto.randomUUID()
     };
 
     return payload;
@@ -56,15 +52,15 @@ export function buildHeaders(token, model, accept = 'application/json', sessionI
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        ...ANTIGRAVITY_HEADERS
+        'User-Agent': ANTIGRAVITY_HEADERS['User-Agent']
     };
 
-    // Add session ID header if provided (matches Antigravity binary behavior)
-    if (sessionId) {
+    const modelFamily = getModelFamily(model);
+
+    // The native Gemini client sends the body session ID without this header.
+    if (sessionId && modelFamily !== 'gemini') {
         headers['X-Machine-Session-Id'] = sessionId;
     }
-
-    const modelFamily = getModelFamily(model);
 
     // Add interleaved thinking header only for Claude thinking models
     if (modelFamily === 'claude' && isThinkingModel(model)) {
