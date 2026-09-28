@@ -1,0 +1,29 @@
+public/js/components/account-manager.js
+  15953bd680a9a76a 11,58-62,72,126-127,129,132
+tests/test-403-account-rotation.cjs
+  15953bd680a9a76a 367-386
+src/webui/routes/accounts.js
+  15953bd680a9a76a 44-48
+src/account-manager/credentials.js
+  15953bd680a9a76a 25-28,86-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "b81a828db2a40f6821376e71bb869f2b982e912b",
+  "prompts": {
+    "15953bd680a9a76a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6da0c44-76bd-4ab8-ac8f-a41dc5e2ad33",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 61,
+      "total_deletions": 28,
+      "accepted_lines": 45,
+      "overriden_lines": 0
+    }
+  }
+}
