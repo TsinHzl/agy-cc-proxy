@@ -39,7 +39,8 @@
     "test:strategies": "node tests/test-strategies.cjs",
     "test:cache-control": "node tests/test-cache-control.cjs",
     "test:compact": "node tests/test-compact-request.cjs",
-    "test:request-builder": "node tests/test-request-builder.cjs"
+    "test:request-builder": "node tests/test-request-builder.cjs",
+    "diagnose:403-prompt": "node tests/diagnose-403-system-prompt.cjs"
   },
   "keywords": [
     "claude",
