@@ -66,6 +66,36 @@ async function runTests() {
         assertEqual(headers['X-Machine-Session-Id'], payload.request.sessionId, 'Claude body/header session IDs must match');
     });
 
+    console.log('\n── System Instruction Contract ─────────────────────────────────');
+
+    test('does not synthesize a system instruction when the client omitted one', () => {
+        const payload = buildCloudCodeRequest(
+            { ...baseRequest, model: 'gemini-2.5-pro' },
+            'test-project',
+            'test@example.com'
+        );
+
+        assertFalse(
+            'systemInstruction' in payload.request,
+            'Proxy must not inject an Antigravity system instruction'
+        );
+    });
+
+    test('forwards only the client system instruction', () => {
+        const payload = buildCloudCodeRequest(
+            {
+                ...baseRequest,
+                model: 'gemini-2.5-pro',
+                system: 'Retain this instruction.'
+            },
+            'test-project',
+            'test@example.com'
+        );
+
+        assertEqual(payload.request.systemInstruction.parts.length, 1);
+        assertEqual(payload.request.systemInstruction.parts[0].text, 'Retain this instruction.');
+    });
+
     console.log('\n── Billing Header Sanitization Contract ────────────────────────');
 
     test('array system blocks remove the billing header and empty block', () => {
