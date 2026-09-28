@@ -1,0 +1,29 @@
+tests/test-request-builder.cjs
+  6e520368cc6c8812 4-6,15,45-50,58,63-66,70-93,131
+src/format/request-converter.js
+  6e520368cc6c8812 307,317-320
+src/cloudcode/request-builder.js
+  6e520368cc6c8812 28,36,55,58-61
+src/utils/version-detector.js
+  6e520368cc6c8812 22-23,183,192,194-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "827b0e973552da5dfd4bed877b7c868bacbf80e8",
+  "prompts": {
+    "6e520368cc6c8812": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1f84b09-fab9-4123-888c-8456c3b73b5a",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 61,
+      "total_deletions": 23,
+      "accepted_lines": 61,
+      "overriden_lines": 0
+    }
+  }
+}
