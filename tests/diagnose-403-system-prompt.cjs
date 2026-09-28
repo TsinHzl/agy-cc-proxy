@@ -58,6 +58,17 @@ function classifyResponse(status, body) {
     return 'other_http_error';
 }
 
+async function summarizeResponse(response) {
+    const body = response.ok ? '' : await response.text();
+    if (response.ok) {
+        await response.body?.cancel();
+    }
+    return {
+        status: response.status,
+        category: classifyResponse(response.status, body)
+    };
+}
+
 function parseArgs(args) {
     const options = { endpoint: 'daily', timeoutMs: 30000 };
     for (let index = 0; index < args.length; index += 2) {
@@ -114,11 +125,8 @@ async function createSender(accountEmail, endpointName, timeoutMs) {
                 body: JSON.stringify(payload),
                 signal: AbortSignal.timeout(timeoutMs)
             });
-            const body = response.ok ? '' : await response.text();
-            await response.body?.cancel();
             return {
-                status: response.status,
-                category: classifyResponse(response.status, body),
+                ...(await summarizeResponse(response)),
                 elapsedMs: Date.now() - startedAt
             };
         } catch (error) {
@@ -151,7 +159,7 @@ async function main() {
     }
 }
 
-module.exports = { buildVariants, classifyResponse, parseArgs, splitSystemText };
+module.exports = { buildVariants, classifyResponse, parseArgs, splitSystemText, summarizeResponse };
 
 if (require.main === module) {
     main().catch(error => {
