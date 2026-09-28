@@ -1,0 +1,27 @@
+tests/diagnose-403-system-prompt.cjs
+  6e520368cc6c8812 1-161
+tests/test-403-system-prompt-probe.cjs
+  6e520368cc6c8812 1-53
+package.json
+  6e520368cc6c8812 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "75be74e84f87f29e6dc7715027c22fa32ce087b9",
+  "prompts": {
+    "6e520368cc6c8812": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1f84b09-fab9-4123-888c-8456c3b73b5a",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 216,
+      "total_deletions": 1,
+      "accepted_lines": 216,
+      "overriden_lines": 0
+    }
+  }
+}
