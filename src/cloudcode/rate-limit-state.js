@@ -136,17 +136,26 @@ export function isPermanentAuthFailure(errorText) {
 }
 
 /**
- * Detect if 403 error is due to VALIDATION_REQUIRED or PERMISSION_DENIED.
- * These are account-level errors that should trigger account rotation,
- * not just endpoint rotation. The account needs validation (e.g., captcha,
- * terms acceptance) which cannot be resolved by trying different endpoints.
+ * Detect if 403 error is due to VALIDATION_REQUIRED.
+ * This is a transient security check from Google (e.g., bot detection, IP flags)
+ * that self-resolves — treat as a temporary cooldown, not permanent invalidation.
  * @param {string} errorText - Error message from API
- * @returns {boolean} True if validation/permission error requiring account rotation
+ * @returns {boolean} True if transient validation check
  */
 export function isValidationRequired(errorText) {
     const lower = (errorText || '').toLowerCase();
-    return lower.includes('validation_required') ||
-        lower.includes('account_disabled') ||
+    return lower.includes('validation_required');
+}
+
+/**
+ * Detect if 403 error is due to the account being permanently disabled by Google.
+ * Unlike VALIDATION_REQUIRED, these cannot self-resolve and require user action.
+ * @param {string} errorText - Error message from API
+ * @returns {boolean} True if account is permanently disabled
+ */
+export function isAccountDisabled(errorText) {
+    const lower = (errorText || '').toLowerCase();
+    return lower.includes('account_disabled') ||
         lower.includes('user_disabled');
 }
 

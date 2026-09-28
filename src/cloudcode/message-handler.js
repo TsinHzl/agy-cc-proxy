@@ -34,7 +34,7 @@ import {
     isPermanentAuthFailure,
     isModelCapacityExhausted,
     isValidationRequired,
-    extractVerificationUrl,
+    isAccountDisabled,
     isAccountBanned,
     calculateSmartBackoff
 } from './rate-limit-state.js';
@@ -300,13 +300,21 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                                 throw new Error(`invalid_request_error: ${errorText}`);
                             }
 
-                            // 403 with VALIDATION_REQUIRED or PERMISSION_DENIED is an account-level error
-                            // The account needs validation (captcha, terms, etc.) - trying different endpoints won't help
-                            // Mark account as invalid (requires user intervention) and rotate (fixes #248)
+                            // 403 VALIDATION_REQUIRED is a transient Google security check (bot detection,
+                            // IP flags, etc.) that self-resolves. Treat as a 5-minute cooldown so the
+                            // account recovers automatically without user intervention.
                             if (response.status === 403 && isValidationRequired(errorText)) {
-                                const verifyUrl = extractVerificationUrl(errorText);
-                                logger.warn(`[CloudCode] 403 VALIDATION_REQUIRED/PERMISSION_DENIED for ${account.email}, marking invalid and rotating account...`);
-                                accountManager.markInvalid(account.email, 'Account requires verification', verifyUrl);
+                                const VALIDATION_COOLDOWN_MS = 60 * 1000; // 60 seconds — transient Google security check, clears quickly
+                                logger.warn(`[CloudCode] 403 VALIDATION_REQUIRED for ${account.email}, applying ${formatDuration(VALIDATION_COOLDOWN_MS)} cooldown and rotating account...`);
+                                accountManager.markRateLimited(account.email, VALIDATION_COOLDOWN_MS, model);
+                                throw new AccountForbiddenError(errorText, account.email);
+                            }
+
+                            // 403 account_disabled / user_disabled — account is permanently disabled by Google.
+                            // This requires user intervention (markInvalid) unlike the transient VALIDATION_REQUIRED.
+                            if (response.status === 403 && isAccountDisabled(errorText)) {
+                                logger.warn(`[CloudCode] 403 ACCOUNT_DISABLED for ${account.email}, marking invalid permanently...`);
+                                accountManager.markInvalid(account.email, 'Account disabled by Google');
                                 throw new AccountForbiddenError(errorText, account.email);
                             }
 
