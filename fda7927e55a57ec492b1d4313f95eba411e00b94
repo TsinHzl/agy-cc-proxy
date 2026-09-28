@@ -1,0 +1,27 @@
+src/cloudcode/streaming-handler.js
+  e644b41b09964e83 37,324-326,328-338
+src/cloudcode/rate-limit-state.js
+  e644b41b09964e83 139-141,143,147-158
+src/cloudcode/message-handler.js
+  e644b41b09964e83 37,303-305,307-317
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "fda7927e55a57ec492b1d4313f95eba411e00b94",
+  "prompts": {
+    "e644b41b09964e83": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6150b13-a52a-47cc-919f-89138d801ce3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 23,
+      "accepted_lines": 46,
+      "overriden_lines": 0
+    }
+  }
+}
