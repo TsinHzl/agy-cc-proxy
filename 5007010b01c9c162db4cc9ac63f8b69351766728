@@ -1,0 +1,27 @@
+tests/test-api-key-account-binding.cjs
+  15953bd680a9a76a 1-192
+src/account-manager/index.js
+  15953bd680a9a76a 143-144,146-147,183,185,188-189
+src/server/routes-messages.js
+  15953bd680a9a76a 17-26,62-64,70-73,77,81,83,92,94,155,255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "5007010b01c9c162db4cc9ac63f8b69351766728",
+  "prompts": {
+    "15953bd680a9a76a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f6da0c44-76bd-4ab8-ac8f-a41dc5e2ad33",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 254,
+      "total_deletions": 46,
+      "accepted_lines": 224,
+      "overriden_lines": 0
+    }
+  }
+}
