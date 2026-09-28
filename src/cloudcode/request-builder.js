@@ -26,8 +26,11 @@ export function buildCloudCodeRequest(anthropicRequest, projectId, accountEmail)
     const model = anthropicRequest.model;
     const googleRequest = convertAnthropicToGoogle(anthropicRequest);
 
-    // Use stable session ID derived from first user message for cache continuity
-    googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
+    // Gemini Cloud Code requests must not carry session identifiers.
+    // Keep the stable session ID for other model families and cache continuity.
+    if (getModelFamily(model) !== 'gemini') {
+        googleRequest.sessionId = deriveSessionId(anthropicRequest, accountEmail);
+    }
 
     // Build system instruction parts array with [ignore] tags to prevent model from
     // identifying as "Antigravity" (fixes GitHub issue #76)

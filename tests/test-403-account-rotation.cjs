@@ -26,6 +26,7 @@ async function runTests() {
 
     const {
         isValidationRequired,
+        isAccountDisabled,
         extractVerificationUrl,
         isPermanentAuthFailure,
         isModelCapacityExhausted
@@ -93,16 +94,16 @@ async function runTests() {
         ));
     });
 
-    test('detects ACCOUNT_DISABLED in error text', () => {
-        assertTrue(isValidationRequired(
-            '{"error":{"code":403,"message":"account_disabled: This account has been disabled"}}'
-        ));
+    test('does NOT classify ACCOUNT_DISABLED as validation required', () => {
+        const errorText = '{"error":{"code":403,"message":"account_disabled: This account has been disabled"}}';
+        assertFalse(isValidationRequired(errorText));
+        assertTrue(isAccountDisabled(errorText));
     });
 
-    test('detects USER_DISABLED in error text', () => {
-        assertTrue(isValidationRequired(
-            '{"error":{"code":403,"message":"user_disabled: User account is disabled"}}'
-        ));
+    test('does NOT classify USER_DISABLED as validation required', () => {
+        const errorText = '{"error":{"code":403,"message":"user_disabled: User account is disabled"}}';
+        assertFalse(isValidationRequired(errorText));
+        assertTrue(isAccountDisabled(errorText));
     });
 
     test('does NOT detect generic 404 error', () => {
