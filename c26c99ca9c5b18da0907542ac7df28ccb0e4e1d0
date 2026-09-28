@@ -1,0 +1,23 @@
+tests/test-request-builder.cjs
+  6e520368cc6c8812 69-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "c26c99ca9c5b18da0907542ac7df28ccb0e4e1d0",
+  "prompts": {
+    "6e520368cc6c8812": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1f84b09-fab9-4123-888c-8456c3b73b5a",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 63,
+      "total_deletions": 34,
+      "accepted_lines": 61,
+      "overriden_lines": 0
+    }
+  }
+}
