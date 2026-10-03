@@ -13,6 +13,13 @@ window.Components.accountManager = () => ({
     reloading: false,
     selectedAccountEmail: '',
     selectedAccountLimits: {},
+    selectedAccountTier: 'free',
+    selectedAccountStatus: 'ok',
+    selectedAccountError: '',
+    selectedAccountPriority: 50,
+    selectedAccountQuotaGroups: [],
+    activeQuotaTab: 'detailed',
+    savingPriority: false,
 
     // Health Inspector (Developer Mode)
     healthData: {},
@@ -64,7 +71,8 @@ window.Components.accountManager = () => ({
             const data = await response.json();
             if (data.status === 'ok') {
                 store.showToast(store.t('refreshedAccount', { email: Redact.email(email) }), 'success');
-                Alpine.store('data').fetchData();
+                await Alpine.store('data').fetchData();
+                return data;
             } else {
                 throw new Error(data.error || store.t('refreshFailed'));
             }
@@ -187,8 +195,53 @@ window.Components.accountManager = () => ({
 
     openQuotaModal(account) {
         this.selectedAccountEmail = account.email;
+        this.selectedAccountTier = account.subscription?.tier || 'free';
+        this.selectedAccountStatus = account.status || 'ok';
+        this.selectedAccountError = account.error || account.invalidReason || '';
+        this.selectedAccountPriority = account.priority ?? 50;
+        this.selectedAccountQuotaGroups = account.quota_groups || account.quota?.quota_groups || [];
         this.selectedAccountLimits = account.limits || {};
+        this.activeQuotaTab = (this.selectedAccountQuotaGroups && this.selectedAccountQuotaGroups.length > 0) ? 'detailed' : 'model';
         document.getElementById('quota_modal').showModal();
+    },
+
+    async saveAccountPriority() {
+        const store = Alpine.store('global');
+        const email = this.selectedAccountEmail;
+        const priority = Number(this.selectedAccountPriority);
+
+        if (!Number.isInteger(priority) || priority < 1 || priority > 100) {
+            store.showToast('Priority must be an integer between 1 and 100', 'error');
+            return;
+        }
+
+        this.savingPriority = true;
+        try {
+            const { response } = await window.utils.request(
+                `/api/accounts/${encodeURIComponent(email)}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ priority })
+                }
+            );
+
+            const data = await response.json();
+            if (data.status === 'ok') {
+                store.showToast('Account priority updated', 'success');
+                this.selectedAccountPriority = priority;
+                const dataStore = Alpine.store('data');
+                dataStore.accounts = (dataStore.accounts || []).map(a =>
+                    a.email === email ? { ...a, priority } : a
+                );
+            } else {
+                throw new Error(data.error || 'Failed to update priority');
+            }
+        } catch (e) {
+            store.showToast('Failed to save priority: ' + e.message, 'error');
+        } finally {
+            this.savingPriority = false;
+        }
     },
 
     // Threshold settings

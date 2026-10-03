@@ -74,7 +74,15 @@ export const CLIENT_METADATA = {
 
 // Cloud Code API endpoints (in fallback order)
 const ANTIGRAVITY_ENDPOINT_DAILY = 'https://daily-cloudcode-pa.googleapis.com';
+const ANTIGRAVITY_ENDPOINT_SANDBOX = 'https://daily-cloudcode-pa.sandbox.googleapis.com';
 const ANTIGRAVITY_ENDPOINT_PROD = 'https://cloudcode-pa.googleapis.com';
+
+// Endpoint fallback order for retrieveUserQuotaSummary (daily → sandbox → prod)
+export const QUOTA_SUMMARY_ENDPOINTS = [
+    ANTIGRAVITY_ENDPOINT_DAILY,
+    ANTIGRAVITY_ENDPOINT_SANDBOX,
+    ANTIGRAVITY_ENDPOINT_PROD
+];
 
 // Endpoint fallback order (daily → prod)
 export const ANTIGRAVITY_ENDPOINT_FALLBACKS = [

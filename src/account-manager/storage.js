@@ -38,7 +38,12 @@ export async function loadAccounts(configPath = ACCOUNT_CONFIG_PATH) {
             modelRateLimits: acc.modelRateLimits || {},
             // New fields for subscription and quota tracking
             subscription: acc.subscription || { tier: 'unknown', projectId: null, detectedAt: null },
-            quota: acc.quota || { models: {}, lastChecked: null },
+            quota: {
+                models: acc.quota?.models || {},
+                quota_groups: Array.isArray(acc.quota?.quota_groups) ? acc.quota.quota_groups : [],
+                lastChecked: acc.quota?.lastChecked || null
+            },
+            priority: (typeof acc.priority === 'number' && acc.priority >= 1 && acc.priority <= 100) ? Math.round(acc.priority) : 50,
             // Quota threshold settings (per-account and per-model overrides)
             quotaThreshold: acc.quotaThreshold,  // undefined means use global
             modelQuotaThresholds: acc.modelQuotaThresholds || {}
@@ -140,7 +145,8 @@ export async function saveAccounts(configPath, accounts, settings, activeIndex) 
                 modelRateLimits: acc.modelRateLimits || {},
                 lastUsed: acc.lastUsed,
                 subscription: acc.subscription || { tier: 'unknown', projectId: null, detectedAt: null },
-                quota: acc.quota || { models: {}, lastChecked: null },
+                quota: acc.quota || { models: {}, quota_groups: [], lastChecked: null },
+                priority: (typeof acc.priority === 'number' && acc.priority >= 1 && acc.priority <= 100) ? Math.round(acc.priority) : 50,
                 quotaThreshold: acc.quotaThreshold,
                 modelQuotaThresholds: Object.keys(acc.modelQuotaThresholds || {}).length > 0 ? acc.modelQuotaThresholds : undefined
             })),

@@ -9,6 +9,7 @@ import {
     ANTIGRAVITY_HEADERS,
     LOAD_CODE_ASSIST_ENDPOINTS,
     LOAD_CODE_ASSIST_HEADERS,
+    QUOTA_SUMMARY_ENDPOINTS,
     CLIENT_METADATA,
     getModelFamily,
     MODEL_VALIDATION_CACHE_TTL_MS
@@ -142,6 +143,29 @@ export async function getModelQuotas(token, projectId = null) {
     }
 
     return quotas;
+}
+
+/**
+ * Get comprehensive account quotas (both model-level and detailed quota groups)
+ *
+ * @param {string} token - OAuth access token
+ * @param {string} [projectId] - Optional project ID for accurate quota info
+ * @returns {Promise<{models: Object, quota_groups: Array<Object>}>} Consolidated quota object
+ */
+export async function getDetailedAccountQuotas(token, projectId = null) {
+    const [modelsResult, groupsResult] = await Promise.allSettled([
+        getModelQuotas(token, projectId),
+        fetchUserQuotaSummary(token, projectId)
+    ]);
+
+    if (modelsResult.status === 'rejected') {
+        throw modelsResult.reason;
+    }
+
+    return {
+        models: modelsResult.value,
+        quota_groups: groupsResult.status === 'fulfilled' ? groupsResult.value : []
+    };
 }
 
 /**
@@ -428,3 +452,71 @@ export async function resolveModel(modelId, token, projectId = null) {
         return { resolved: modelId, autoMapped: false };
     }
 }
+
+/**
+ * Fetch detailed user quota summary from Cloud Code API
+ * Calls v1internal:retrieveUserQuotaSummary to retrieve fine-grained quota groups and buckets.
+ *
+ * @param {string} token - OAuth access token
+ * @param {string} [projectId] - Optional project ID for quota scope
+ * @returns {Promise<Array<Object>>} Normalized quota groups array
+ */
+export async function fetchUserQuotaSummary(token, projectId = null) {
+    if (!token || typeof token !== 'string') {
+        return [];
+    }
+
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...ANTIGRAVITY_HEADERS
+    };
+
+    const body = projectId ? { project: projectId } : {};
+
+    for (const endpoint of QUOTA_SUMMARY_ENDPOINTS) {
+        try {
+            const url = `${endpoint}/v1internal:retrieveUserQuotaSummary`;
+            const response = await throttledFetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                logger.warn(`[CloudCode] retrieveUserQuotaSummary error at ${endpoint}: ${response.status}`);
+                continue;
+            }
+
+            const data = await response.json();
+            const rawGroups = data.quotaGroups || data.quota_groups || [];
+            if (!Array.isArray(rawGroups)) {
+                logger.warn(`[CloudCode] retrieveUserQuotaSummary received non-array groups from ${endpoint}`);
+                continue;
+            }
+
+            return rawGroups.map(group => {
+                const rawBuckets = Array.isArray(group?.buckets) ? group.buckets : [];
+                return {
+                    display_name: group?.displayName || group?.display_name || '',
+                    description: group?.description || '',
+                    buckets: rawBuckets.map(bucket => {
+                        const rawFraction = bucket?.remainingFraction ?? bucket?.remaining_fraction;
+                        const resetTime = bucket?.resetTime || bucket?.reset_time || null;
+                        return {
+                            window: bucket?.window || '',
+                            remaining_fraction: rawFraction ?? (resetTime ? 0 : null),
+                            reset_time: resetTime
+                        };
+                    })
+                };
+            });
+        } catch (error) {
+            logger.warn(`[CloudCode] retrieveUserQuotaSummary failed at ${endpoint}:`, error.message);
+        }
+    }
+
+    logger.warn('[CloudCode] Failed to fetch user quota summary from all endpoints');
+    return [];
+}
+

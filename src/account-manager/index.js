@@ -478,6 +478,10 @@ export class AccountManager {
                 invalidReason: a.invalidReason || null,
                 verifyUrl: a.verifyUrl || null,
                 lastUsed: a.lastUsed,
+                subscription: a.subscription || { tier: 'unknown', projectId: null, detectedAt: null },
+                quota: a.quota || { models: {}, quota_groups: [], lastChecked: null },
+                quota_groups: a.quota?.quota_groups || [],
+                priority: a.priority ?? 50,
                 // Include quota threshold settings
                 quotaThreshold: a.quotaThreshold,
                 modelQuotaThresholds: a.modelQuotaThresholds || {}

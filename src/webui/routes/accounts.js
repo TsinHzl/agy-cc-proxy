@@ -5,6 +5,7 @@
 import { ACCOUNT_CONFIG_PATH } from '../../constants.js';
 import { loadAccounts, saveAccounts } from '../../account-manager/storage.js';
 import { logger } from '../../utils/logger.js';
+import { getDetailedAccountQuotas, getSubscriptionTier } from '../../cloudcode/index.js';
 import { setAccountEnabled, removeAccount, addAccount } from '../account-ops.js';
 
 export function registerAccountRoutes(app, ctx) {
@@ -44,13 +45,47 @@ export function registerAccountRoutes(app, ctx) {
             // The user has completed verification on Google's site and clicks Refresh to re-enable.
             // Auth errors (no verifyUrl) still require OAuth re-auth via FIX button.
             const account = accountManager.getAllAccounts().find(a => a.email === email);
-            if (account && account.isInvalid && account.verifyUrl) {
+            if (!account) {
+                return res.status(404).json({ status: 'error', error: `Account ${email} not found` });
+            }
+            if (account.isInvalid && account.verifyUrl) {
                 accountManager.clearInvalid(email);
+            }
+
+            let freshQuota = account?.quota || null;
+            let freshSubscription = account?.subscription || null;
+
+            if (account && !account.isInvalid) {
+                try {
+                    const token = await accountManager.getTokenForAccount(account);
+                    const subscription = await getSubscriptionTier(token);
+                    const quotaDetails = await getDetailedAccountQuotas(token, subscription.projectId);
+
+                    account.subscription = {
+                        tier: subscription.tier,
+                        projectId: subscription.projectId,
+                        detectedAt: Date.now()
+                    };
+                    account.quota = {
+                        models: quotaDetails.models,
+                        quota_groups: quotaDetails.quota_groups || [],
+                        lastChecked: Date.now()
+                    };
+                    freshQuota = account.quota;
+                    freshSubscription = account.subscription;
+
+                    await accountManager.saveToDisk();
+                } catch (quotaError) {
+                    logger.warn(`[WebUI] Failed to refresh quota for ${email}:`, quotaError.message);
+                }
             }
 
             res.json({
                 status: 'ok',
-                message: `Token cache cleared for ${email}`
+                message: `Token cache cleared and quota refreshed for ${email}`,
+                quota: freshQuota,
+                subscription: freshSubscription,
+                quota_groups: freshQuota?.quota_groups || []
             });
         } catch (error) {
             res.status(500).json({ status: 'error', error: error.message });
@@ -109,7 +144,7 @@ export function registerAccountRoutes(app, ctx) {
     app.patch('/api/accounts/:email', async (req, res) => {
         try {
             const { email } = req.params;
-            const { quotaThreshold, modelQuotaThresholds } = req.body;
+            const { quotaThreshold, modelQuotaThresholds, priority } = req.body;
 
             const { accounts, settings, activeIndex } = await loadAccounts(ACCOUNT_CONFIG_PATH);
             const account = accounts.find(a => a.email === email);
@@ -151,20 +186,32 @@ export function registerAccountRoutes(app, ctx) {
                 }
             }
 
+            // Validate and update priority (1-100 integer or null to clear)
+            if (priority !== undefined) {
+                if (priority === null) {
+                    delete account.priority;
+                } else if (typeof priority === 'number' && Number.isInteger(priority) && priority >= 1 && priority <= 100) {
+                    account.priority = priority;
+                } else {
+                    return res.status(400).json({ status: 'error', error: 'priority must be an integer between 1 and 100 or null' });
+                }
+            }
+
             await saveAccounts(ACCOUNT_CONFIG_PATH, accounts, settings, activeIndex);
 
             // Reload AccountManager to pick up changes
             await accountManager.reload();
 
-            logger.info(`[WebUI] Account ${email} thresholds updated`);
+            logger.info(`[WebUI] Account ${email} updated`);
 
             res.json({
                 status: 'ok',
-                message: `Account ${email} thresholds updated`,
+                message: `Account ${email} updated`,
                 account: {
                     email: account.email,
                     quotaThreshold: account.quotaThreshold,
-                    modelQuotaThresholds: account.modelQuotaThresholds || {}
+                    modelQuotaThresholds: account.modelQuotaThresholds || {},
+                    priority: account.priority ?? 50
                 }
             });
         } catch (error) {

@@ -2,7 +2,7 @@
  * Health & account-limits routes (moved verbatim from src/server.js).
  */
 
-import { getModelQuotas, getSubscriptionTier } from '../cloudcode/index.js';
+import { getModelQuotas, getDetailedAccountQuotas, getSubscriptionTier } from '../cloudcode/index.js';
 import { config } from '../config.js';
 import { formatDuration } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
@@ -156,7 +156,8 @@ export function registerHealthRoutes(app, ctx) {
                         const subscription = await getSubscriptionTier(token);
 
                         // Then fetch quotas with project ID for accurate quota info
-                        const quotas = await getModelQuotas(token, subscription.projectId);
+                        const quotaDetails = await getDetailedAccountQuotas(token, subscription.projectId);
+                        const quotas = quotaDetails.models;
 
                         // Update account object with fresh data
                         account.subscription = {
@@ -166,6 +167,7 @@ export function registerHealthRoutes(app, ctx) {
                         };
                         account.quota = {
                             models: quotas,
+                            quota_groups: quotaDetails.quota_groups || [],
                             lastChecked: Date.now()
                         };
 
@@ -178,7 +180,8 @@ export function registerHealthRoutes(app, ctx) {
                             email: account.email,
                             status: 'ok',
                             subscription: account.subscription,
-                            models: quotas
+                            models: quotas,
+                            quota_groups: quotaDetails.quota_groups || []
                         };
                     } catch (error) {
                         // Detect ToS ban from quota/subscription fetch and mark account invalid
@@ -377,6 +380,8 @@ export function registerHealthRoutes(app, ctx) {
                         modelQuotaThresholds: metadata.modelQuotaThresholds || {},
                         // Subscription data (new)
                         subscription: acc.subscription || metadata.subscription || { tier: 'unknown', projectId: null },
+                        priority: metadata.priority ?? 50,
+                        quota_groups: acc.quota_groups || metadata.quota?.quota_groups || [],
                         // Quota limits
                         limits: Object.fromEntries(
                             sortedModels.map(modelId => {
