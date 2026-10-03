@@ -1,0 +1,43 @@
+openspec/specs/detailed-quota/spec.md
+  15d360604b3b0166 1-41
+public/views/accounts.html
+  15d360604b3b0166 226-234,455,458-482,484-507,509-524,560-621
+src/cloudcode/index.js
+  15d360604b3b0166 15,20,28,31-32
+tests/test-detailed-quota.cjs
+  15d360604b3b0166 1-232
+src/account-manager/storage.js
+  15d360604b3b0166 41-46,148-149
+public/js/components/account-manager.js
+  15d360604b3b0166 16-22,74-75,198-202,204,208-244
+src/cloudcode/model-api.js
+  15d360604b3b0166 12,149-170,455-522
+src/constants.js
+  15d360604b3b0166 77,80-85
+src/server/routes-health.js
+  15d360604b3b0166 5,159-160,170,183-184,383-384
+src/webui/routes/accounts.js
+  15d360604b3b0166 8,48-51,55-82,85-88,147,189-199,205,209,213-214
+src/account-manager/index.js
+  15d360604b3b0166 481-484
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "2edb1de436be22af7581ca3bb3da531daeb3b421",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 838,
+      "total_deletions": 73,
+      "accepted_lines": 789,
+      "overriden_lines": 0
+    }
+  }
+}
