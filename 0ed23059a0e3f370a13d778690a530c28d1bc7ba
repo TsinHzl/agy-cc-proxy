@@ -1,0 +1,23 @@
+public/views/accounts.html
+  15d360604b3b0166 61-81,101-236,238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "0ed23059a0e3f370a13d778690a530c28d1bc7ba",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 159,
+      "total_deletions": 2,
+      "accepted_lines": 158,
+      "overriden_lines": 0
+    }
+  }
+}
