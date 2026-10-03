@@ -20,6 +20,14 @@ window.Components.accountManager = () => ({
     selectedAccountQuotaGroups: [],
     activeQuotaTab: 'detailed',
     savingPriority: false,
+    viewMode: localStorage.getItem('ag_accounts_view_mode') || 'grid',
+
+    setViewMode(mode) {
+        this.viewMode = mode;
+        try {
+            localStorage.setItem('ag_accounts_view_mode', mode);
+        } catch (e) { /* ignore */ }
+    },
 
     // Health Inspector (Developer Mode)
     healthData: {},
@@ -424,6 +432,181 @@ window.Components.accountManager = () => ({
             percent: Math.round(val * 100),
             model: bestModel
         };
+    },
+
+    /**
+     * Get quota items for Card view: all Claude models + 1 latest Gemini model
+     * @param {Object} account
+     * @returns {Array<Object>}
+     */
+    getCardQuotaModels(account) {
+        if (!account) return [];
+        const limits = account.limits || {};
+
+        const availableModelIds = new Set(Object.keys(limits));
+        const allKnownModels = Alpine.store('data')?.models || [];
+        allKnownModels.forEach(m => availableModelIds.add(m));
+
+        const getQuotaInfo = (modelId) => {
+            const l = limits[modelId];
+            let percent = null;
+            let resetTime = null;
+            if (l) {
+                if (l.remainingFraction !== null && l.remainingFraction !== undefined) {
+                    percent = Math.round(l.remainingFraction * 100);
+                } else if (l.resetTime) {
+                    percent = 0;
+                }
+                resetTime = l.resetTime || null;
+            }
+            return { percent, resetTime };
+        };
+
+        const formatModelName = (modelId) => {
+            const lower = modelId.toLowerCase();
+            if (lower.includes('sonnet')) {
+                if (lower.includes('4-6') || lower.includes('4.6')) return 'Claude Sonnet 4.6 (Think)';
+                if (lower.includes('3-7') || lower.includes('3.7')) return 'Claude Sonnet 3.7 (Think)';
+                if (lower.includes('3-5') || lower.includes('3.5')) return 'Claude Sonnet 3.5';
+                return 'Claude Sonnet';
+            }
+            if (lower.includes('opus')) {
+                if (lower.includes('4-6') || lower.includes('4.6')) return 'Claude Opus 4.6 (Think)';
+                if (lower.includes('4-5') || lower.includes('4.5')) return 'Claude Opus 4.5';
+                if (lower.includes('3')) return 'Claude Opus 3';
+                return 'Claude Opus (Think)';
+            }
+            if (lower.includes('haiku')) {
+                if (lower.includes('4-5') || lower.includes('4.5')) return 'Claude Haiku 4.5';
+                if (lower.includes('3-5') || lower.includes('3.5')) return 'Claude Haiku 3.5';
+                return 'Claude Haiku';
+            }
+            if (lower.includes('gemini')) {
+                const isFlash = lower.includes('flash');
+                const isAgent = lower.includes('agent');
+                let ver = '';
+                if (lower.includes('3.5')) ver = '3.5';
+                else if (lower.includes('3.1')) ver = '3.1';
+                else if (lower.includes('3') || lower.includes('3-')) ver = '3';
+                else if (lower.includes('2.5') || lower.includes('2-5')) ver = '2.5';
+
+                let tier = '';
+                if (lower.includes('high')) tier = ' (High)';
+                else if (lower.includes('preview')) tier = ' (Preview)';
+                else if (lower.includes('low')) tier = ' (Low)';
+
+                if (isAgent) return 'Gemini Pro Agent';
+                if (isFlash) return `Gemini ${ver ? ver + ' ' : ''}Flash${tier}`;
+                if (ver) return `Gemini ${ver} Pro${tier}`;
+                return 'Gemini Pro';
+            }
+            return modelId.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+        };
+
+        const getFamilyColor = (modelId, percent) => {
+            const lower = modelId.toLowerCase();
+            if (percent === 0) {
+                return {
+                    trackClass: 'bg-surface-3 text-ink-3 border-hairline',
+                    barClass: 'bg-transparent',
+                    isZero: true
+                };
+            }
+            if (lower.includes('opus')) {
+                return {
+                    trackClass: percent === 100
+                        ? 'bg-purple-500/15 border-purple-500/30 text-purple-700 dark:text-purple-300'
+                        : 'bg-surface-2 border-hairline text-ink',
+                    barClass: 'bg-gradient-to-r from-purple-500 to-indigo-600',
+                    isOpus: true
+                };
+            }
+            if (lower.includes('sonnet')) {
+                return {
+                    trackClass: percent === 100
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                        : 'bg-surface-2 border-hairline text-ink',
+                    barClass: 'bg-gradient-to-r from-amber-500 to-orange-500',
+                    isSonnet: true
+                };
+            }
+            if (lower.includes('haiku')) {
+                return {
+                    trackClass: percent === 100
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-surface-2 border-hairline text-ink',
+                    barClass: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+                    isHaiku: true
+                };
+            }
+            // Gemini
+            return {
+                trackClass: percent === 100
+                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-surface-2 border-hairline text-ink',
+                barClass: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+                isGemini: true
+            };
+        };
+
+        // All Claude models
+        const claudeModels = Array.from(availableModelIds)
+            .filter(id => id.toLowerCase().includes('claude'))
+            .sort((a, b) => {
+                const score = (id) => {
+                    const l = id.toLowerCase();
+                    if (l.includes('opus')) return 300;
+                    if (l.includes('sonnet')) return 200;
+                    if (l.includes('haiku')) return 100;
+                    return 0;
+                };
+                return score(b) - score(a);
+            });
+
+        // 1 Latest Gemini model
+        const geminiModels = Array.from(availableModelIds)
+            .filter(id => id.toLowerCase().includes('gemini'))
+            .sort((a, b) => {
+                const score = (id) => {
+                    const l = id.toLowerCase();
+                    let s = 0;
+                    if (l.includes('3.1')) s += 500;
+                    else if (l.includes('3')) s += 300;
+                    else if (l.includes('2.5')) s += 200;
+                    if (l.includes('high')) s += 50;
+                    if (l.includes('preview')) s += 40;
+                    if (l.includes('pro')) s += 30;
+                    return s;
+                };
+                return score(b) - score(a);
+            });
+
+        const selectedGemini = geminiModels.length > 0 ? [geminiModels[0]] : [];
+        const finalModelIds = [...claudeModels, ...selectedGemini];
+
+        return finalModelIds.map(modelId => {
+            const { percent, resetTime } = getQuotaInfo(modelId);
+            const displayName = formatModelName(modelId);
+            let countdown = null;
+            if (resetTime && (percent === null || percent < 100)) {
+                try {
+                    countdown = window.utils.formatTimeUntil(resetTime);
+                } catch (e) { /* ignore */ }
+            }
+
+            const effectivePercent = percent !== null ? percent : 100;
+            const colors = getFamilyColor(modelId, effectivePercent);
+
+            return {
+                id: modelId,
+                name: displayName,
+                percent: effectivePercent,
+                hasPercent: percent !== null,
+                resetTime,
+                countdown,
+                colors
+            };
+        });
     },
 
     /**
