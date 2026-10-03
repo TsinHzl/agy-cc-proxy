@@ -58,6 +58,27 @@
                 </svg>
                 <span x-text="$store.global.t('reload')">Reload</span>
             </button>
+            <!-- View Mode -->
+            <div x-show="$store.data.accounts.length > 0" class="flex h-8 items-center rounded-[7px] border border-hairline bg-surface-2 p-0.5"
+                 role="group" aria-label="Account view">
+                <button type="button" class="grid size-7 place-items-center rounded-[5px] transition-colors"
+                        :class="viewMode === 'grid' ? 'bg-surface text-brand shadow-hair' : 'text-ink-3 hover:text-ink'"
+                        :aria-pressed="viewMode === 'grid'" aria-label="Card view"
+                        @click="setViewMode('grid')" title="Card view">
+                    <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" />
+                    </svg>
+                </button>
+                <button type="button" class="grid size-7 place-items-center rounded-[5px] transition-colors"
+                        :class="viewMode === 'table' ? 'bg-surface text-brand shadow-hair' : 'text-ink-3 hover:text-ink'"
+                        :aria-pressed="viewMode === 'table'" aria-label="Table view"
+                        @click="setViewMode('table')" title="Table view">
+                    <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+
             <!-- Account Count Indicator -->
             <div class="flex items-center h-6 px-2 rounded-[6px] border border-hairline bg-surface-2"
                  :class="{ 'border-warn-line': $store.data.accounts.length >= $store.data.maxAccounts }">
@@ -77,8 +98,144 @@
         </div>
     </div>
 
+    <!-- Card View -->
+    <section x-show="viewMode === 'grid'" x-cloak>
+        <template x-if="$store.data.accounts.length === 0">
+            <div class="flex flex-col items-center gap-3 rounded-[11px] border border-hairline bg-surface px-3 py-14 shadow-panel">
+                <svg class="size-6 text-ink-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h3 class="text-[12.5px] font-medium text-ink-2" x-text="$store.global.t('noAccountsYet')">No Accounts Yet</h3>
+                <p class="max-w-md text-center text-[12.5px] leading-relaxed text-ink-3" x-text="$store.global.t('noAccountsDesc')">
+                    Get started by adding a Google account via OAuth, or use the CLI command to import credentials.
+                </p>
+                <button class="btn-action-primary btn-sm gap-2" onclick="document.getElementById('add_account_modal').showModal()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span x-text="$store.global.t('addFirstAccount')">Add Your First Account</span>
+                </button>
+            </div>
+        </template>
+
+        <template x-if="$store.data.accounts.length > 0 && filteredAccounts.length > 0">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <template x-for="acc in filteredAccounts" :key="acc.email">
+                    <article class="overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel transition-shadow hover:shadow-pop"
+                             :class="{ 'opacity-[.55]': acc.enabled === false }">
+                        <header class="flex items-start gap-3 border-b border-hairline px-4 py-3.5">
+                            <label class="relative mt-1 inline-flex h-[18px] w-8 shrink-0 cursor-pointer items-center rounded-[10px] transition-colors"
+                                   :class="acc.enabled !== false ? 'bg-brand' : 'bg-track'">
+                                <input type="checkbox" class="sr-only peer" :checked="acc.enabled !== false"
+                                       @change="toggleAccount(acc.email, $el.checked)">
+                                <span class="pointer-events-none ml-[2px] block size-3 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.28)] transition-transform peer-checked:translate-x-[14px]"></span>
+                            </label>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <div class="grid size-[26px] flex-none place-items-center rounded-[7px] text-[11px] font-semibold tracking-[-0.02em]"
+                                         :class="acc.status === 'ok' ? 'bg-ok-soft text-ok' : (acc.status === 'banned' ? 'bg-danger-soft text-danger' : 'bg-warn-soft text-warn')"
+                                         x-text="(acc.email[0] || '?').toUpperCase()"></div>
+                                    <span class="truncate text-[12.5px] font-semibold tracking-[-0.01em] text-ink"
+                                          x-text="formatEmail(Redact.email(acc.email))"
+                                          :title="Redact.email(acc.email)"></span>
+                                </div>
+                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <span :class="acc.status === 'ok' ? 'text-ok bg-ok-soft border-ok-line' : (acc.status === 'banned' ? 'text-danger bg-danger-soft border-danger-line' : 'text-warn bg-warn-soft border-warn-line')"
+                                          class="inline-flex h-5 items-center rounded-[6px] border px-[7px] text-[10px] font-bold uppercase"
+                                          x-text="acc.status.toUpperCase()"></span>
+                                    <span :class="{
+                                              'status-pill-ultra': acc.subscription?.tier === 'ultra',
+                                              'status-pill-pro': acc.subscription?.tier === 'pro',
+                                              'status-pill-free': !acc.subscription || acc.subscription.tier === 'free' || acc.subscription.tier === 'unknown'
+                                          }"
+                                          x-text="(acc.subscription?.tier || 'free').toUpperCase()"></span>
+                                    <span class="inline-flex h-5 items-center rounded-[6px] border border-hairline bg-surface-2 px-[7px] font-mono text-[10px] text-ink-3"
+                                          x-text="'P' + (acc.priority ?? 50)"></span>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div class="space-y-3 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3" x-text="$store.global.t('quota')">Quota</span>
+                                <button class="text-[10.5px] font-medium text-brand hover:text-brand-2" @click="openQuotaModal(acc)">
+                                    <span x-text="$store.global.t('details') || 'Details'">Details</span>
+                                </button>
+                            </div>
+                            <div class="space-y-2">
+                                <template x-for="quota in getCardQuotaModels(acc)" :key="quota.id">
+                                    <button type="button" class="block w-full rounded-[7px] border px-2.5 py-2 text-left transition-colors hover:border-brand-line"
+                                            :class="quota.colors.trackClass" @click="openQuotaModal(acc)">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="truncate text-[10.5px] font-medium" x-text="quota.name"></span>
+                                            <span class="shrink-0 font-mono text-[10.5px] tabular-nums" x-text="quota.hasPercent ? quota.percent + '%' : '-' "></span>
+                                        </div>
+                                        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full" :class="quota.colors.isZero ? 'bg-surface-3' : 'bg-black/10 dark:bg-white/10'">
+                                            <div class="h-full rounded-full transition-[width] duration-300" :class="quota.colors.barClass"
+                                                 :style="`width: ${quota.percent}%`"></div>
+                                        </div>
+                                        <div class="mt-1 min-h-[12px] font-mono text-[9px] text-ink-3" x-text="quota.countdown || ''"></div>
+                                    </button>
+                                </template>
+                            </div>
+                            <p x-show="getCardQuotaModels(acc).length === 0" class="py-3 text-center text-[11px] text-ink-3">-</p>
+                            <p x-show="acc.status === 'banned'" class="text-[10px] leading-tight text-danger" x-text="acc.error || 'Gemini disabled for ToS violation'"></p>
+                        </div>
+
+                        <footer class="flex items-center justify-end gap-1 border-t border-hairline bg-surface-2 px-3 py-2">
+                            <button x-show="acc.status === 'invalid'" class="inline-flex h-6 items-center rounded-[6px] border border-warn-line bg-warn-soft px-[7px] text-[10px] font-bold font-mono uppercase tracking-wider text-warn"
+                                    @click="fixAccount(acc.email)" x-text="$store.global.t('fix')">FIX</button>
+                            <a x-show="acc.status === 'banned'" href="mailto:gemini-code-assist-user-feedback@google.com"
+                               class="inline-flex h-6 items-center rounded-[6px] border border-danger-line bg-danger-soft px-[7px] text-[10px] font-bold font-mono uppercase tracking-wider text-danger">APPEAL</a>
+                            <button class="grid size-[28px] place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+                                    @click="openQuotaModal(acc)" title="Account Quotas & Details">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                            </button>
+                            <button class="grid size-[28px] place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+                                    @click="openThresholdModal(acc)" title="Account Settings">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c.94-1.543-.826-3.31-2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                            <span class="mx-1 h-4 w-px bg-hairline"></span>
+                            <button class="grid size-[28px] place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+                                    @click="refreshAccount(acc.email)" :disabled="refreshing" :title="$store.global.t('refreshData')">
+                                <svg class="w-4 h-4 transition-transform" :class="{ 'animate-spin': refreshing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                            <button class="grid size-[28px] place-items-center rounded-[6px] transition-colors"
+                                    :class="acc.source === 'database' ? 'cursor-not-allowed text-ink-3 opacity-40' : 'text-ink-3 hover:bg-danger-soft hover:text-danger'"
+                                    :disabled="acc.source === 'database'"
+                                    @click="acc.source !== 'database' && confirmDeleteAccount(acc.email)"
+                                    :title="acc.source === 'database' ? $store.global.t('cannotDeleteDatabase') : $store.global.t('delete')">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </footer>
+                    </article>
+                </template>
+            </div>
+        </template>
+
+        <template x-if="$store.data.accounts.length > 0 && filteredAccounts.length === 0">
+            <div class="flex flex-col items-center gap-3 rounded-[11px] border border-hairline bg-surface px-3 py-14 shadow-panel">
+                <svg class="size-6 text-ink-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <p class="text-[12.5px] text-ink-3" x-text="$store.global.t('noSearchResults')">No accounts match your search</p>
+                <button class="rounded-[6px] border border-hairline-2 bg-surface px-2.5 py-1 text-[11.5px] font-medium text-ink-2 shadow-hair transition-colors hover:bg-surface-2"
+                        @click="searchQuery = ''" x-text="$store.global.t('clearSearch')">Clear Search</button>
+            </div>
+        </template>
+    </section>
+
     <!-- Table Card（kiro2cc table-kit PANEL 规格） -->
-    <section class="overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
+    <section x-show="viewMode === 'table'" x-cloak class="overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
         <div class="max-h-[70vh] overflow-y-auto">
             <table class="w-full border-separate border-spacing-0">
             <thead x-show="$store.data.accounts.length > 0">
