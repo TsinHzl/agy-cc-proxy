@@ -1,0 +1,27 @@
+tests/test-account-quota-groups.cjs
+  15d360604b3b0166 111-129
+public/css/src/input.css
+  15d360604b3b0166 367-370
+public/views/accounts.html
+  15d360604b3b0166 340-342,524-526,697,736,738
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "ddeb747ea29dcb886a51fa6858a940e7374ab11c",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 41,
+      "total_deletions": 30,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    }
+  }
+}
