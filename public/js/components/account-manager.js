@@ -17,8 +17,6 @@ window.Components.accountManager = () => ({
     selectedAccountStatus: 'ok',
     selectedAccountError: '',
     selectedAccountPriority: 50,
-    selectedAccountQuotaGroups: [],
-    activeQuotaTab: 'detailed',
     savingPriority: false,
     viewMode: localStorage.getItem('ag_accounts_view_mode') || 'grid',
 
@@ -207,9 +205,7 @@ window.Components.accountManager = () => ({
         this.selectedAccountStatus = account.status || 'ok';
         this.selectedAccountError = account.error || account.invalidReason || '';
         this.selectedAccountPriority = account.priority ?? 50;
-        this.selectedAccountQuotaGroups = account.quota_groups || account.quota?.quota_groups || [];
         this.selectedAccountLimits = account.limits || {};
-        this.activeQuotaTab = (this.selectedAccountQuotaGroups && this.selectedAccountQuotaGroups.length > 0) ? 'detailed' : 'model';
         document.getElementById('quota_modal').showModal();
     },
 
