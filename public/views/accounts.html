@@ -337,9 +337,9 @@
                                     </div>
                                 </template>
                                 <template x-if="quota.percent !== null">
-                                    <div class="quota-bar justify-end"
-                                         :class="quota.percent > 60 ? 'quota-tier-safe' : (quota.percent > 30 ? 'quota-tier-mod' : (quota.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))">
-                                        <div :style="`width: ${quota.percent}%`"></div>
+                                    <div class="quota-bar justify-end">
+                                        <div :class="quota.percent > 60 ? 'quota-tier-safe' : (quota.percent > 30 ? 'quota-tier-mod' : (quota.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
+                                             :style="`width: ${quota.percent}%`"></div>
                                     </div>
                                 </template>
                                 <template x-if="quota.percent === null">
@@ -521,9 +521,9 @@
                                     </td>
                                     <td class="border-b border-hairline px-3 py-[9px]">
                                         <div class="flex items-center gap-2">
-                                            <div class="w-20 quota-bar"
-                                                 :class="acc.healthScore > 70 ? 'quota-tier-safe' : (acc.healthScore > 50 ? 'quota-tier-warn' : 'quota-tier-danger')">
-                                                <div :style="`width: ${acc.healthScore}%`"></div>
+                                            <div class="w-20 quota-bar">
+                                                <div :class="acc.healthScore > 70 ? 'quota-tier-safe' : (acc.healthScore > 50 ? 'quota-tier-warn' : 'quota-tier-danger')"
+                                                     :style="`width: ${acc.healthScore}%`"></div>
                                             </div>
                                             <span class="text-[11px] font-mono tabular-nums" :class="{
                                                 'text-ok': acc.healthScore > 70,
@@ -692,9 +692,9 @@
                             </div>
                         </div>
 
-                        <div class="w-full quota-bar mb-2"
-                             :class="limit.remainingFraction * 100 > 60 ? 'quota-tier-safe' : (limit.remainingFraction * 100 > 30 ? 'quota-tier-mod' : (limit.remainingFraction * 100 > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))">
+                        <div class="w-full quota-bar mb-2">
                             <div class="transition-all duration-500"
+                                 :class="limit.remainingFraction * 100 > 60 ? 'quota-tier-safe' : (limit.remainingFraction * 100 > 30 ? 'quota-tier-mod' : (limit.remainingFraction * 100 > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))"
                                  :style="`width: ${limit.remainingFraction * 100}%`">
                             </div>
                         </div>
@@ -733,9 +733,9 @@
                                               :class="bucket.percent === null ? 'quota-badge-mod' : (bucket.percent > 60 ? 'quota-badge-safe' : (bucket.percent > 30 ? 'quota-badge-mod' : (bucket.percent > 15 ? 'quota-badge-warn' : 'quota-badge-danger')))"
                                               x-text="bucket.percent === null ? '-' : bucket.percent + '%'"></span>
                                     </div>
-                                    <div class="quota-bar mb-3"
-                                         :class="bucket.percent === null ? 'quota-tier-mod' : (bucket.percent > 60 ? 'quota-tier-safe' : (bucket.percent > 30 ? 'quota-tier-mod' : (bucket.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))">
+                                    <div class="quota-bar mb-3">
                                         <div class="transition-all duration-500"
+                                             :class="bucket.percent === null ? 'quota-tier-mod' : (bucket.percent > 60 ? 'quota-tier-safe' : (bucket.percent > 30 ? 'quota-tier-mod' : (bucket.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))"
                                              :style="`width: ${bucket.percent || 0}%`"></div>
                                     </div>
                                     <div class="flex items-center gap-1.5 text-[11px] text-ink-3">
