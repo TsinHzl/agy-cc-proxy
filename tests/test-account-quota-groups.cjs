@@ -28,6 +28,23 @@ function assertJsonEqual(actual, expected) {
 
 function runTests() {
     const component = createAccountManager();
+    assert.equal(
+        component.getQuotaBarStyle(61),
+        'width: 61%; background-image: var(--quota-safe-grad)'
+    );
+    assert.equal(
+        component.getQuotaBarStyle(60),
+        'width: 60%; background-image: var(--quota-mod-grad)'
+    );
+    assert.equal(
+        component.getQuotaBarStyle(30),
+        'width: 30%; background-image: var(--quota-warn-grad)'
+    );
+    assert.equal(
+        component.getQuotaBarStyle(15),
+        'width: 15%; background-image: var(--quota-danger-grad)'
+    );
+
     component.openQuotaModal({
         email: 'quota@example.com',
         limits: {},
@@ -108,25 +125,11 @@ function runTests() {
     assert.match(template, /getDetailedQuotaGroups\(\)/);
     assert.match(template, /bucket\.label/);
     assert.match(template, /bucket\.resetTime/);
-    assert.match(template, /class="quota-bar justify-end"\s*>\s*<div\s+:class="quota\.percent > 60 \? 'quota-tier-safe'/);
-    assert.match(template, /class="w-20 quota-bar"\s*>\s*<div\s+:class="acc\.healthScore > 70 \? 'quota-tier-safe'/);
-    assert.match(template, /class="w-full quota-bar mb-2"\s*>\s*<div class="transition-all duration-500"\s+:class="limit\.remainingFraction \* 100 > 60 \? 'quota-tier-safe'/);
-    assert.match(template, /class="quota-bar mb-3"\s*>\s*<div class="transition-all duration-500"\s+:class="bucket\.percent === null \? 'quota-tier-mod'/);
-    assert.doesNotMatch(template, /class="quota-bar justify-end"\s+:class=/);
-    assert.doesNotMatch(template, /class="w-20 quota-bar"\s+:class=/);
-    assert.doesNotMatch(template, /class="w-full quota-bar mb-2"\s+:class=/);
-    assert.doesNotMatch(template, /class="quota-bar mb-3"\s+:class=/);
-
-    const quotaCss = fs.readFileSync(path.join(__dirname, '../public/css/src/input.css'), 'utf8');
-    assert.match(quotaCss, /\.quota-bar\s*\{[^}]*background:\s*var\(--track\)/s);
-    assert.match(quotaCss, /\.quota-tier-safe \{ background-image: var\(--quota-safe-grad\); \}/);
-    assert.match(quotaCss, /\.quota-tier-mod \{ background-image: var\(--quota-mod-grad\); \}/);
-    assert.match(quotaCss, /\.quota-tier-warn \{ background-image: var\(--quota-warn-grad\); \}/);
-    assert.match(quotaCss, /\.quota-tier-danger \{ background-image: var\(--quota-danger-grad\); \}/);
-    assert.doesNotMatch(quotaCss, /\.quota-tier-safe > div/);
-    assert.doesNotMatch(quotaCss, /\.quota-tier-mod > div/);
-    assert.doesNotMatch(quotaCss, /\.quota-tier-warn > div/);
-    assert.doesNotMatch(quotaCss, /\.quota-tier-danger > div/);
+    assert.match(template, /<div\s+:style="getQuotaBarStyle\(quota\.percent\)"\s*><\/div>/);
+    assert.match(template, /<div\s+:style="getQuotaBarStyle\(acc\.healthScore\)"\s*><\/div>/);
+    assert.match(template, /<div\s+class="transition-all duration-500"\s+:style="getQuotaBarStyle\(limit\.remainingFraction \* 100\)"\s*>/);
+    assert.match(template, /<div\s+class="transition-all duration-500"\s+:style="getQuotaBarStyle\(bucket\.percent \|\| 0\)"\s*>/);
+    assert.doesNotMatch(template, /quota-tier-(?:safe|mod|warn|danger)/);
 
     console.log('✓ Account detailed quota groups map Weekly and 5H buckets');
 }

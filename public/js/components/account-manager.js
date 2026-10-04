@@ -29,6 +29,20 @@ window.Components.accountManager = () => ({
         } catch (e) { /* ignore */ }
     },
 
+    getQuotaBarStyle(percent) {
+        const value = Number(percent);
+        const width = Number.isFinite(value)
+            ? Math.max(0, Math.min(100, value))
+            : 0;
+        const gradient = width > 60
+            ? '--quota-safe-grad'
+            : (width > 30
+                ? '--quota-mod-grad'
+                : (width > 15 ? '--quota-warn-grad' : '--quota-danger-grad'));
+
+        return `width: ${width}%; background-image: var(${gradient})`;
+    },
+
     // Health Inspector (Developer Mode)
     healthData: {},
     healthLoading: false,
