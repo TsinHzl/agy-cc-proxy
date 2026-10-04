@@ -489,7 +489,7 @@ export async function fetchUserQuotaSummary(token, projectId = null) {
             }
 
             const data = await response.json();
-            const rawGroups = data.quotaGroups || data.quota_groups || [];
+            const rawGroups = data.groups || data.quotaGroups || data.quota_groups || [];
             if (!Array.isArray(rawGroups)) {
                 logger.warn(`[CloudCode] retrieveUserQuotaSummary received non-array groups from ${endpoint}`);
                 continue;
@@ -504,6 +504,7 @@ export async function fetchUserQuotaSummary(token, projectId = null) {
                         const rawFraction = bucket?.remainingFraction ?? bucket?.remaining_fraction;
                         const resetTime = bucket?.resetTime || bucket?.reset_time || null;
                         return {
+                            bucket_id: bucket?.bucketId || bucket?.bucket_id || '',
                             window: bucket?.window || '',
                             remaining_fraction: rawFraction ?? (resetTime ? 0 : null),
                             reset_time: resetTime

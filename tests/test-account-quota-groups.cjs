@@ -36,7 +36,7 @@ function runTests() {
                 display_name: 'Gemini Models',
                 description: 'Gemini Flash, Gemini Pro',
                 buckets: [
-                    { window: '7d', remaining_fraction: 0.88, reset_time: '2026-10-08T09:22:04Z' },
+                    { bucket_id: 'gemini-weekly', window: 'weekly', remaining_fraction: 0.88, reset_time: '2026-10-08T09:22:04Z' },
                     { window: '5h', remaining_fraction: 1, reset_time: '2026-10-04T12:37:58Z' },
                     { window: '1d', remaining_fraction: 0.5, reset_time: null }
                 ]
@@ -45,7 +45,7 @@ function runTests() {
                 display_name: 'Claude and GPT models',
                 description: 'Claude Opus, Claude Sonnet, GPT-OSS',
                 buckets: [
-                    { window: '7d', remaining_fraction: 1, reset_time: '2026-10-11T09:20:52Z' },
+                    { bucket_id: '3p-weekly', window: 'weekly', remaining_fraction: 1, reset_time: '2026-10-11T09:20:52Z' },
                     { window: '5h', remaining_fraction: 1, reset_time: '2026-10-04T14:20:52Z' }
                 ]
             },

@@ -243,8 +243,12 @@ window.Components.accountManager = () => ({
                 name: section.name,
                 description: group?.description || '',
                 buckets: windows.map(window => {
-                    const bucket = buckets.find(item =>
-                        String(item?.window || '').toLowerCase() === window.apiWindow);
+                    const bucket = buckets.find(item => {
+                        const source = `${item?.window || ''} ${item?.bucket_id || item?.bucketId || ''}`.toLowerCase();
+                        return window.id === 'weekly'
+                            ? source.includes('weekly') || source.includes('7d')
+                            : source.includes('5h') || source.includes('hour');
+                    });
                     const fraction = bucket?.remaining_fraction;
 
                     return {

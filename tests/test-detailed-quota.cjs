@@ -45,16 +45,16 @@ async function runTests() {
         assertEqual(res2, [], 'Empty string token should return empty array');
     });
 
-    // Test 2: Normalization of camelCase quota groups
-    await test('Normalizes camelCase upstream quota payload structure', async () => {
+    // Test 2: Normalization of real retrieveUserQuotaSummary payload structure
+    await test('Normalizes groups payload and preserves bucket IDs', async () => {
         const rawResponse = {
-            quotaGroups: [
+            groups: [
                 {
-                    displayName: 'Claude Models',
+                    displayName: 'Claude and GPT models',
                     description: 'Quota for Claude 3.5 Sonnet and Haiku',
                     buckets: [
-                        { window: '5h', remainingFraction: 0.85, resetTime: '2026-10-03T18:00:00Z' },
-                        { window: '7d', remainingFraction: null, resetTime: null }
+                        { bucketId: '3p-weekly', window: 'weekly', remainingFraction: 0.85, resetTime: '2026-10-08T18:00:00Z' },
+                        { bucketId: '3p-5h', window: '5h', remainingFraction: 0.65, resetTime: '2026-10-03T18:00:00Z' }
                     ]
                 }
             ]
@@ -70,18 +70,20 @@ async function runTests() {
         try {
             const result = await fetchUserQuotaSummary('mock-valid-token');
             assertEqual(result.length, 1);
-            assertEqual(result[0].display_name, 'Claude Models');
+            assertEqual(result[0].display_name, 'Claude and GPT models');
             assertEqual(result[0].description, 'Quota for Claude 3.5 Sonnet and Haiku');
             assertEqual(result[0].buckets.length, 2);
             assertEqual(result[0].buckets[0], {
-                window: '5h',
+                bucket_id: '3p-weekly',
+                window: 'weekly',
                 remaining_fraction: 0.85,
-                reset_time: '2026-10-03T18:00:00Z'
+                reset_time: '2026-10-08T18:00:00Z'
             });
             assertEqual(result[0].buckets[1], {
-                window: '7d',
-                remaining_fraction: null,
-                reset_time: null
+                bucket_id: '3p-5h',
+                window: '5h',
+                remaining_fraction: 0.65,
+                reset_time: '2026-10-03T18:00:00Z'
             });
         } finally {
             globalThis.fetch = originalFetch;
