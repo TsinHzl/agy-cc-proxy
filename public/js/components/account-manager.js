@@ -577,7 +577,10 @@ window.Components.accountManager = () => ({
                 return score(b) - score(a);
             });
 
-        const selectedGemini = geminiModels.length > 0 ? [geminiModels[0]] : [];
+        const preferredGeminiModel = 'gemini-3.1-pro-high';
+        const selectedGemini = availableModelIds.has(preferredGeminiModel)
+            ? [preferredGeminiModel]
+            : (geminiModels.length > 0 ? [geminiModels[0]] : []);
         const finalModelIds = [...claudeModels, ...selectedGemini];
 
         return finalModelIds.map(modelId => {
