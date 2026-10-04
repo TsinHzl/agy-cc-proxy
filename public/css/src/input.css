@@ -364,9 +364,13 @@
   height: 100%;
   border-radius: 3px;
 }
-.quota-tier-safe   > div { background-image: var(--quota-safe-grad); }
-.quota-tier-mod    > div { background-image: var(--quota-mod-grad); }
-.quota-tier-warn   > div { background-image: var(--quota-warn-grad); }
+.quota-tier-safe,
+.quota-tier-safe > div { background-image: var(--quota-safe-grad); }
+.quota-tier-mod,
+.quota-tier-mod > div { background-image: var(--quota-mod-grad); }
+.quota-tier-warn,
+.quota-tier-warn > div { background-image: var(--quota-warn-grad); }
+.quota-tier-danger,
 .quota-tier-danger > div { background-image: var(--quota-danger-grad); }
 
 /* 保留旧类名：语义类已由四档渐变接管，webkit 原生 progress 元素同步映射 */

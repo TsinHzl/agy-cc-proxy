@@ -110,6 +110,8 @@ function runTests() {
     assert.match(template, /bucket\.resetTime/);
     assert.match(template, /class="quota-bar mb-3"\s+:class="bucket\.percent === null \? 'quota-tier-mod'/);
     assert.match(template, /class="w-full quota-bar mb-2"\s+:class="limit\.remainingFraction \* 100 > 60 \? 'quota-tier-safe'/);
+    const quotaCss = fs.readFileSync(path.join(__dirname, '../public/css/style.css'), 'utf8');
+    assert.match(quotaCss, /\.quota-tier-safe,\.quota-tier-safe>div\{background-image:var\(--quota-safe-grad\)\}/);
 
     console.log('✓ Account detailed quota groups map Weekly and 5H buckets');
 }
