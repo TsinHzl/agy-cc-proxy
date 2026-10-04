@@ -480,16 +480,16 @@ window.Components.accountManager = () => ({
             if (lower.includes('gemini')) {
                 const isFlash = lower.includes('flash');
                 const isAgent = lower.includes('agent');
-                let ver = '';
-                if (lower.includes('3.5')) ver = '3.5';
-                else if (lower.includes('3.1')) ver = '3.1';
-                else if (lower.includes('3') || lower.includes('3-')) ver = '3';
-                else if (lower.includes('2.5') || lower.includes('2-5')) ver = '2.5';
+                const versionMatch = lower.match(/gemini[-_](\d+)(?:[._-](\d+))?/);
+                const ver = versionMatch
+                    ? `${versionMatch[1]}${versionMatch[2] ? `.${versionMatch[2]}` : ''}`
+                    : '';
 
                 let tier = '';
                 if (lower.includes('high')) tier = ' (High)';
                 else if (lower.includes('preview')) tier = ' (Preview)';
                 else if (lower.includes('low')) tier = ' (Low)';
+                else if (lower.includes('tiered')) tier = ' (Tiered)';
 
                 if (isAgent) return 'Gemini Pro Agent';
                 if (isFlash) return `Gemini ${ver ? ver + ' ' : ''}Flash${tier}`;
@@ -560,27 +560,31 @@ window.Components.accountManager = () => ({
             });
 
         // 1 Latest Gemini model
+        const getGeminiVersion = (modelId) => {
+            const versionMatch = modelId.toLowerCase().match(/gemini[-_](\d+)(?:[._-](\d+))?/);
+            return {
+                major: Number(versionMatch?.[1] || 0),
+                minor: Number(versionMatch?.[2] || 0)
+            };
+        };
         const geminiModels = Array.from(availableModelIds)
             .filter(id => id.toLowerCase().includes('gemini'))
             .sort((a, b) => {
                 const score = (id) => {
                     const l = id.toLowerCase();
-                    let s = 0;
-                    if (l.includes('3.1')) s += 500;
-                    else if (l.includes('3')) s += 300;
-                    else if (l.includes('2.5')) s += 200;
-                    if (l.includes('high')) s += 50;
-                    if (l.includes('preview')) s += 40;
-                    if (l.includes('pro')) s += 30;
-                    return s;
+                    if (l.includes('high')) return 50;
+                    if (l.includes('preview')) return 40;
+                    if (l.includes('pro')) return 30;
+                    return 0;
                 };
+                const aVersion = getGeminiVersion(a);
+                const bVersion = getGeminiVersion(b);
+                if (aVersion.major !== bVersion.major) return bVersion.major - aVersion.major;
+                if (aVersion.minor !== bVersion.minor) return bVersion.minor - aVersion.minor;
                 return score(b) - score(a);
             });
 
-        const preferredGeminiModel = 'gemini-3.1-pro-high';
-        const selectedGemini = availableModelIds.has(preferredGeminiModel)
-            ? [preferredGeminiModel]
-            : (geminiModels.length > 0 ? [geminiModels[0]] : []);
+        const selectedGemini = geminiModels.length > 0 ? [geminiModels[0]] : [];
         const finalModelIds = [...claudeModels, ...selectedGemini];
 
         return finalModelIds.map(modelId => {
