@@ -108,6 +108,7 @@ function runTests() {
     assert.match(template, /getDetailedQuotaGroups\(\)/);
     assert.match(template, /bucket\.label/);
     assert.match(template, /bucket\.resetTime/);
+    assert.match(template, /class="quota-bar mb-3"\s+:class="bucket\.percent === null \? 'quota-tier-mod'/);
 
     console.log('✓ Account detailed quota groups map Weekly and 5H buckets');
 }

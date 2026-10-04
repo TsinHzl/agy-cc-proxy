@@ -733,9 +733,9 @@
                                               :class="bucket.percent === null ? 'quota-badge-mod' : (bucket.percent > 60 ? 'quota-badge-safe' : (bucket.percent > 30 ? 'quota-badge-mod' : (bucket.percent > 15 ? 'quota-badge-warn' : 'quota-badge-danger')))"
                                               x-text="bucket.percent === null ? '-' : bucket.percent + '%'"></span>
                                     </div>
-                                    <div class="quota-bar mb-3">
+                                    <div class="quota-bar mb-3"
+                                         :class="bucket.percent === null ? 'quota-tier-mod' : (bucket.percent > 60 ? 'quota-tier-safe' : (bucket.percent > 30 ? 'quota-tier-mod' : (bucket.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))">
                                         <div class="transition-all duration-500"
-                                             :class="bucket.percent === null ? 'quota-tier-mod' : (bucket.percent > 60 ? 'quota-tier-safe' : (bucket.percent > 30 ? 'quota-tier-mod' : (bucket.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))"
                                              :style="`width: ${bucket.percent || 0}%`"></div>
                                     </div>
                                     <div class="flex items-center gap-1.5 text-[11px] text-ink-3">
