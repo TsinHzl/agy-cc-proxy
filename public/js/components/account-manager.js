@@ -17,6 +17,8 @@ window.Components.accountManager = () => ({
     selectedAccountStatus: 'ok',
     selectedAccountError: '',
     selectedAccountPriority: 50,
+    selectedAccountQuotaGroups: [],
+    activeQuotaTab: 'detailed',
     savingPriority: false,
     viewMode: localStorage.getItem('ag_accounts_view_mode') || 'grid',
 
@@ -205,8 +207,56 @@ window.Components.accountManager = () => ({
         this.selectedAccountStatus = account.status || 'ok';
         this.selectedAccountError = account.error || account.invalidReason || '';
         this.selectedAccountPriority = account.priority ?? 50;
+        const quotaGroups = Array.isArray(account.quota_groups)
+            ? account.quota_groups
+            : (Array.isArray(account.quota?.quota_groups) ? account.quota.quota_groups : []);
+        this.selectedAccountQuotaGroups = quotaGroups;
         this.selectedAccountLimits = account.limits || {};
+        this.activeQuotaTab = quotaGroups.length > 0 ? 'detailed' : 'model';
         document.getElementById('quota_modal').showModal();
+    },
+
+    getDetailedQuotaGroups() {
+        const groups = Array.isArray(this.selectedAccountQuotaGroups)
+            ? this.selectedAccountQuotaGroups
+            : [];
+        const sections = [
+            { id: 'gemini', name: 'Gemini Models', matches: name => name.includes('gemini') },
+            {
+                id: 'claude-gpt',
+                name: 'Claude and GPT models',
+                matches: name => name.includes('claude') || name.includes('gpt')
+            }
+        ];
+        const windows = [
+            { id: 'weekly', apiWindow: '7d', label: 'WEEKLY' },
+            { id: 'five-hour', apiWindow: '5h', label: '5H' }
+        ];
+
+        return sections.map(section => {
+            const group = groups.find(item =>
+                section.matches(String(item?.display_name || '').toLowerCase()));
+            const buckets = Array.isArray(group?.buckets) ? group.buckets : [];
+
+            return {
+                id: section.id,
+                name: section.name,
+                description: group?.description || '',
+                buckets: windows.map(window => {
+                    const bucket = buckets.find(item =>
+                        String(item?.window || '').toLowerCase() === window.apiWindow);
+                    const fraction = bucket?.remaining_fraction;
+
+                    return {
+                        ...window,
+                        percent: typeof fraction === 'number'
+                            ? Math.round(Math.min(1, Math.max(0, fraction)) * 100)
+                            : null,
+                        resetTime: bucket?.reset_time || null
+                    };
+                })
+            };
+        });
     },
 
     async saveAccountPriority() {
@@ -591,7 +641,7 @@ window.Components.accountManager = () => ({
             const { percent, resetTime } = getQuotaInfo(modelId);
             const displayName = formatModelName(modelId);
             let countdown = null;
-            if (resetTime && (percent === null || percent < 100)) {
+            if (resetTime) {
                 try {
                     countdown = window.utils.formatTimeUntil(resetTime);
                 } catch (e) { /* ignore */ }

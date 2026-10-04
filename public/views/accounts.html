@@ -663,8 +663,24 @@
                 </div>
             </div>
 
-            <!-- Model Quota -->
-            <div class="mt-4 grid grid-cols-1 gap-3 overflow-y-auto max-h-[50vh] pr-2 custom-scrollbar">
+            <!-- Quota Tabs -->
+            <div class="mt-4 flex gap-2 border-b border-hairline">
+                <button type="button" class="border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+                        :class="activeQuotaTab === 'model' ? 'border-brand text-brand' : 'border-transparent text-ink-3 hover:text-ink'"
+                        :aria-pressed="activeQuotaTab === 'model'"
+                        @click="activeQuotaTab = 'model'">
+                    Model Quota
+                </button>
+                <button type="button" class="border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+                        :class="activeQuotaTab === 'detailed' ? 'border-brand text-brand' : 'border-transparent text-ink-3 hover:text-ink'"
+                        :aria-pressed="activeQuotaTab === 'detailed'"
+                        @click="activeQuotaTab = 'detailed'">
+                    Detailed Quota
+                </button>
+            </div>
+
+            <!-- Tab: Model Quota -->
+            <div x-show="activeQuotaTab === 'model'" class="mt-4 grid grid-cols-1 gap-3 overflow-y-auto max-h-[50vh] pr-2 custom-scrollbar">
                 <template x-for="(limit, modelId) in selectedAccountLimits" :key="modelId">
                     <div class="p-3 bg-surface-2 border border-hairline rounded-[9px]">
                         <div class="flex justify-between items-center mb-2">
@@ -700,6 +716,41 @@
                 </template>
             </div>
 
+            <!-- Tab: Detailed Quota -->
+            <div x-show="activeQuotaTab === 'detailed'" class="mt-4 max-h-[50vh] space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+                <template x-for="group in getDetailedQuotaGroups()" :key="group.id">
+                    <section class="rounded-[10px] border border-brand-line bg-surface-2 p-4">
+                        <header class="mb-4 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                            <h4 class="font-mono text-base font-semibold text-brand" x-text="group.name"></h4>
+                            <p class="font-mono text-xs text-ink-3" x-show="group.description" x-text="group.description"></p>
+                        </header>
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <template x-for="bucket in group.buckets" :key="bucket.id">
+                                <article class="rounded-[9px] border border-hairline bg-surface p-3 shadow-hair">
+                                    <div class="mb-2 flex items-center justify-between gap-3">
+                                        <span class="text-xs font-bold uppercase tracking-[0.08em] text-ink-2" x-text="bucket.label"></span>
+                                        <span class="quota-badge font-mono"
+                                              :class="bucket.percent === null ? 'quota-badge-mod' : (bucket.percent > 60 ? 'quota-badge-safe' : (bucket.percent > 30 ? 'quota-badge-mod' : (bucket.percent > 15 ? 'quota-badge-warn' : 'quota-badge-danger')))"
+                                              x-text="bucket.percent === null ? '-' : bucket.percent + '%'"></span>
+                                    </div>
+                                    <div class="quota-bar mb-3">
+                                        <div class="transition-all duration-500"
+                                             :class="bucket.percent === null ? 'quota-tier-mod' : (bucket.percent > 60 ? 'quota-tier-safe' : (bucket.percent > 30 ? 'quota-tier-mod' : (bucket.percent > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))"
+                                             :style="`width: ${bucket.percent || 0}%`"></div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-[11px] text-ink-3">
+                                        <svg class="size-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span class="font-mono truncate"
+                                              x-text="bucket.resetTime ? new Date(bucket.resetTime).toLocaleString() : '-'"></span>
+                                    </div>
+                                </article>
+                            </template>
+                        </div>
+                    </section>
+                </template>
+            </div>
 
             <div class="modal-action">
                 <form method="dialog">
