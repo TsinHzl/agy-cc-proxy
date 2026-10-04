@@ -109,6 +109,7 @@ function runTests() {
     assert.match(template, /bucket\.label/);
     assert.match(template, /bucket\.resetTime/);
     assert.match(template, /class="quota-bar mb-3"\s+:class="bucket\.percent === null \? 'quota-tier-mod'/);
+    assert.match(template, /class="w-full quota-bar mb-2"\s+:class="limit\.remainingFraction \* 100 > 60 \? 'quota-tier-safe'/);
 
     console.log('✓ Account detailed quota groups map Weekly and 5H buckets');
 }

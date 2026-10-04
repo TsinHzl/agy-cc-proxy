@@ -692,9 +692,9 @@
                             </div>
                         </div>
 
-                        <div class="w-full quota-bar mb-2">
+                        <div class="w-full quota-bar mb-2"
+                             :class="limit.remainingFraction * 100 > 60 ? 'quota-tier-safe' : (limit.remainingFraction * 100 > 30 ? 'quota-tier-mod' : (limit.remainingFraction * 100 > 15 ? 'quota-tier-warn' : 'quota-tier-danger')))">
                             <div class="transition-all duration-500"
-                                 :class="limit.remainingFraction * 100 > 60 ? 'quota-tier-safe' : (limit.remainingFraction * 100 > 30 ? 'quota-tier-mod' : (limit.remainingFraction * 100 > 15 ? 'quota-tier-warn' : 'quota-tier-danger'))"
                                  :style="`width: ${limit.remainingFraction * 100}%`">
                             </div>
                         </div>
