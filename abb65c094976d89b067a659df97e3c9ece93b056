@@ -1,0 +1,29 @@
+tests/test-account-quota-groups.cjs
+  15d360604b3b0166 39,48
+src/cloudcode/model-api.js
+  15d360604b3b0166 492,507
+public/js/components/account-manager.js
+  15d360604b3b0166 246-251
+tests/test-detailed-quota.cjs
+  15d360604b3b0166 48-49,51,53,56-57,73,77-78,80,83-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "abb65c094976d89b067a659df97e3c9ece93b056",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 17,
+      "accepted_lines": 24,
+      "overriden_lines": 0
+    }
+  }
+}
