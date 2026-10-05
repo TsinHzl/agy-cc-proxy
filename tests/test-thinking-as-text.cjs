@@ -57,19 +57,36 @@ const script = `
             index: 1,
             delta: {
                 type: 'text_delta',
-                text: '> ' + DIM + '💭 Thinking' + RESET + '\\n'
+                text: '> ' + DIM + '💭 Thinking' + RESET
             }
         },
-        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '> ' + DIM + 'line one' + RESET + '\\n' } },
-        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '> ' + DIM + RESET + '\\n' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n> ' + DIM + 'line one' + RESET } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n> ' + DIM + RESET } },
         {
             type: 'content_block_delta',
             index: 1,
-            delta: { type: 'text_delta', text: '> ' + DIM + 'line two' + RESET + '\\n' }
+            delta: { type: 'text_delta', text: '\\n> ' + DIM + 'line two' + RESET }
         },
         { type: 'content_block_stop', index: 1 }
     ]);
     assert.equal(transformedThinking.some((event) => event.delta?.type === 'thinking_delta' || event.delta?.type === 'signature_delta'), false);
+
+    // Whitespace-only thinking: streaming matches kiro's char-machine (empty
+    // quote lines are emitted), while non-streaming rendering collapses to
+    // header-only; old-format (trailing newline) history blocks may leave one
+    // blank line behind after stripping.
+    const whitespaceRendered = (await collectEvents(asAsyncEvents([
+        { type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'thinking_delta', thinking: '\\n\\n' } },
+        { type: 'content_block_stop', index: 1 }
+    ]), { thinkingAsText: true, isClaudeCode: true }))
+        .map((event) => event.delta?.text || '').join('');
+    assert.equal(whitespaceRendered, '> ' + DIM + '💭 Thinking' + RESET + '\\n> ' + DIM + RESET + '\\n> ' + DIM + RESET);
+    const oldFormatRendered = '> ' + DIM + '💭 Thinking' + RESET + '\\n> ' + DIM + 'old line' + RESET + '\\n';
+    const oldFormatHistory = [
+        { role: 'assistant', content: [{ type: 'text', text: oldFormatRendered + 'tail' }] }
+    ];
+    assert.deepEqual(stripThinkingTextHistory(oldFormatHistory)[0].content, [{ type: 'text', text: '\\ntail' }]);
 
     const surroundingEvents = [
         { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },

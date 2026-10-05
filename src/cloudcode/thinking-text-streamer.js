@@ -10,8 +10,12 @@ const ANSI_RESET = '\x1b[0m';
 // individually and resets before every newline so styling never spans lines.
 const THINKING_TEXT_HEADER_LINE = `> ${ANSI_DIM}💭 Thinking${ANSI_RESET}`;
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Each quoted line is `\n> ...RESET` — matching up to RESET (rather than to
+// end-of-line) keeps trailing text on the same line (e.g. the final answer)
+// from being swallowed when the block no longer ends with a newline.
+const THINKING_TEXT_LINE_RE = `\\n> [^\\n]*?${escapeRegExp(ANSI_RESET)}`;
 const THINKING_TEXT_BLOCK_RE = new RegExp(
-    `${escapeRegExp(THINKING_TEXT_HEADER_LINE)}\\n(?:> [^\\n]*(?:\\n|$))*`,
+    `${escapeRegExp(THINKING_TEXT_HEADER_LINE)}(?:${THINKING_TEXT_LINE_RE})*`,
     'g'
 );
 // Legacy marker-prefixed format (whole-block dim + invisible marker) kept so
@@ -31,13 +35,16 @@ export function formatThinkingAsText(thinking) {
 
     const quotedThinking = thinking
         .replace(/\r\n?/g, '\n')
+        // Trailing newlines would render an empty blockquote line (the stray
+        // extra segment of the left quote bar), so drop them.
+        .replace(/\n+$/, '')
         .split('\n')
         .map((line) => `> ${ANSI_DIM}${line}${ANSI_RESET}`)
         .join('\n');
-    // Trailing newline keeps the rendered block self-terminating so
-    // THINKING_TEXT_BLOCK_RE strips it completely even when concatenated
-    // with following text (lines otherwise lack the final '\n').
-    return `${THINKING_TEXT_HEADER_LINE}\n${quotedThinking}\n`;
+    // No trailing newline: a block-ending '\n' makes Claude Code render one
+    // blockquote line more than the text (matches kiro2cc-proxy thinking_text.rs).
+    if (!quotedThinking) return THINKING_TEXT_HEADER_LINE;
+    return `${THINKING_TEXT_HEADER_LINE}\n${quotedThinking}`;
 }
 
 export function stripThinkingTextHistory(messages) {
@@ -132,11 +139,12 @@ export async function* transformThinkingAsTextEvents(events, options) {
             }
             if (block.firstChunk) {
                 block.firstChunk = false;
-                yield textDeltaEvent(block.index, `${THINKING_TEXT_HEADER_LINE}\n`);
+                yield textDeltaEvent(block.index, THINKING_TEXT_HEADER_LINE);
             }
-            // Dim wraps each line only — reset before the newline so styling
-            // never spans lines (matches kiro2cc-proxy thinking_text.rs).
-            yield textDeltaEvent(block.index, `> ${ANSI_DIM}${line}${ANSI_RESET}\n`);
+            // Newline leads the next line instead of trailing the previous one,
+            // so the block never ends with '\n' (an extra empty blockquote line
+            // rendering as a stray segment of the left quote bar) — kiro style.
+            yield textDeltaEvent(block.index, `\n> ${ANSI_DIM}${line}${ANSI_RESET}`);
         }
     };
 
@@ -182,10 +190,10 @@ export async function* transformThinkingAsTextEvents(events, options) {
 
                 if (isMatchingStop(event, pendingBlock.index)) {
                     if (!pendingBlock.discarded && pendingBlock.thinking) {
-                        // Every emitted line already ends with ANSI_RESET, so
-                        // no extra reset is needed at block close (kiro style).
+                        // Newline leads, never trails: the block ends right
+                        // after ANSI_RESET with no extra empty quote line.
                         const tail = pendingBlock.pending
-                            ? `${pendingBlock.firstChunk ? `${THINKING_TEXT_HEADER_LINE}\n` : ''}> ${ANSI_DIM}${pendingBlock.pending.replace(/\r$/, '')}${ANSI_RESET}\n`
+                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_HEADER_LINE : ''}\n> ${ANSI_DIM}${pendingBlock.pending.replace(/\r$/, '')}${ANSI_RESET}`
                             : '';
                         pendingBlock.firstChunk = false;
                         if (!pendingBlock.started) {
