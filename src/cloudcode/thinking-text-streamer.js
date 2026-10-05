@@ -127,7 +127,7 @@ export async function* transformThinkingAsTextEvents(events, options) {
                 }
 
                 if (isMatchingStop(event, pendingBlock.index)) {
-                    const formattedThinking = !pendingBlock.discarded && pendingBlock.signature
+                    const formattedThinking = !pendingBlock.discarded && pendingBlock.thinking
                         ? formatThinkingAsText(pendingBlock.thinking)
                         : null;
                     if (formattedThinking) {

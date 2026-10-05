@@ -25,7 +25,12 @@ import { iterateSSEJsonEvents } from './sse-event-aggregator.js';
  * @param {string} originalModel - The original model name
  * @yields {Object} Anthropic-format SSE events
  */
-export async function* streamSSEResponse(response, originalModel, isCompactFlag = false) {
+export async function* streamSSEResponse(
+    response,
+    originalModel,
+    isCompactFlag = false,
+    { emitUnsignedThinking = false } = {}
+) {
     const messageId = `msg_${crypto.randomBytes(16).toString('hex')}`;
     let hasEmittedStart = false;
     let blockIndex = 0;
@@ -38,7 +43,8 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
         pendingThinkingText = '';
         pendingThinkingSignature = '';
 
-        if (!text || signature.length < MIN_SIGNATURE_LENGTH) {
+        const hasValidSignature = signature.length >= MIN_SIGNATURE_LENGTH;
+        if (!text || (!hasValidSignature && !emitUnsignedThinking)) {
             return [];
         }
 
@@ -49,7 +55,9 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
             currentBlockType = null;
         }
 
-        cacheThinkingSignature(signature, getModelFamily(originalModel));
+        if (hasValidSignature) {
+            cacheThinkingSignature(signature, getModelFamily(originalModel));
+        }
         const index = blockIndex++;
         events.push(
             {
@@ -61,14 +69,16 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                 type: 'content_block_delta',
                 index,
                 delta: { type: 'thinking_delta', thinking: text }
-            },
-            {
+            }
+        );
+        if (hasValidSignature) {
+            events.push({
                 type: 'content_block_delta',
                 index,
                 delta: { type: 'signature_delta', signature }
-            },
-            { type: 'content_block_stop', index }
-        );
+            });
+        }
+        events.push({ type: 'content_block_stop', index });
         return events;
     };
     let inputTokens = 0;

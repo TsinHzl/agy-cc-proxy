@@ -34,9 +34,9 @@ async function runTests() {
             failed++;
         }
     };
-    const collect = async (chunks) => {
+    const collect = async (chunks, options) => {
         const events = [];
-        for await (const event of streamSSEResponse(new MockResponse(chunks), 'claude-sonnet-4-6')) events.push(event);
+        for await (const event of streamSSEResponse(new MockResponse(chunks), 'claude-sonnet-4-6', false, options)) events.push(event);
         return events;
     };
 
@@ -88,10 +88,19 @@ async function runTests() {
         assertEqual(events.find((event) => event.delta?.type === 'signature_delta')?.delta.signature, lastSignature);
     });
 
-    await test('丢弃没有有效签名的流式 thought 块', async () => {
+    await test('默认路径丢弃没有有效签名的流式 thought 块', async () => {
         const chunks = [`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ thought: true, text: 'unsigned' }, { text: 'answer' }] }, finishReason: 'STOP' }] })}\n\n`];
         const events = await collect(chunks);
         assertEqual(events.filter((event) => event.delta?.type === 'thinking_delta').length, 0);
+        assertEqual(events.find((event) => event.delta?.type === 'text_delta')?.delta.text, 'answer');
+    });
+
+    await test('文本化路径保留真实无签名 thought 且不输出 signature delta', async () => {
+        const chunks = [`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ thought: true, text: 'unsigned' }, { text: 'answer' }] }, finishReason: 'STOP' }] })}\n\n`];
+        const events = await collect(chunks, { emitUnsignedThinking: true });
+        assertEqual(events.filter((event) => event.delta?.type === 'thinking_delta').length, 1);
+        assertEqual(events.find((event) => event.delta?.type === 'thinking_delta')?.delta.thinking, 'unsigned');
+        assertEqual(events.filter((event) => event.delta?.type === 'signature_delta').length, 0);
         assertEqual(events.find((event) => event.delta?.type === 'text_delta')?.delta.text, 'answer');
     });
 

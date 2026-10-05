@@ -24,7 +24,10 @@ import { logger } from '../utils/logger.js';
 import { parseResetTime } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
 import { streamSSEResponse } from './sse-streamer.js';
-import { transformThinkingAsTextEvents } from './thinking-text-streamer.js';
+import {
+    shouldRenderThinkingAsText,
+    transformThinkingAsTextEvents
+} from './thinking-text-streamer.js';
 import { isCompactRequest } from '../format/request-converter.js';
 import { getFallbackModel } from '../fallback-config.js';
 import {
@@ -370,10 +373,13 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                     // tool_use or thinking-only outputs (those are legitimate).
                     const isCompact = isCompactRequest(anthropicRequest.system, anthropicRequest.messages, anthropicRequest);
 
+                    const renderThinkingAsText = shouldRenderThinkingAsText(streamOptions);
                     for (let emptyRetries = 0; emptyRetries <= MAX_EMPTY_RESPONSE_RETRIES; emptyRetries++) {
                         try {
                             yield* transformThinkingAsTextEvents(
-                                streamSSEResponse(currentResponse, anthropicRequest.model, isCompact),
+                                streamSSEResponse(currentResponse, anthropicRequest.model, isCompact, {
+                                    emitUnsignedThinking: renderThinkingAsText
+                                }),
                                 streamOptions
                             );
                             logger.debug('[CloudCode] Stream completed');

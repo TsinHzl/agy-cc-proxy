@@ -9,6 +9,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const configUrl = pathToFileURL(path.join(repoRoot, 'src/config.js')).href;
 const configRouteUrl = pathToFileURL(path.join(repoRoot, 'src/webui/routes/config.js')).href;
 const messagesRoutePath = path.join(repoRoot, 'src/server/routes-messages.js');
+const streamingHandlerPath = path.join(repoRoot, 'src/cloudcode/streaming-handler.js');
 const requestConverterPath = path.join(repoRoot, 'src/format/request-converter.js');
 const thinkingTextStreamerUrl = pathToFileURL(path.join(repoRoot, 'src/cloudcode/thinking-text-streamer.js')).href;
 const serverConfigPath = path.join(repoRoot, 'public/js/components/server-config.js');
@@ -75,7 +76,7 @@ const script = `
     assert.deepEqual(transformedSurrounding.filter((event) => event.index !== 1), surroundingEvents.filter((event) => event.index !== 1));
 
     const unsignedEvents = thinkingEvents.filter((event) => event.delta?.type !== 'signature_delta');
-    assert.deepEqual(await collectEvents(asAsyncEvents(unsignedEvents), { thinkingAsText: true, isClaudeCode: true }), []);
+    assert.deepEqual(await collectEvents(asAsyncEvents(unsignedEvents), { thinkingAsText: true, isClaudeCode: true }), transformedThinking);
     assert.deepEqual(await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: false, isClaudeCode: true }), thinkingEvents);
     assert.deepEqual(await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: true, isClaudeCode: false }), thinkingEvents);
 
@@ -157,6 +158,8 @@ const script = `
     assert.equal(claudeCodeUserAgent.test('claude-code 2.1.0'), true);
     assert.ok(messagesRouteSource.includes('thinkingAsText: config.thinkingAsText === true'));
     assert.ok(messagesRouteSource.includes("isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))"));
+    const streamingHandlerSource = fs.readFileSync(${JSON.stringify(streamingHandlerPath)}, 'utf8');
+    assert.ok(streamingHandlerSource.includes('emitUnsignedThinking: renderThinkingAsText'));
 
     const routes = new Map();
     registerConfigRoutes({
