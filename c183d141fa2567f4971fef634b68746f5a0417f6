@@ -1,0 +1,61 @@
+tests/test-thinking-as-text.cjs
+  15d360604b3b0166 1-267
+src/cloudcode/streaming-handler.js
+  15d360604b3b0166 27,57,98,375-378,554
+src/cloudcode/thinking-text-streamer.js
+  15d360604b3b0166 1-174
+public/js/translations/zh.js
+  15d360604b3b0166 270-273
+src/webui/routes/config.js
+  15d360604b3b0166 39-49,70-72
+public/js/translations/en.js
+  15d360604b3b0166 270-273
+public/js/translations/id.js
+  15d360604b3b0166 303-306
+public/views/settings.html
+  15d360604b3b0166 1591-1612
+config.example.json
+  15d360604b3b0166 33-34
+src/cloudcode/sse-parser.js
+  15d360604b3b0166 15,17,35,42-43,53-55,73,117-118
+src/config.js
+  15d360604b3b0166 90
+public/js/translations/pt.js
+  15d360604b3b0166 248-251
+src/server/routes-messages.js
+  15d360604b3b0166 16-19,144-147
+src/cloudcode/sse-streamer.js
+  15d360604b3b0166 19,33-73,98-100,185-187,189-190,192-194,196,352-353
+public/js/translations/tr.js
+  15d360604b3b0166 252-255
+src/cloudcode/sse-event-aggregator.js
+  15d360604b3b0166 1-62
+public/js/components/server-config.js
+  15d360604b3b0166 195-219
+src/format/response-converter.js
+  15d360604b3b0166 49-53,56-57,59-74,135-136
+tests/test-sse-thinking.cjs
+  15d360604b3b0166 1-155
+src/format/request-converter.js
+  15d360604b3b0166 120,170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "c183d141fa2567f4971fef634b68746f5a0417f6",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 1022,
+      "total_deletions": 236,
+      "accepted_lines": 926,
+      "overriden_lines": 0
+    }
+  }
+}
