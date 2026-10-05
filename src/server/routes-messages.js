@@ -244,7 +244,9 @@ export function registerMessagesRoutes(app, ctx) {
             } else {
                 // Handle non-streaming response
                 const nonStreamStartTime = Date.now();
-                const response = await sendMessage(request, accountManager, fallbackEnabled, { allowedEmails: getAllowedAccounts(req._apiKeyId) });
+                const response = await sendMessage(request, accountManager, fallbackEnabled, { allowedEmails: getAllowedAccounts(req._apiKeyId) }, {
+                    emitUnsignedThinking: config.thinkingAsText === true && isClaudeCodeUserAgent(req.get('user-agent'))
+                });
                 res.json(response);
 
                 // Record usage for non-streaming request

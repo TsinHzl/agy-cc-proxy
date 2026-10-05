@@ -52,7 +52,7 @@ import {
  * @returns {Promise<Object>} Anthropic-format response object
  * @throws {Error} If max retries exceeded or no accounts available
  */
-export async function sendMessage(anthropicRequest, accountManager, fallbackEnabled = false, accountFilter = null) {
+export async function sendMessage(anthropicRequest, accountManager, fallbackEnabled = false, accountFilter = null, { emitUnsignedThinking = false } = {}) {
     const model = anthropicRequest.model;
     const isThinking = isThinkingModel(model);
     // API key account binding: restrict selection to these account emails (null = unrestricted)
@@ -94,7 +94,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                         if (fallbackModel) {
                             logger.warn(`[CloudCode] All accounts exhausted for ${model} (${formatDuration(minWaitMs)} wait). Attempting fallback to ${fallbackModel}`);
                             const fallbackRequest = { ...anthropicRequest, model: fallbackModel };
-                            return await sendMessage(fallbackRequest, accountManager, false, accountFilter);
+                            return await sendMessage(fallbackRequest, accountManager, false, accountFilter, { emitUnsignedThinking });
                         }
                     }
                     throw new Error(
@@ -341,7 +341,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
 
                     // For thinking models, parse SSE and accumulate all parts
                     if (isThinking) {
-                        const result = await parseThinkingSSEResponse(response, anthropicRequest.model);
+                        const result = await parseThinkingSSEResponse(response, anthropicRequest.model, { emitUnsignedThinking });
                         // Clear rate limit state on success
                         clearRateLimitState(account.email, model);
                         clearModelProbe(model);
@@ -457,7 +457,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
         if (fallbackModel) {
             logger.warn(`[CloudCode] All retries exhausted for ${model}. Attempting fallback to ${fallbackModel}`);
             const fallbackRequest = { ...anthropicRequest, model: fallbackModel };
-            return await sendMessage(fallbackRequest, accountManager, false, accountFilter);
+            return await sendMessage(fallbackRequest, accountManager, false, accountFilter, { emitUnsignedThinking });
         }
     }
 

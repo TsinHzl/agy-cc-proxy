@@ -21,9 +21,12 @@ import { iterateSSEJsonEvents } from './sse-event-aggregator.js';
  *
  * @param {Response} response - The HTTP response with SSE body
  * @param {string} originalModel - The original model name
+ * @param {Object} [options]
+ * @param {boolean} [options.emitUnsignedThinking=false] - Keep thought text without a valid
+ *   signature (thinkingAsText mode) instead of silently dropping it
  * @returns {Promise<Object>} Anthropic-format response object
  */
-export async function parseThinkingSSEResponse(response, originalModel) {
+export async function parseThinkingSSEResponse(response, originalModel, { emitUnsignedThinking = false } = {}) {
     let accumulatedThinkingText = '';
     let accumulatedThinkingSignature = '';
     let accumulatedText = '';
@@ -32,12 +35,19 @@ export async function parseThinkingSSEResponse(response, originalModel) {
     let finishReason = 'STOP';
 
     const flushThinking = () => {
-        if (accumulatedThinkingText && accumulatedThinkingSignature.length >= MIN_SIGNATURE_LENGTH) {
-            finalParts.push({
-                thought: true,
-                text: accumulatedThinkingText,
-                thoughtSignature: accumulatedThinkingSignature
-            });
+        if (accumulatedThinkingText) {
+            if (accumulatedThinkingSignature.length >= MIN_SIGNATURE_LENGTH) {
+                finalParts.push({
+                    thought: true,
+                    text: accumulatedThinkingText,
+                    thoughtSignature: accumulatedThinkingSignature
+                });
+            } else if (emitUnsignedThinking) {
+                // thinkingAsText mode: keep the thought text even without a valid
+                // signature — convertGoogleToAnthropic emits an unsigned thinking
+                // block for transformThinkingAsTextEvents to render as text.
+                finalParts.push({ thought: true, text: accumulatedThinkingText });
+            }
         }
         accumulatedThinkingText = '';
         accumulatedThinkingSignature = '';
@@ -134,5 +144,5 @@ export async function parseThinkingSSEResponse(response, originalModel) {
         logger.debug('[CloudCode] Thinking signature length:', thinkingPart?.thoughtSignature?.length || 0);
     }
 
-    return convertGoogleToAnthropic(accumulatedResponse, originalModel);
+    return convertGoogleToAnthropic(accumulatedResponse, originalModel, { emitUnsignedThinking });
 }

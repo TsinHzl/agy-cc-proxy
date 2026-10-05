@@ -154,6 +154,41 @@ async function runTests() {
         assertEqual(parsed.content.find((part) => part.text === 'answer')?.text, 'answer');
     });
 
+    await test('非流式文本化路径保留无签名 thought 且不输出签名', async () => {
+        const payload = JSON.stringify({
+            candidates: [{
+                content: {
+                    parts: [
+                        { thought: true, text: 'unsigned thought' },
+                        { text: 'answer' }
+                    ]
+                }
+            }]
+        });
+        const parsed = await parseThinkingSSEResponse(new MockResponse([`data: ${payload}\n\n`]), 'claude-sonnet-4-6', { emitUnsignedThinking: true });
+        assertEqual(parsed.content.filter((part) => part.type === 'thinking').length, 1);
+        assertEqual(parsed.content.find((part) => part.type === 'thinking')?.thinking, 'unsigned thought');
+        assertEqual(parsed.content.find((part) => part.type === 'thinking')?.signature, '');
+        assertEqual(parsed.content.find((part) => part.text === 'answer')?.text, 'answer');
+    });
+
+    await test('通用响应转换器 emitUnsignedThinking 输出无签名 thinking 块', async () => {
+        const response = convertGoogleToAnthropic({
+            candidates: [{
+                content: {
+                    parts: [
+                        { thought: true, text: 'unsigned thought' },
+                        { text: 'answer' }
+                    ]
+                }
+            }]
+        }, 'claude-sonnet-4-6', { emitUnsignedThinking: true });
+        assertEqual(response.content.filter((part) => part.type === 'thinking').length, 1);
+        assertEqual(response.content.find((part) => part.type === 'thinking')?.thinking, 'unsigned thought');
+        assertEqual(response.content.find((part) => part.type === 'thinking')?.signature, '');
+        assertEqual(response.content.find((part) => part.text === 'answer')?.text, 'answer');
+    });
+
     console.log(`Results: ${passed} passed, ${failed} failed`);
     process.exit(failed ? 1 : 0);
 }

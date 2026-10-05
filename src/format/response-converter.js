@@ -13,9 +13,12 @@ import { isWebSearchResult, buildWebSearchBlocks, extractSearchQuery, extractGro
  *
  * @param {Object} googleResponse - Google format response (the inner response object)
  * @param {string} model - The model name used
+ * @param {Object} [options]
+ * @param {boolean} [options.emitUnsignedThinking=false] - Keep thought text without a valid
+ *   signature (thinkingAsText mode) instead of silently dropping it
  * @returns {Object} Anthropic format response
  */
-export function convertGoogleToAnthropic(googleResponse, model) {
+export function convertGoogleToAnthropic(googleResponse, model, { emitUnsignedThinking = false } = {}) {
     // Handle the response wrapper
     const response = googleResponse.response || googleResponse;
 
@@ -49,13 +52,23 @@ export function convertGoogleToAnthropic(googleResponse, model) {
     let accumulatedThinkingText = '';
     let accumulatedThinkingSignature = '';
     const flushThinking = () => {
-        if (accumulatedThinkingText && accumulatedThinkingSignature.length >= MIN_SIGNATURE_LENGTH) {
-            cacheThinkingSignature(accumulatedThinkingSignature, getModelFamily(model));
-            anthropicContent.push({
-                type: 'thinking',
-                thinking: accumulatedThinkingText,
-                signature: accumulatedThinkingSignature
-            });
+        if (accumulatedThinkingText) {
+            if (accumulatedThinkingSignature.length >= MIN_SIGNATURE_LENGTH) {
+                cacheThinkingSignature(accumulatedThinkingSignature, getModelFamily(model));
+                anthropicContent.push({
+                    type: 'thinking',
+                    thinking: accumulatedThinkingText,
+                    signature: accumulatedThinkingSignature
+                });
+            } else if (emitUnsignedThinking) {
+                // thinkingAsText mode: keep the thought text even without a valid
+                // signature — transformThinkingAsTextEvents renders it as text.
+                anthropicContent.push({
+                    type: 'thinking',
+                    thinking: accumulatedThinkingText,
+                    signature: ''
+                });
+            }
         }
         accumulatedThinkingText = '';
         accumulatedThinkingSignature = '';
