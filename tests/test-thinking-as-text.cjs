@@ -48,6 +48,8 @@ const script = `
         { type: 'content_block_stop', index: 1 }
     ];
     const transformedThinking = await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: true, isClaudeCode: true });
+    const DIM = String.fromCharCode(27) + '[2m';
+    const RESET = String.fromCharCode(27) + '[0m';
     assert.deepEqual(transformedThinking, [
         { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } },
         {
@@ -55,14 +57,15 @@ const script = `
             index: 1,
             delta: {
                 type: 'text_delta',
-                text: String.fromCharCode(27) + '[2m> 💭 Thinking⁣agy-thinking-text-v1⁣> line one\\n'
+                text: '> ' + DIM + '💭 Thinking' + RESET + '\\n'
             }
         },
-        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '> \\n' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '> ' + DIM + 'line one' + RESET + '\\n' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '> ' + DIM + RESET + '\\n' } },
         {
             type: 'content_block_delta',
             index: 1,
-            delta: { type: 'text_delta', text: '> line two\\n' + String.fromCharCode(27) + '[0m' }
+            delta: { type: 'text_delta', text: '> ' + DIM + 'line two' + RESET + '\\n' }
         },
         { type: 'content_block_stop', index: 1 }
     ]);
@@ -138,14 +141,16 @@ const script = `
     assert.deepEqual(await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: true, isClaudeCode: true }), transformedThinking);
 
     const renderedThinking = transformedThinking.map((event) => event.delta?.text || '').join('');
+    const legacyRendered = String.fromCharCode(27) + '[2m> 💭 Thinking⁣agy-thinking-text-v1⁣\\n> legacy line\\n' + String.fromCharCode(27) + '[0m';
     const history = [
-        { role: 'assistant', content: [{ type: 'text', text: renderedThinking }, { type: 'text', text: renderedThinking + 'final answer' }, { type: 'thinking', thinking: 'native', signature: validSignature }] },
+        { role: 'assistant', content: [{ type: 'text', text: renderedThinking }, { type: 'text', text: renderedThinking + 'final answer' }, { type: 'text', text: legacyRendered + 'kept legacy tail' }, { type: 'thinking', thinking: 'native', signature: validSignature }] },
         { role: 'user', content: [{ type: 'text', text: renderedThinking }] },
         { role: 'assistant', content: [{ type: 'text', text: '> ordinary quote' }] }
     ];
     const cleanedHistory = stripThinkingTextHistory(history);
     assert.deepEqual(cleanedHistory[0].content, [
         { type: 'text', text: 'final answer' },
+        { type: 'text', text: 'kept legacy tail' },
         { type: 'thinking', thinking: 'native', signature: validSignature }
     ]);
     assert.deepEqual(cleanedHistory[1], history[1]);

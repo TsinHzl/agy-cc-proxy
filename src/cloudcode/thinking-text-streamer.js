@@ -6,11 +6,19 @@ export const MAX_THINKING_TEXT_RESPONSE_BYTES = 1024 * 1024;
 
 const ANSI_DIM = '\x1b[2m';
 const ANSI_RESET = '\x1b[0m';
-const THINKING_TEXT_MARKER = '⁣agy-thinking-text-v1⁣';
-const THINKING_TEXT_PREFIX = `${ANSI_DIM}> 💭 Thinking${THINKING_TEXT_MARKER}`;
+// Style matches kiro2cc-proxy thinking_text.rs: dim wraps each line
+// individually and resets before every newline so styling never spans lines.
+const THINKING_TEXT_HEADER_LINE = `> ${ANSI_DIM}💭 Thinking${ANSI_RESET}`;
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const THINKING_TEXT_BLOCK_RE = new RegExp(
-    `${escapeRegExp(THINKING_TEXT_PREFIX)}\\n?(?:> [^\\r\\n]*(?:\\r?\\n|(?=${escapeRegExp(ANSI_RESET)})))*${escapeRegExp(ANSI_RESET)}`,
+    `${escapeRegExp(THINKING_TEXT_HEADER_LINE)}\\n(?:> [^\\n]*(?:\\n|$))*`,
+    'g'
+);
+// Legacy marker-prefixed format (whole-block dim + invisible marker) kept so
+// history rendered by older versions is still stripped from conversations.
+const LEGACY_THINKING_TEXT_PREFIX = `${ANSI_DIM}> 💭 Thinking⁣agy-thinking-text-v1⁣`;
+const LEGACY_THINKING_TEXT_BLOCK_RE = new RegExp(
+    `${escapeRegExp(LEGACY_THINKING_TEXT_PREFIX)}\\n?(?:> [^\\r\\n]*(?:\\r?\\n|(?=${escapeRegExp(ANSI_RESET)})))*${escapeRegExp(ANSI_RESET)}`,
     'g'
 );
 
@@ -24,9 +32,12 @@ export function formatThinkingAsText(thinking) {
     const quotedThinking = thinking
         .replace(/\r\n?/g, '\n')
         .split('\n')
-        .map((line) => `> ${line}`)
+        .map((line) => `> ${ANSI_DIM}${line}${ANSI_RESET}`)
         .join('\n');
-    return `${THINKING_TEXT_PREFIX}\n${quotedThinking}${ANSI_RESET}`;
+    // Trailing newline keeps the rendered block self-terminating so
+    // THINKING_TEXT_BLOCK_RE strips it completely even when concatenated
+    // with following text (lines otherwise lack the final '\n').
+    return `${THINKING_TEXT_HEADER_LINE}\n${quotedThinking}\n`;
 }
 
 export function stripThinkingTextHistory(messages) {
@@ -36,14 +47,21 @@ export function stripThinkingTextHistory(messages) {
         if (message?.role !== 'assistant') return message;
 
         if (typeof message.content === 'string') {
-            return { ...message, content: message.content.replace(THINKING_TEXT_BLOCK_RE, '') };
+            return {
+                ...message,
+                content: message.content
+                    .replace(THINKING_TEXT_BLOCK_RE, '')
+                    .replace(LEGACY_THINKING_TEXT_BLOCK_RE, '')
+            };
         }
 
         if (!Array.isArray(message.content)) return message;
 
         const content = message.content.flatMap((block) => {
             if (block?.type !== 'text' || typeof block.text !== 'string') return [block];
-            const text = block.text.replace(THINKING_TEXT_BLOCK_RE, '');
+            const text = block.text
+                .replace(THINKING_TEXT_BLOCK_RE, '')
+                .replace(LEGACY_THINKING_TEXT_BLOCK_RE, '');
             return text ? [{ ...block, text }] : [];
         });
         return { ...message, content };
@@ -112,9 +130,13 @@ export async function* transformThinkingAsTextEvents(events, options) {
                     content_block: { type: 'text', text: '' }
                 };
             }
-            const prefix = block.firstChunk ? THINKING_TEXT_PREFIX : '';
-            block.firstChunk = false;
-            yield textDeltaEvent(block.index, `${prefix}> ${line}\n`);
+            if (block.firstChunk) {
+                block.firstChunk = false;
+                yield textDeltaEvent(block.index, `${THINKING_TEXT_HEADER_LINE}\n`);
+            }
+            // Dim wraps each line only — reset before the newline so styling
+            // never spans lines (matches kiro2cc-proxy thinking_text.rs).
+            yield textDeltaEvent(block.index, `> ${ANSI_DIM}${line}${ANSI_RESET}\n`);
         }
     };
 
@@ -160,12 +182,12 @@ export async function* transformThinkingAsTextEvents(events, options) {
 
                 if (isMatchingStop(event, pendingBlock.index)) {
                     if (!pendingBlock.discarded && pendingBlock.thinking) {
-                        // Emit the trailing (still incomplete) line, then the ANSI reset.
-                        // A single-line thinking (no newline seen) still carries the prefix
-                        // here so THINKING_TEXT_BLOCK_RE can strip it from history.
+                        // Every emitted line already ends with ANSI_RESET, so
+                        // no extra reset is needed at block close (kiro style).
                         const tail = pendingBlock.pending
-                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_PREFIX : ''}> ${pendingBlock.pending.replace(/\r$/, '')}\n`
+                            ? `${pendingBlock.firstChunk ? `${THINKING_TEXT_HEADER_LINE}\n` : ''}> ${ANSI_DIM}${pendingBlock.pending.replace(/\r$/, '')}${ANSI_RESET}\n`
                             : '';
+                        pendingBlock.firstChunk = false;
                         if (!pendingBlock.started) {
                             yield {
                                 type: 'content_block_start',
@@ -174,12 +196,11 @@ export async function* transformThinkingAsTextEvents(events, options) {
                             };
                             pendingBlock.started = true;
                         }
-                        yield textDeltaEvent(pendingBlock.index, `${tail}${ANSI_RESET}`);
+                        if (tail) yield textDeltaEvent(pendingBlock.index, tail);
                         yield event;
                     } else if (pendingBlock.started) {
                         // Partially streamed block got discarded (block/response limit) —
-                        // it must still be closed with a reset and its stop event.
-                        yield textDeltaEvent(pendingBlock.index, ANSI_RESET);
+                        // lines already end with resets; just close with its stop event.
                         yield event;
                     }
                     pendingBlock = null;
