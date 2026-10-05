@@ -39,6 +39,8 @@ export function formatThinkingAsText(thinking) {
         // extra segment of the left quote bar), so drop them.
         .replace(/\n+$/, '')
         .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line)
         .map((line) => `> ${ANSI_DIM}${line}${ANSI_RESET}`)
         .join('\n');
     // No trailing newline: a block-ending '\n' makes Claude Code render one
@@ -127,8 +129,11 @@ export async function* transformThinkingAsTextEvents(events, options) {
     const flushCompleteLines = function* (block) {
         let newlineIndex;
         while ((newlineIndex = block.pending.indexOf('\n')) !== -1) {
-            const line = block.pending.slice(0, newlineIndex).replace(/\r$/, '');
+            const line = block.pending.slice(0, newlineIndex).replace(/\r$/, '').trim();
             block.pending = block.pending.slice(newlineIndex + 1);
+            // Skip blank lines: an empty quote line renders as a stray extra
+            // segment of the left blockquote bar in Claude Code.
+            if (!line) continue;
             if (!block.started) {
                 block.started = true;
                 yield {
@@ -190,22 +195,32 @@ export async function* transformThinkingAsTextEvents(events, options) {
 
                 if (isMatchingStop(event, pendingBlock.index)) {
                     if (!pendingBlock.discarded && pendingBlock.thinking) {
-                        // Newline leads, never trails: the block ends right
-                        // after ANSI_RESET with no extra empty quote line.
-                        const tail = pendingBlock.pending
-                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_HEADER_LINE : ''}\n> ${ANSI_DIM}${pendingBlock.pending.replace(/\r$/, '')}${ANSI_RESET}`
+                        // Newline leads, never trails; blank lines are skipped so
+                        // the block ends right after ANSI_RESET with no extra
+                        // empty quote line.
+                        const lastLine = pendingBlock.pending.replace(/\r$/, '').trim();
+                        const tail = lastLine
+                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_HEADER_LINE : ''}\n> ${ANSI_DIM}${lastLine}${ANSI_RESET}`
                             : '';
-                        pendingBlock.firstChunk = false;
-                        if (!pendingBlock.started) {
-                            yield {
-                                type: 'content_block_start',
-                                index: pendingBlock.index,
-                                content_block: { type: 'text', text: '' }
-                            };
-                            pendingBlock.started = true;
+                        // Whitespace-only block with nothing emitted: skip the
+                        // stop event too, so the client never sees an orphan
+                        // content_block_stop without its content_block_start.
+                        // Whitespace-only block with nothing emitted: skip the
+                        // stop event too, so the client never sees an orphan
+                        // content_block_stop without its content_block_start.
+                        if (pendingBlock.started || tail) {
+                            pendingBlock.firstChunk = false;
+                            if (!pendingBlock.started) {
+                                yield {
+                                    type: 'content_block_start',
+                                    index: pendingBlock.index,
+                                    content_block: { type: 'text', text: '' }
+                                };
+                                pendingBlock.started = true;
+                            }
+                            if (tail) yield textDeltaEvent(pendingBlock.index, tail);
+                            yield event;
                         }
-                        if (tail) yield textDeltaEvent(pendingBlock.index, tail);
-                        yield event;
                     } else if (pendingBlock.started) {
                         // Partially streamed block got discarded (block/response limit) —
                         // lines already end with resets; just close with its stop event.
