@@ -1,0 +1,27 @@
+tests/test-count-tokens.cjs
+  15d360604b3b0166 1-150
+src/server/routes-misc.js
+  15d360604b3b0166 13-65,142-144,147-168,170-178
+src/format/request-converter.js
+  15d360604b3b0166 288,476-477
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "40daa85de40f394de6d7db30cb63a122abeac298",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 246,
+      "total_deletions": 16,
+      "accepted_lines": 240,
+      "overriden_lines": 0
+    }
+  }
+}
