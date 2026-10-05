@@ -10,7 +10,7 @@ const THINKING_TEXT_MARKER = '⁣agy-thinking-text-v1⁣';
 const THINKING_TEXT_PREFIX = `${ANSI_DIM}> 💭 Thinking${THINKING_TEXT_MARKER}`;
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const THINKING_TEXT_BLOCK_RE = new RegExp(
-    `${escapeRegExp(THINKING_TEXT_PREFIX)}\\n(?:> [^\\r\\n]*(?:\\r?\\n|(?=${escapeRegExp(ANSI_RESET)})))*${escapeRegExp(ANSI_RESET)}`,
+    `${escapeRegExp(THINKING_TEXT_PREFIX)}\\n?(?:> [^\\r\\n]*(?:\\r?\\n|(?=${escapeRegExp(ANSI_RESET)})))*${escapeRegExp(ANSI_RESET)}`,
     'g'
 );
 
@@ -89,10 +89,40 @@ export async function* transformThinkingAsTextEvents(events, options) {
     let responseThinkingBytes = 0;
     let responseLimitExceeded = false;
 
+    const textDeltaEvent = (index, text) => ({
+        type: 'content_block_delta',
+        index,
+        delta: { type: 'text_delta', text }
+    });
+
+    // Emit buffered complete lines as they arrive so the thinking text streams
+    // out incrementally instead of appearing all at once at content_block_stop.
+    // The content_block_start is emitted lazily with the first line so deltas
+    // never precede their block start.
+    const flushCompleteLines = function* (block) {
+        let newlineIndex;
+        while ((newlineIndex = block.pending.indexOf('\n')) !== -1) {
+            const line = block.pending.slice(0, newlineIndex).replace(/\r$/, '');
+            block.pending = block.pending.slice(newlineIndex + 1);
+            if (!block.started) {
+                block.started = true;
+                yield {
+                    type: 'content_block_start',
+                    index: block.index,
+                    content_block: { type: 'text', text: '' }
+                };
+            }
+            const prefix = block.firstChunk ? THINKING_TEXT_PREFIX : '';
+            block.firstChunk = false;
+            yield textDeltaEvent(block.index, `${prefix}> ${line}\n`);
+        }
+    };
+
     const discardPendingBlock = (reason) => {
         if (!pendingBlock || pendingBlock.discarded) return;
         logger.warn(`[CloudCode] Dropping thinking text block index=${pendingBlock.index} reason=${reason} blockBytes=${pendingBlock.bytes} responseBytes=${responseThinkingBytes}`);
         pendingBlock.thinking = '';
+        pendingBlock.pending = '';
         pendingBlock.discarded = true;
     };
 
@@ -112,6 +142,8 @@ export async function* transformThinkingAsTextEvents(events, options) {
                     } else if (!pendingBlock.discarded) {
                         pendingBlock.thinking += thinkingDelta;
                         pendingBlock.bytes += deltaBytes;
+                        pendingBlock.pending += thinkingDelta;
+                        yield* flushCompleteLines(pendingBlock);
                         if (responseThinkingBytes === MAX_THINKING_TEXT_RESPONSE_BYTES) {
                             responseLimitExceeded = true;
                         }
@@ -127,20 +159,27 @@ export async function* transformThinkingAsTextEvents(events, options) {
                 }
 
                 if (isMatchingStop(event, pendingBlock.index)) {
-                    const formattedThinking = !pendingBlock.discarded && pendingBlock.thinking
-                        ? formatThinkingAsText(pendingBlock.thinking)
-                        : null;
-                    if (formattedThinking) {
-                        yield {
-                            type: 'content_block_start',
-                            index: pendingBlock.index,
-                            content_block: { type: 'text', text: '' }
-                        };
-                        yield {
-                            type: 'content_block_delta',
-                            index: pendingBlock.index,
-                            delta: { type: 'text_delta', text: formattedThinking }
-                        };
+                    if (!pendingBlock.discarded && pendingBlock.thinking) {
+                        // Emit the trailing (still incomplete) line, then the ANSI reset.
+                        // A single-line thinking (no newline seen) still carries the prefix
+                        // here so THINKING_TEXT_BLOCK_RE can strip it from history.
+                        const tail = pendingBlock.pending
+                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_PREFIX : ''}> ${pendingBlock.pending.replace(/\r$/, '')}\n`
+                            : '';
+                        if (!pendingBlock.started) {
+                            yield {
+                                type: 'content_block_start',
+                                index: pendingBlock.index,
+                                content_block: { type: 'text', text: '' }
+                            };
+                            pendingBlock.started = true;
+                        }
+                        yield textDeltaEvent(pendingBlock.index, `${tail}${ANSI_RESET}`);
+                        yield event;
+                    } else if (pendingBlock.started) {
+                        // Partially streamed block got discarded (block/response limit) —
+                        // it must still be closed with a reset and its stop event.
+                        yield textDeltaEvent(pendingBlock.index, ANSI_RESET);
                         yield event;
                     }
                     pendingBlock = null;
@@ -154,6 +193,9 @@ export async function* transformThinkingAsTextEvents(events, options) {
                 pendingBlock = {
                     index: event.index,
                     thinking: '',
+                    pending: '',
+                    firstChunk: true,
+                    started: false,
                     signature: '',
                     bytes: 0,
                     discarded: responseLimitExceeded

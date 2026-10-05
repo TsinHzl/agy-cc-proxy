@@ -55,8 +55,14 @@ const script = `
             index: 1,
             delta: {
                 type: 'text_delta',
-                text: String.fromCharCode(27) + '[2m> 💭 Thinking⁣agy-thinking-text-v1⁣\\n> line one\\n> \\n> line two' + String.fromCharCode(27) + '[0m'
+                text: String.fromCharCode(27) + '[2m> 💭 Thinking⁣agy-thinking-text-v1⁣> line one\\n'
             }
+        },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '> \\n' } },
+        {
+            type: 'content_block_delta',
+            index: 1,
+            delta: { type: 'text_delta', text: '> line two\\n' + String.fromCharCode(27) + '[0m' }
         },
         { type: 'content_block_stop', index: 1 }
     ]);
@@ -131,7 +137,7 @@ const script = `
     await assert.rejects(() => collectEvents(failingEvents(), { thinkingAsText: true, isClaudeCode: true }), /stream interrupted/);
     assert.deepEqual(await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: true, isClaudeCode: true }), transformedThinking);
 
-    const renderedThinking = transformedThinking[1].delta.text;
+    const renderedThinking = transformedThinking.map((event) => event.delta?.text || '').join('');
     const history = [
         { role: 'assistant', content: [{ type: 'text', text: renderedThinking }, { type: 'text', text: renderedThinking + 'final answer' }, { type: 'thinking', thinking: 'native', signature: validSignature }] },
         { role: 'user', content: [{ type: 'text', text: renderedThinking }] },
