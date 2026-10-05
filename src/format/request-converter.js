@@ -285,8 +285,7 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
     const googleRequest = {
         contents: [],
-        generationConfig: {},
-        tools: []
+        generationConfig: {}
     };
 
     // Handle system instruction
@@ -474,6 +473,8 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     // Claude Code's compaction explicitly requires TEXT ONLY without tool calls.
     // Stripping tools prevents the model from emitting tool_use during compaction.
     if (!isCompact && tools && tools.length > 0) {
+        googleRequest.tools = [];
+
         // Claude Code's web search is an Anthropic "server tool" (type: "server",
         // name web_search/webSearch). It is NOT a callable function declaration —
         // it represents a grounding capability that the model triggers. Emitting it
