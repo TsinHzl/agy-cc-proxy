@@ -12,7 +12,9 @@ import {
     extractSearchQuery,
     extractGroundingContexts
 } from '../format/search-blocks.js';
+import { MIN_SIGNATURE_LENGTH } from '../constants.js';
 import { logger } from '../utils/logger.js';
+import { iterateSSEJsonEvents } from './sse-event-aggregator.js';
 
 /**
  * Parse SSE response for thinking models and accumulate all parts
@@ -30,15 +32,15 @@ export async function parseThinkingSSEResponse(response, originalModel) {
     let finishReason = 'STOP';
 
     const flushThinking = () => {
-        if (accumulatedThinkingText) {
+        if (accumulatedThinkingText && accumulatedThinkingSignature.length >= MIN_SIGNATURE_LENGTH) {
             finalParts.push({
                 thought: true,
                 text: accumulatedThinkingText,
                 thoughtSignature: accumulatedThinkingSignature
             });
-            accumulatedThinkingText = '';
-            accumulatedThinkingSignature = '';
         }
+        accumulatedThinkingText = '';
+        accumulatedThinkingSignature = '';
     };
 
     const flushText = () => {
@@ -48,26 +50,9 @@ export async function parseThinkingSSEResponse(response, originalModel) {
         }
     };
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-            const jsonText = line.slice(5).trim();
-            if (!jsonText) continue;
-
-            try {
-                const data = JSON.parse(jsonText);
-                const innerResponse = data.response || data;
+    for await (const data of iterateSSEJsonEvents(response.body)) {
+        try {
+            const innerResponse = data.response || data;
 
                 if (innerResponse.usageMetadata) {
                     usageMetadata = innerResponse.usageMetadata;
@@ -85,7 +70,7 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                     if (part.thought === true) {
                         flushText();
                         accumulatedThinkingText += (part.text || '');
-                        if (part.thoughtSignature) {
+                        if (accumulatedThinkingText && part.thoughtSignature?.length >= MIN_SIGNATURE_LENGTH) {
                             accumulatedThinkingSignature = part.thoughtSignature;
                         }
                     } else if (isWebSearchResult(part)) {
@@ -129,9 +114,8 @@ export async function parseThinkingSSEResponse(response, originalModel) {
                     const recordedQuery = contexts[0]?.title || entrance || '';
                     finalParts.push(...buildWebSearchBlocks(null, recordedQuery, contexts, entrance));
                 }
-            } catch (e) {
-                logger.debug('[CloudCode] SSE parse warning:', e.message, 'Raw:', jsonText.slice(0, 100));
-            }
+        } catch (e) {
+            logger.debug(`[CloudCode] SSE response handling warning: ${e.message}`);
         }
     }
 

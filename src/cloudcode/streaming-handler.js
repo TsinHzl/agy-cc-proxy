@@ -24,6 +24,7 @@ import { logger } from '../utils/logger.js';
 import { parseResetTime } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
 import { streamSSEResponse } from './sse-streamer.js';
+import { transformThinkingAsTextEvents } from './thinking-text-streamer.js';
 import { isCompactRequest } from '../format/request-converter.js';
 import { getFallbackModel } from '../fallback-config.js';
 import {
@@ -53,7 +54,7 @@ import crypto from 'crypto';
  * @yields {Object} Anthropic-format SSE events (message_start, content_block_start, content_block_delta, etc.)
  * @throws {Error} If max retries exceeded or no accounts available
  */
-export async function* sendMessageStream(anthropicRequest, accountManager, fallbackEnabled = false, accountFilter = null) {
+export async function* sendMessageStream(anthropicRequest, accountManager, fallbackEnabled = false, accountFilter = null, streamOptions = null) {
     const model = anthropicRequest.model;
     // API key account binding: restrict selection to these account emails (null = unrestricted)
     const allowedEmails = accountFilter?.allowedEmails ?? null;
@@ -94,7 +95,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                         if (fallbackModel) {
                             logger.warn(`[CloudCode] All accounts exhausted for ${model} (${formatDuration(minWaitMs)} wait). Attempting fallback to ${fallbackModel} (streaming)`);
                             const fallbackRequest = { ...anthropicRequest, model: fallbackModel };
-                            yield* sendMessageStream(fallbackRequest, accountManager, false, accountFilter);
+                            yield* sendMessageStream(fallbackRequest, accountManager, false, accountFilter, streamOptions);
                             return;
                         }
                     }
@@ -371,7 +372,10 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
                     for (let emptyRetries = 0; emptyRetries <= MAX_EMPTY_RESPONSE_RETRIES; emptyRetries++) {
                         try {
-                            yield* streamSSEResponse(currentResponse, anthropicRequest.model, isCompact);
+                            yield* transformThinkingAsTextEvents(
+                                streamSSEResponse(currentResponse, anthropicRequest.model, isCompact),
+                                streamOptions
+                            );
                             logger.debug('[CloudCode] Stream completed');
                             // Clear rate limit state on success
                             clearRateLimitState(account.email, model);
@@ -547,7 +551,7 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
         if (fallbackModel) {
             logger.warn(`[CloudCode] All retries exhausted for ${model}. Attempting fallback to ${fallbackModel} (streaming)`);
             const fallbackRequest = { ...anthropicRequest, model: fallbackModel };
-            yield* sendMessageStream(fallbackRequest, accountManager, false, accountFilter);
+            yield* sendMessageStream(fallbackRequest, accountManager, false, accountFilter, streamOptions);
             return;
         }
     }

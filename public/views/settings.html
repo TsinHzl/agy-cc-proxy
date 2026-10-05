@@ -1588,6 +1588,28 @@
                         </div>
                     </div>
 
+                    <!-- Claude Code Thinking Text -->
+                    <div class="overflow-hidden rounded-lg border border-hairline bg-surface shadow-hair transition-colors hover:border-brand-line">
+                        <div class="flex items-center justify-between border-b border-hairline px-4 py-[13px]">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[12.5px] font-semibold text-ink"
+                                    :class="serverConfig.thinkingAsText ? 'text-brand' : ''"
+                                    x-text="$store.global.t('thinkingAsText')">Claude Code Thinking Text</span>
+                                <span class="text-[11px] text-ink-3"
+                                    x-text="$store.global.t('thinkingAsTextDesc')">Render valid upstream thinking as dim text for Claude Code streaming requests.</span>
+                            </div>
+                            <button type="button" role="switch"
+                                :aria-checked="(serverConfig.thinkingAsText === true).toString()"
+                                @click="toggleThinkingAsText(!(serverConfig.thinkingAsText === true))"
+                                :aria-label="$store.global.t('thinkingAsText')"
+                                class="relative h-[18px] w-8 flex-none rounded-[10px] border border-transparent transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                :class="serverConfig.thinkingAsText === true ? 'bg-brand' : 'bg-track'">
+                                <span class="absolute top-0.5 size-3 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,.28)]"
+                                    :class="serverConfig.thinkingAsText === true ? 'right-0.5' : 'left-0.5'"></span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Max Accounts -->
                     <div class="overflow-hidden rounded-lg border border-hairline bg-surface shadow-hair transition-colors hover:border-brand-line">
                         <div class="border-b border-hairline px-4 py-[13px]">

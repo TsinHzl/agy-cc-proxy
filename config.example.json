@@ -30,6 +30,8 @@
 
   "tokenCacheTtlMs": 300000,
   "persistTokenCache": false,
+  "thinkingAsText": false,
+  "_thinkingAsText_comment": "Render valid upstream thinking as dim text only for Claude Code streaming requests.",
 
   "requestTimeoutMs": 300000,
 

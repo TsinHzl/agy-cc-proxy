@@ -13,6 +13,10 @@ import { logger } from '../utils/logger.js';
 import usageLog from '../modules/usage-log.js';
 import { parseError } from './parse-error.js';
 
+export function isClaudeCodeUserAgent(userAgent) {
+    return /^(?:claude-cli|claude-code)(?:\/|\s|$)/i.test(userAgent || '');
+}
+
 export function registerMessagesRoutes(app, ctx) {
     const { accountManager, ensureInitialized, fallbackEnabled } = ctx;
 
@@ -137,7 +141,10 @@ export function registerMessagesRoutes(app, ctx) {
 
                 try {
                     // Initialize the generator
-                    const generator = sendMessageStream(request, accountManager, fallbackEnabled, { allowedEmails: getAllowedAccounts(req._apiKeyId) });
+                    const generator = sendMessageStream(request, accountManager, fallbackEnabled, { allowedEmails: getAllowedAccounts(req._apiKeyId) }, {
+                        thinkingAsText: config.thinkingAsText === true,
+                        isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))
+                    });
 
                     // BUFFERING STRATEGY:
                     // Pull the first event *before* sending headers.

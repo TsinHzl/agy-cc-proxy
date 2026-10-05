@@ -16,6 +16,7 @@ import {
     converterExtractGroundingContexts
 } from '../format/search-blocks.js';
 import { logger } from '../utils/logger.js';
+import { iterateSSEJsonEvents } from './sse-event-aggregator.js';
 
 /**
  * Stream SSE response and yield Anthropic-format events
@@ -29,7 +30,47 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     let hasEmittedStart = false;
     let blockIndex = 0;
     let currentBlockType = null;
-    let currentThinkingSignature = '';
+    let pendingThinkingText = '';
+    let pendingThinkingSignature = '';
+    const flushPendingThinking = () => {
+        const text = pendingThinkingText;
+        const signature = pendingThinkingSignature;
+        pendingThinkingText = '';
+        pendingThinkingSignature = '';
+
+        if (!text || signature.length < MIN_SIGNATURE_LENGTH) {
+            return [];
+        }
+
+        const events = [];
+        if (currentBlockType !== null) {
+            events.push({ type: 'content_block_stop', index: blockIndex });
+            blockIndex++;
+            currentBlockType = null;
+        }
+
+        cacheThinkingSignature(signature, getModelFamily(originalModel));
+        const index = blockIndex++;
+        events.push(
+            {
+                type: 'content_block_start',
+                index,
+                content_block: { type: 'thinking', thinking: '' }
+            },
+            {
+                type: 'content_block_delta',
+                index,
+                delta: { type: 'thinking_delta', thinking: text }
+            },
+            {
+                type: 'content_block_delta',
+                index,
+                delta: { type: 'signature_delta', signature }
+            },
+            { type: 'content_block_stop', index }
+        );
+        return events;
+    };
     let inputTokens = 0;
     let outputTokens = 0;
     let cacheReadTokens = 0;
@@ -54,27 +95,9 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     // final message_delta carries the count.
     let webSearchCount = 0;
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-
-            const jsonText = line.slice(5).trim();
-            if (!jsonText) continue;
-
-            try {
-                const data = JSON.parse(jsonText);
-                const innerResponse = data.response || data;
+    for await (const data of iterateSSEJsonEvents(response.body)) {
+        try {
+            const innerResponse = data.response || data;
 
                 // Extract usage metadata (including cache tokens)
                 const usage = innerResponse.usageMetadata;
@@ -157,39 +180,20 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                 // Process each part
                 for (const part of parts) {
                     if (part.thought === true) {
-                        // Handle thinking block
                         const text = part.text || '';
-                        const signature = part.thoughtSignature || '';
                         thinkingChars += text.length;
-
-                        if (currentBlockType !== 'thinking') {
-                            if (currentBlockType !== null) {
-                                yield { type: 'content_block_stop', index: blockIndex };
-                                blockIndex++;
-                            }
-                            currentBlockType = 'thinking';
-                            currentThinkingSignature = '';
-                            yield {
-                                type: 'content_block_start',
-                                index: blockIndex,
-                                content_block: { type: 'thinking', thinking: '' }
-                            };
+                        pendingThinkingText += text;
+                        if (pendingThinkingText && part.thoughtSignature?.length >= MIN_SIGNATURE_LENGTH) {
+                            pendingThinkingSignature = part.thoughtSignature;
                         }
+                        continue;
+                    }
 
-                        if (signature && signature.length >= MIN_SIGNATURE_LENGTH) {
-                            currentThinkingSignature = signature;
-                            // Cache thinking signature with model family for cross-model compatibility
-                            const modelFamily = getModelFamily(originalModel);
-                            cacheThinkingSignature(signature, modelFamily);
-                        }
+                    for (const event of flushPendingThinking()) {
+                        yield event;
+                    }
 
-                        yield {
-                            type: 'content_block_delta',
-                            index: blockIndex,
-                            delta: { type: 'thinking_delta', thinking: text }
-                        };
-
-                    } else if (part.text !== undefined) {
+                    if (part.text !== undefined) {
                         // Skip empty text parts (but preserve whitespace-only chunks for proper spacing)
                         if (part.text === '') {
                             continue;
@@ -198,14 +202,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
 
                         // Handle regular text
                         if (currentBlockType !== 'text') {
-                            if (currentBlockType === 'thinking' && currentThinkingSignature) {
-                                yield {
-                                    type: 'content_block_delta',
-                                    index: blockIndex,
-                                    delta: { type: 'signature_delta', signature: currentThinkingSignature }
-                                };
-                                currentThinkingSignature = '';
-                            }
                             if (currentBlockType !== null) {
                                 yield { type: 'content_block_stop', index: blockIndex };
                                 blockIndex++;
@@ -236,14 +232,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                         const toolId = part?.functionCall?.id || null;
                         const recordedQuery = query || contexts[0]?.title || '';
 
-                        if (currentBlockType === 'thinking' && currentThinkingSignature) {
-                            yield {
-                                type: 'content_block_delta',
-                                index: blockIndex,
-                                delta: { type: 'signature_delta', signature: currentThinkingSignature }
-                            };
-                            currentThinkingSignature = '';
-                        }
                         if (currentBlockType !== null) {
                             yield { type: 'content_block_stop', index: blockIndex };
                             blockIndex++;
@@ -278,14 +266,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                         // The signature is a sibling to functionCall, not inside it
                         const functionCallSignature = part.thoughtSignature || '';
 
-                        if (currentBlockType === 'thinking' && currentThinkingSignature) {
-                            yield {
-                                type: 'content_block_delta',
-                                index: blockIndex,
-                                delta: { type: 'signature_delta', signature: currentThinkingSignature }
-                            };
-                            currentThinkingSignature = '';
-                        }
                         if (currentBlockType !== null) {
                             yield { type: 'content_block_stop', index: blockIndex };
                             blockIndex++;
@@ -328,14 +308,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
                         };
                     } else if (part.inlineData) {
                         // Handle image content from Google format
-                        if (currentBlockType === 'thinking' && currentThinkingSignature) {
-                            yield {
-                                type: 'content_block_delta',
-                                index: blockIndex,
-                                delta: { type: 'signature_delta', signature: currentThinkingSignature }
-                            };
-                            currentThinkingSignature = '';
-                        }
                         if (currentBlockType !== null) {
                             yield { type: 'content_block_stop', index: blockIndex };
                             blockIndex++;
@@ -375,7 +347,10 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
             } catch (parseError) {
                 logger.warn('[CloudCode] SSE parse error:', parseError.message);
             }
-        }
+    }
+
+    for (const event of flushPendingThinking()) {
+        yield event;
     }
 
     // [WS-DIAG] Temporary instrumentation (remove after root-cause
@@ -480,13 +455,6 @@ export async function* streamSSEResponse(response, originalModel, isCompactFlag 
     } else {
         // Close any open block
         if (currentBlockType !== null) {
-            if (currentBlockType === 'thinking' && currentThinkingSignature) {
-                yield {
-                    type: 'content_block_delta',
-                    index: blockIndex,
-                    delta: { type: 'signature_delta', signature: currentThinkingSignature }
-                };
-            }
             yield { type: 'content_block_stop', index: blockIndex };
         }
     }

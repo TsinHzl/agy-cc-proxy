@@ -117,6 +117,7 @@ import {
     clampGeminiThinkingBudget
 } from './thinking-utils.js';
 import { logger } from '../utils/logger.js';
+import { stripThinkingTextHistory } from '../cloudcode/thinking-text-streamer.js';
 
 /**
  * Convert Anthropic Messages API request to the format expected by Cloud Code
@@ -166,7 +167,7 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     // Claude Code CLI sends cache_control on various content blocks, but Cloud Code API
     // rejects them with "Extra inputs are not permitted". Clean them proactively here
     // before any other processing, following the pattern from Antigravity-Manager.
-    const messages = cleanCacheControl(anthropicRequest.messages || []);
+    const messages = stripThinkingTextHistory(cleanCacheControl(anthropicRequest.messages || []));
 
     // [CRITICAL FIX] Strip Claude Code's billing-header metadata line from the
     // system prompt (production incident, Sep 2026): CC v2.1+ injects

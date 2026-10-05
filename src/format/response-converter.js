@@ -46,24 +46,32 @@ export function convertGoogleToAnthropic(googleResponse, model) {
     // the model second-guesses its own real grounding results.
     let webSearchCount = 0;
 
-    for (const part of parts) {
-        if (part.thought === true && part.text !== undefined) {
-            // Handle thinking blocks
-            const signature = part.thoughtSignature || '';
-
-            // Cache thinking signature with model family for cross-model compatibility
-            if (signature && signature.length >= MIN_SIGNATURE_LENGTH) {
-                const modelFamily = getModelFamily(model);
-                cacheThinkingSignature(signature, modelFamily);
-            }
-
-            // Include thinking blocks in the response for Claude Code
+    let accumulatedThinkingText = '';
+    let accumulatedThinkingSignature = '';
+    const flushThinking = () => {
+        if (accumulatedThinkingText && accumulatedThinkingSignature.length >= MIN_SIGNATURE_LENGTH) {
+            cacheThinkingSignature(accumulatedThinkingSignature, getModelFamily(model));
             anthropicContent.push({
                 type: 'thinking',
-                thinking: part.text,
-                signature: signature
+                thinking: accumulatedThinkingText,
+                signature: accumulatedThinkingSignature
             });
-        } else if (part.text !== undefined) {
+        }
+        accumulatedThinkingText = '';
+        accumulatedThinkingSignature = '';
+    };
+
+    for (const part of parts) {
+        if (part.thought === true) {
+            accumulatedThinkingText += part.text || '';
+            if (accumulatedThinkingText && part.thoughtSignature?.length >= MIN_SIGNATURE_LENGTH) {
+                accumulatedThinkingSignature = part.thoughtSignature;
+            }
+            continue;
+        }
+
+        flushThinking();
+        if (part.text !== undefined) {
             anthropicContent.push({
                 type: 'text',
                 text: part.text
@@ -123,6 +131,8 @@ export function convertGoogleToAnthropic(googleResponse, model) {
             });
         }
     }
+
+    flushThinking();
 
     // A grounding intent announced at the content level (some backends surface
     // groundingMetadata on content while the model emits only a text part) is

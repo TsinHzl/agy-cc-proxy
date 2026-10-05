@@ -192,6 +192,31 @@ window.Components.serverConfig = () => ({
         }
     },
 
+    async toggleThinkingAsText(enabled) {
+        const store = Alpine.store('global');
+        const previousValue = this.serverConfig.thinkingAsText;
+        this.serverConfig.thinkingAsText = enabled;
+
+        try {
+            const { response } = await window.utils.request('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ thinkingAsText: enabled })
+            });
+            const data = await response.json();
+            if (data.status === 'ok') {
+                const status = enabled ? store.t('enabledStatus') : store.t('disabledStatus');
+                store.showToast(store.t('thinkingAsTextToggled', { status }), 'success');
+                await this.fetchServerConfig();
+            } else {
+                throw new Error(data.error || store.t('failedToUpdateThinkingAsText'));
+            }
+        } catch (e) {
+            this.serverConfig.thinkingAsText = previousValue;
+            store.showToast(store.t('failedToUpdateThinkingAsText') + ': ' + e.message, 'error');
+        }
+    },
+
     // Generic debounced save method for numeric configs with validation
     async saveConfigField(fieldName, value, displayName, validator = null) {
         const store = Alpine.store('global');

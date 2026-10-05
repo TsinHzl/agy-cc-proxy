@@ -36,7 +36,17 @@ export function registerConfigRoutes(app, ctx) {
      */
     app.post('/api/config', async (req, res) => {
         try {
-            const { debug, devMode, logLevel, persistTokenCache, requestThrottlingEnabled, requestDelayMs } = req.body;
+            const { debug, devMode, logLevel, persistTokenCache, requestThrottlingEnabled, requestDelayMs, thinkingAsText } = req.body;
+
+            if (Object.hasOwn(req.body, 'thinkingAsText') && typeof thinkingAsText !== 'boolean') {
+                return res.status(400).json({
+                    type: 'error',
+                    error: {
+                        type: 'invalid_request_error',
+                        message: 'thinkingAsText must be a boolean'
+                    }
+                });
+            }
 
             // Validate tunable config fields via shared helper
             const updates = validateConfigFields(req.body);
@@ -56,6 +66,9 @@ export function registerConfigRoutes(app, ctx) {
             }
             if (typeof persistTokenCache === 'boolean') {
                 updates.persistTokenCache = persistTokenCache;
+            }
+            if (typeof thinkingAsText === 'boolean') {
+                updates.thinkingAsText = thinkingAsText;
             }
             if (typeof requestThrottlingEnabled === 'boolean') {
                 updates.requestThrottlingEnabled = requestThrottlingEnabled;
