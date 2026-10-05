@@ -1,0 +1,25 @@
+src/cloudcode/thinking-text-streamer.js
+  15d360604b3b0166 13-16,18,38-40,44-47,142,144-147,193-194,196
+tests/test-thinking-as-text.cjs
+  15d360604b3b0166 60,63-64,68,74-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "90c55843ffc9ed92cf17f726c5255fd08ba6b9a8",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 23,
+      "accepted_lines": 41,
+      "overriden_lines": 0
+    }
+  }
+}
