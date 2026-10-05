@@ -1,0 +1,31 @@
+src/cloudcode/streaming-handler.js
+  15d360604b3b0166 27-29,376,380-382
+tests/test-sse-thinking.cjs
+  15d360604b3b0166 37,39,91,98-103
+src/cloudcode/thinking-text-streamer.js
+  15d360604b3b0166 130
+tests/test-thinking-as-text.cjs
+  15d360604b3b0166 12,79,161-162
+src/cloudcode/sse-streamer.js
+  15d360604b3b0166 28-32,46-47,58-60,72-75,79-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "ea6e46070424467cfce5365d137c932d70b9e537",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 43,
+      "total_deletions": 15,
+      "accepted_lines": 41,
+      "overriden_lines": 0
+    }
+  }
+}
