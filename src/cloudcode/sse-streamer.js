@@ -38,6 +38,27 @@ export async function* streamSSEResponse(
     let pendingThinkingText = '';
     let pendingThinkingSignature = '';
     const flushPendingThinking = () => {
+        if (emitUnsignedThinking && currentBlockType === 'thinking') {
+            // Unsigned streaming path: the thinking block was already opened and
+            // streamed incrementally — just close it (signature first, if any).
+            const signature = pendingThinkingSignature;
+            const hasValidSignature = signature.length >= MIN_SIGNATURE_LENGTH;
+            pendingThinkingSignature = '';
+            const events = [];
+            if (hasValidSignature) {
+                cacheThinkingSignature(signature, getModelFamily(originalModel));
+                events.push({
+                    type: 'content_block_delta',
+                    index: blockIndex,
+                    delta: { type: 'signature_delta', signature }
+                });
+            }
+            events.push({ type: 'content_block_stop', index: blockIndex });
+            blockIndex++;
+            currentBlockType = null;
+            return events;
+        }
+
         const text = pendingThinkingText;
         const signature = pendingThinkingSignature;
         pendingThinkingText = '';
@@ -192,10 +213,47 @@ export async function* streamSSEResponse(
                     if (part.thought === true) {
                         const text = part.text || '';
                         thinkingChars += text.length;
-                        pendingThinkingText += text;
-                        if (pendingThinkingText && part.thoughtSignature?.length >= MIN_SIGNATURE_LENGTH) {
+                        // Record a signature only when this part actually carries
+                        // a valid one, so a later unsigned thought part cannot
+                        // clobber an earlier valid signature. The default path
+                        // additionally requires pending text: an orphan/leading
+                        // signature cannot legitimize text arriving after it
+                        // (out-of-order guard). The unsigned streaming path
+                        // records any in-block signature — the block is open
+                        // and closed wholesale.
+                        if (part.thoughtSignature?.length >= MIN_SIGNATURE_LENGTH &&
+                            (emitUnsignedThinking || pendingThinkingText)) {
                             pendingThinkingSignature = part.thoughtSignature;
                         }
+                        if (emitUnsignedThinking) {
+                            // Stream thought parts as they arrive instead of
+                            // buffering the whole block until the first answer
+                            // part arrives (which made thinking text appear
+                            // all at once right before the answer). Textless
+                            // parts only update the signature — opening a block
+                            // for them could emit an empty thinking block.
+                            if (text && currentBlockType !== 'thinking') {
+                                if (currentBlockType !== null) {
+                                    yield { type: 'content_block_stop', index: blockIndex };
+                                    blockIndex++;
+                                }
+                                currentBlockType = 'thinking';
+                                yield {
+                                    type: 'content_block_start',
+                                    index: blockIndex,
+                                    content_block: { type: 'thinking', thinking: '' }
+                                };
+                            }
+                            if (text) {
+                                yield {
+                                    type: 'content_block_delta',
+                                    index: blockIndex,
+                                    delta: { type: 'thinking_delta', thinking: text }
+                                };
+                            }
+                            continue;
+                        }
+                        pendingThinkingText += text;
                         continue;
                     }
 
