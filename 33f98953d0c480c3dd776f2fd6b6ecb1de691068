@@ -1,0 +1,31 @@
+src/cloudcode/sse-parser.js
+  15d360604b3b0166 24-26,29,38-50,147
+src/format/response-converter.js
+  15d360604b3b0166 16-18,21,55-71
+tests/test-sse-thinking.cjs
+  15d360604b3b0166 157-191
+src/cloudcode/message-handler.js
+  15d360604b3b0166 55,97,344,460
+src/server/routes-messages.js
+  15d360604b3b0166 247-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "33f98953d0c480c3dd776f2fd6b6ecb1de691068",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 81,
+      "total_deletions": 21,
+      "accepted_lines": 81,
+      "overriden_lines": 0
+    }
+  }
+}
