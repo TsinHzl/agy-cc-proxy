@@ -1,0 +1,27 @@
+public/js/components/models.js
+  15d360604b3b0166 24-37
+public/views/models.html
+  15d360604b3b0166 260,262,298,498,500,534,536
+tests/test-model-quota-bars.cjs
+  15d360604b3b0166 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "4a565f3bea7649da3f81882e1cdeb36d7e895443",
+  "prompts": {
+    "15d360604b3b0166": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "70e746e8-d064-4f27-a40c-94ee4ba0b414",
+        "model": "gemini-3.8-flash-tiered"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 72,
+      "total_deletions": 10,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    }
+  }
+}
