@@ -12,12 +12,18 @@ const ANSI_RESET = '\x1b[0m';
 // left quote bar for it.
 const THINKING_TEXT_HEADER_LINE = `${ANSI_DIM}💭 Thinking${ANSI_RESET}`;
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Duration line appended at block stop (kiro2cc-proxy style): rounded to whole
+// seconds, minimum 1s. Stripped from conversation history alongside the header.
+const THINKING_TEXT_DURATION_PREFIX = '💭 Thought for ';
+const THINKING_TEXT_DURATION_LINE_RE = new RegExp(
+    `\\n${escapeRegExp(ANSI_DIM)}${escapeRegExp(THINKING_TEXT_DURATION_PREFIX)}\\d+s${escapeRegExp(ANSI_RESET)}`
+);
 // Each rendered line is `\n...RESET` — matching up to RESET (rather than to
 // end-of-line) keeps trailing text on the same line (e.g. the final answer)
 // from being swallowed when the block no longer ends with a newline.
 const THINKING_TEXT_LINE_RE = `\\n[^\\n]*?${escapeRegExp(ANSI_RESET)}`;
 const THINKING_TEXT_BLOCK_RE = new RegExp(
-    `${escapeRegExp(THINKING_TEXT_HEADER_LINE)}(?:${THINKING_TEXT_LINE_RE})*`,
+    `${escapeRegExp(THINKING_TEXT_HEADER_LINE)}(?:${THINKING_TEXT_LINE_RE})*${THINKING_TEXT_DURATION_LINE_RE.source}?`,
     'g'
 );
 // Legacy marker-prefixed format (whole-block dim + invisible marker) kept so
@@ -221,6 +227,10 @@ export async function* transformThinkingAsTextEvents(events, options) {
                                 pendingBlock.started = true;
                             }
                             if (tail) yield textDeltaEvent(pendingBlock.index, tail);
+                            // Duration tail (kiro style): "💭 Thought for Ns",
+                            // rounded to whole seconds with a 1s floor.
+                            const durationSecs = Math.max(1, Math.round((Date.now() - pendingBlock.startedAt) / 1000));
+                            yield textDeltaEvent(pendingBlock.index, `\n${ANSI_DIM}${THINKING_TEXT_DURATION_PREFIX}${durationSecs}s${ANSI_RESET}`);
                             yield event;
                         }
                     } else if (pendingBlock.started) {
@@ -244,6 +254,8 @@ export async function* transformThinkingAsTextEvents(events, options) {
                     started: false,
                     signature: '',
                     bytes: 0,
+                    // Wall-clock start used for the "Thought for Ns" tail.
+                    startedAt: Date.now(),
                     discarded: responseLimitExceeded
                 };
                 if (responseLimitExceeded) {
