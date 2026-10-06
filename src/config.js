@@ -87,7 +87,7 @@ const DEFAULT_CONFIG = {
     retryBaseMs: 1000,
     retryMaxMs: 30000,
     persistTokenCache: false,
-    thinkingAsText: false,
+    thinkingAsText: true,
     defaultCooldownMs: 10000,  // 10 seconds
     maxWaitBeforeErrorMs: 120000, // 2 minutes
     maxAccounts: 10, // Maximum number of accounts allowed
