@@ -6,14 +6,16 @@ export const MAX_THINKING_TEXT_RESPONSE_BYTES = 1024 * 1024;
 
 const ANSI_DIM = '\x1b[2m';
 const ANSI_RESET = '\x1b[0m';
-// Style matches kiro2cc-proxy thinking_text.rs: dim wraps each line
-// individually and resets before every newline so styling never spans lines.
-const THINKING_TEXT_HEADER_LINE = `> ${ANSI_DIM}💭 Thinking${ANSI_RESET}`;
+// Style matches kiro2cc-proxy thinking_text.rs except without blockquote
+// markers: dim wraps each line individually and resets before every newline
+// so styling never spans lines. No `> ` prefix — Claude Code would render a
+// left quote bar for it.
+const THINKING_TEXT_HEADER_LINE = `${ANSI_DIM}💭 Thinking${ANSI_RESET}`;
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-// Each quoted line is `\n> ...RESET` — matching up to RESET (rather than to
+// Each rendered line is `\n...RESET` — matching up to RESET (rather than to
 // end-of-line) keeps trailing text on the same line (e.g. the final answer)
 // from being swallowed when the block no longer ends with a newline.
-const THINKING_TEXT_LINE_RE = `\\n> [^\\n]*?${escapeRegExp(ANSI_RESET)}`;
+const THINKING_TEXT_LINE_RE = `\\n[^\\n]*?${escapeRegExp(ANSI_RESET)}`;
 const THINKING_TEXT_BLOCK_RE = new RegExp(
     `${escapeRegExp(THINKING_TEXT_HEADER_LINE)}(?:${THINKING_TEXT_LINE_RE})*`,
     'g'
@@ -41,7 +43,7 @@ export function formatThinkingAsText(thinking) {
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line)
-        .map((line) => `> ${ANSI_DIM}${line}${ANSI_RESET}`)
+        .map((line) => `${ANSI_DIM}${line}${ANSI_RESET}`)
         .join('\n');
     // No trailing newline: a block-ending '\n' makes Claude Code render one
     // blockquote line more than the text (matches kiro2cc-proxy thinking_text.rs).
@@ -149,7 +151,7 @@ export async function* transformThinkingAsTextEvents(events, options) {
             // Newline leads the next line instead of trailing the previous one,
             // so the block never ends with '\n' (an extra empty blockquote line
             // rendering as a stray segment of the left quote bar) — kiro style.
-            yield textDeltaEvent(block.index, `\n> ${ANSI_DIM}${line}${ANSI_RESET}`);
+            yield textDeltaEvent(block.index, `\n${ANSI_DIM}${line}${ANSI_RESET}`);
         }
     };
 
@@ -200,7 +202,7 @@ export async function* transformThinkingAsTextEvents(events, options) {
                         // empty quote line.
                         const lastLine = pendingBlock.pending.replace(/\r$/, '').trim();
                         const tail = lastLine
-                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_HEADER_LINE : ''}\n> ${ANSI_DIM}${lastLine}${ANSI_RESET}`
+                            ? `${pendingBlock.firstChunk ? THINKING_TEXT_HEADER_LINE : ''}\n${ANSI_DIM}${lastLine}${ANSI_RESET}`
                             : '';
                         // Whitespace-only block with nothing emitted: skip the
                         // stop event too, so the client never sees an orphan

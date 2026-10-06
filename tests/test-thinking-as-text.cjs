@@ -57,11 +57,11 @@ const script = `
             index: 1,
             delta: {
                 type: 'text_delta',
-                text: '> ' + DIM + '💭 Thinking' + RESET
+                text: DIM + '💭 Thinking' + RESET
             }
         },
-        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n> ' + DIM + 'line one' + RESET } },
-        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n> ' + DIM + 'line two' + RESET } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n' + DIM + 'line one' + RESET } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n' + DIM + 'line two' + RESET } },
         { type: 'content_block_stop', index: 1 }
     ]);
     assert.equal(transformedThinking.some((event) => event.delta?.type === 'thinking_delta' || event.delta?.type === 'signature_delta'), false);
@@ -82,6 +82,8 @@ const script = `
         { type: 'content_block_stop', index: 1 }
     ]), { thinkingAsText: true, isClaudeCode: true });
     assert.equal(whitespaceEvents.some((event) => event.index === 1), false);
+    // Old format (with `> ` quote prefix) history must still be stripped, plus
+    // the current format without the prefix.
     const oldFormatRendered = '> ' + DIM + '💭 Thinking' + RESET + '\\n> ' + DIM + 'old line' + RESET + '\\n';
     const oldFormatHistory = [
         { role: 'assistant', content: [{ type: 'text', text: oldFormatRendered + 'tail' }] }
@@ -211,12 +213,12 @@ const script = `
         return { statusCode, payload };
     };
 
-    assert.equal(getPublicConfig().thinkingAsText, false);
+    assert.equal(getPublicConfig().thinkingAsText, true);
     for (const invalidValue of [null, 'true', 1, {}, []]) {
         const result = await updateConfig({ thinkingAsText: invalidValue });
         assert.equal(result.statusCode, 400);
         assert.equal(result.payload.error.type, 'invalid_request_error');
-        assert.equal(config.thinkingAsText, false);
+        assert.equal(config.thinkingAsText, true);
     }
 
     const enabled = await updateConfig({ thinkingAsText: true });
@@ -227,7 +229,7 @@ const script = `
 
     const disabled = await updateConfig({ thinkingAsText: false });
     assert.equal(disabled.statusCode, 200);
-    assert.equal(config.thinkingAsText, false);
+    assert.equal(config.thinkingAsText, true);
     assert.equal(JSON.parse(fs.readFileSync(configPath, 'utf8')).thinkingAsText, false);
 
     const toasts = [];
@@ -286,7 +288,7 @@ try {
     execFileSync(process.execPath, ['--input-type=module', '--eval', `
         import assert from 'node:assert/strict';
         import { getPublicConfig } from ${JSON.stringify(configUrl)};
-        assert.equal(getPublicConfig().thinkingAsText, false);
+        assert.equal(getPublicConfig().thinkingAsText, true);
     `], {
         cwd: repoRoot,
         env: { ...process.env, HOME: tempHome, API_KEY: 'test-api-key' },
