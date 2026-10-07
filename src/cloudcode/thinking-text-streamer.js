@@ -16,7 +16,7 @@ const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // seconds, minimum 1s. Stripped from conversation history alongside the header.
 const THINKING_TEXT_DURATION_PREFIX = '💭 Thought for ';
 const THINKING_TEXT_DURATION_LINE_RE = new RegExp(
-    `\\n${escapeRegExp(ANSI_DIM)}${escapeRegExp(THINKING_TEXT_DURATION_PREFIX)}\\d+s${escapeRegExp(ANSI_RESET)}`
+    `\\n${escapeRegExp(ANSI_DIM)}${escapeRegExp(THINKING_TEXT_DURATION_PREFIX)}(?:\\d+h)?(?:\\d+m)?\\d+s${escapeRegExp(ANSI_RESET)}`
 );
 // Each rendered line is `\n...RESET` — matching up to RESET (rather than to
 // end-of-line) keeps trailing text on the same line (e.g. the final answer)
@@ -229,8 +229,14 @@ export async function* transformThinkingAsTextEvents(events, options) {
                             if (tail) yield textDeltaEvent(pendingBlock.index, tail);
                             // Duration tail (kiro style): "💭 Thought for Ns",
                             // rounded to whole seconds with a 1s floor.
-                            const durationSecs = Math.max(1, Math.round((Date.now() - pendingBlock.startedAt) / 1000));
-                            yield textDeltaEvent(pendingBlock.index, `\n${ANSI_DIM}${THINKING_TEXT_DURATION_PREFIX}${durationSecs}s${ANSI_RESET}`);
+                            const totalSecs = Math.max(1, Math.round((Date.now() - pendingBlock.startedAt) / 1000));
+                            // Humanized duration: 59s → "59s", 75s → "1m15s", 3690s → "1h1m30s".
+                            const mins = Math.floor(totalSecs / 60);
+                            const secs = totalSecs % 60;
+                            const duration = mins > 0
+                                ? `${Math.floor(mins / 60) > 0 ? `${Math.floor(mins / 60)}h` : ''}${mins % 60}m${secs}s`
+                                : `${secs}s`;
+                            yield textDeltaEvent(pendingBlock.index, `\n${ANSI_DIM}${THINKING_TEXT_DURATION_PREFIX}${duration}${ANSI_RESET}`);
                             yield event;
                         }
                     } else if (pendingBlock.started) {
