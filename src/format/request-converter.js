@@ -352,6 +352,12 @@ export function convertAnthropicToGoogle(anthropicRequest) {
 
         // For assistant messages, process thinking blocks and reorder content
         if ((msg.role === 'assistant' || msg.role === 'model') && Array.isArray(msgContent)) {
+            // Claude family: thinking blocks from prior turns are never replayed
+            // upstream — strip them so they consume no context (regardless of
+            // thinkingAsText). Gemini keeps them (needed for its tool-call loop).
+            if (isClaudeModel) {
+                msgContent = msgContent.filter((block) => block?.type !== 'thinking');
+            }
             // First, try to restore signatures for unsigned thinking blocks from cache
             msgContent = restoreThinkingSignatures(msgContent);
             // Remove trailing unsigned thinking blocks
