@@ -531,13 +531,22 @@ export async function* streamSSEResponse(
     // reserves `input_tokens` for `message_start.usage`; repeating it here would
     // let downstream SDKs (incl. Claude Code) overwrite their cumulative context
     // counter with the per-turn input total, regressing auto-compact accuracy.
-    // We only emit the incremental fields authorised by Anthropic's spec.
+    //
+    // `cache_read_input_tokens` is deliberately NOT re-emitted here either.
+    // message_start fires on the first chunk carrying parts, which in practice
+    // precedes upstream reporting cachedContentTokenCount — the
+    // `input_tokens - cacheReadTokens` subtraction there lands on a zero
+    // cacheRead and is a no-op. Re-sending the fresh cacheRead in message_delta
+    // then makes Claude Code double count the cached prefix
+    // (in + cr ≈ promptTokenCount + cachedContentTokenCount, measured ~1.9x),
+    // tripping auto-compact near half the real context window. Freezing
+    // cache_read at its message_start value keeps in + cr == promptTokenCount
+    // under both chunk orderings.
     yield {
         type: 'message_delta',
         delta: { stop_reason: stopReason || 'end_turn', stop_sequence: null },
         usage: {
             output_tokens: outputTokens,
-            cache_read_input_tokens: cacheReadTokens,
             cache_creation_input_tokens: 0,
             // Anthropic's usage.server_tool_use carries server-tool request
             // counts; CC reads web_search_requests from here to render the
