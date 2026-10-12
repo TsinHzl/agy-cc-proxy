@@ -100,7 +100,9 @@ import {
     GEMINI_MAX_OUTPUT_TOKENS,
     CLAUDE_MAX_OUTPUT_TOKENS,
     getModelFamily,
-    isThinkingModel
+    isThinkingModel,
+    supportsEffort,
+    resolveEffortBudget
 } from '../constants.js';
 import { convertContentToParts, convertRole } from './content-converter.js';
 import { sanitizeSchema, cleanSchema } from './schema-sanitizer.js';
@@ -180,7 +182,7 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     // without touching any other system content.
     const rawSystem = anthropicRequest.system;
     const system = stripBillingHeaderLine(rawSystem);
-    const { max_tokens, temperature, top_p, top_k, stop_sequences, tools, tool_choice, thinking } = anthropicRequest;
+    const { max_tokens, temperature, top_p, top_k, stop_sequences, tools, tool_choice, thinking, output_config } = anthropicRequest;
     const modelName = anthropicRequest.model || '';
     const modelFamily = getModelFamily(modelName);
     const isClaudeModel = modelFamily === 'claude';
@@ -414,9 +416,39 @@ export function convertAnthropicToGoogle(anthropicRequest) {
     const COMPACT_SUMMARY_RESERVE = 16384;
     // Resolve the thinking budget up-front so the Gemini cap below can see it.
     let resolvedThinkingBudget = null;
+    // Tracks which input produced the budget, for accurate debug logging.
+    let budgetSource = null;
+    // True when the client explicitly asked for a budget (a token count or an
+    // effort tier) rather than the server falling back to its default. Decides
+    // the log level when max_tokens below has to be raised.
+    let budgetIsExplicit = false;
     if (isThinking) {
         if (isClaudeModel) {
-            resolvedThinkingBudget = thinking?.budget_tokens || 32000;
+            // Priority: explicit thinking.budget_tokens > output_config.effort > default.
+            // An explicit token count is more specific than a coarse effort tier,
+            // so it wins when both are present. effort is only honored for the
+            // Claude 4.6 models that officially accept it.
+            const rawEffort = supportsEffort(modelName) ? output_config?.effort : undefined;
+            const effortBudget = resolveEffortBudget(rawEffort);
+            resolvedThinkingBudget = thinking?.budget_tokens || effortBudget || 32000;
+            // Normalize once so the logged tier matches the key resolveEffortBudget
+            // actually looked up (that helper trims and lowercases internally).
+            const effortTier = typeof rawEffort === 'string' ? rawEffort.trim().toLowerCase() : '';
+            if (thinking?.budget_tokens) {
+                budgetSource = 'budget_tokens';
+                budgetIsExplicit = true;
+            } else if (effortBudget) {
+                budgetSource = `effort=${effortTier}`;
+                budgetIsExplicit = true;
+            } else if (rawEffort !== undefined && rawEffort !== null) {
+                // The client sent an effort value we do not recognize. Name it in
+                // the log instead of reporting "default", otherwise a typo stays
+                // invisible. String() is bounded and cannot throw on parsed JSON.
+                budgetSource = `effort=${String(rawEffort).slice(0, 32)} (unrecognized → default)`;
+                budgetIsExplicit = true;
+            } else {
+                budgetSource = 'default';
+            }
         } else if (isGeminiModel) {
             resolvedThinkingBudget = clampGeminiThinkingBudget(modelName, thinking?.budget_tokens);
         }
@@ -451,13 +483,13 @@ export function convertAnthropicToGoogle(anthropicRequest) {
                 include_thoughts: true,
                 thinking_budget: thinkingBudget
             };
-            logger.debug(`[RequestConverter] Claude thinking enabled with budget: ${thinkingBudget}${!thinking?.budget_tokens ? ' (default)' : ''}`);
+            logger.debug(`[RequestConverter] Claude thinking enabled with budget: ${thinkingBudget} (${budgetSource})`);
 
             // Validate max_tokens > thinking_budget as required by the API
             const currentMaxTokens = googleRequest.generationConfig.maxOutputTokens;
             if (currentMaxTokens && currentMaxTokens <= thinkingBudget) {
                 const adjustedMaxTokens = thinkingBudget + 8192;
-                if (thinking?.budget_tokens) {
+                if (budgetIsExplicit) {
                     logger.warn(`[RequestConverter] max_tokens (${currentMaxTokens}) <= thinking_budget (${thinkingBudget}). Adjusting to ${adjustedMaxTokens} to satisfy API requirements`);
                 } else {
                     logger.debug(`[RequestConverter] Adjusting max_tokens to ${adjustedMaxTokens} for default thinking budget`);

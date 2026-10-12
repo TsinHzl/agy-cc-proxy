@@ -254,6 +254,51 @@ export function isThinkingModel(modelName) {
     return false;
 }
 
+// Effort → thinking budget mapping for Claude 4.6 models.
+// Anthropic's `output_config.effort` is a coarse tier; Cloud Code's
+// generationConfig.thinkingConfig only accepts a numeric budget, so each tier
+// is translated here. `high` maps to 32000 — the same value the Claude branch
+// used before effort support existed — so requests that omit effort keep
+// byte-identical behavior.
+export const EFFORT_BUDGET_MAP = {
+    low: 4000,
+    medium: 16000,
+    high: 32000,
+    max: 48000
+};
+
+// Only the Claude 4.6 family accepts `output_config.effort`. Other Claude
+// models (and Gemini) ignore the field entirely.
+const EFFORT_MODEL_PATTERNS = ['claude-sonnet-4-6', 'claude-opus-4-6'];
+
+/**
+ * Check whether a model accepts the `output_config.effort` parameter.
+ * @param {string} modelName - The model name from the request
+ * @returns {boolean} True if effort is supported
+ */
+export function supportsEffort(modelName) {
+    const lower = (modelName || '').toLowerCase();
+    return EFFORT_MODEL_PATTERNS.some(pattern => lower.includes(pattern));
+}
+
+/**
+ * Translate an effort tier into a numeric thinking budget.
+ * Unknown or non-string values return null so the caller can fall back to its
+ * default instead of injecting an invalid budget upstream. The hasOwnProperty
+ * guard keeps prototype keys ("constructor", "toString") from resolving to a
+ * function and leaking into the payload as a non-numeric budget.
+ *
+ * @param {string} effort - The effort tier from output_config
+ * @returns {number|null} Thinking budget in tokens, or null if unrecognized
+ */
+export function resolveEffortBudget(effort) {
+    if (typeof effort !== 'string') return null;
+    const key = effort.trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(EFFORT_BUDGET_MAP, key)
+        ? EFFORT_BUDGET_MAP[key]
+        : null;
+}
+
 // Google OAuth configuration (from opencode-antigravity-auth)
 // OAuth callback port - configurable via environment variable for Windows compatibility (issue #176)
 // Windows may reserve ports in range 49152-65535 for Hyper-V/WSL2/Docker, causing EACCES errors
