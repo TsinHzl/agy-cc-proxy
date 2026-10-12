@@ -1,0 +1,29 @@
+tests/test-effort.cjs
+  5a3dac54572d60ca 1-149
+src/format/request-converter.js
+  5a3dac54572d60ca 103-105,185,419-424,427-451,486,492
+package.json
+  5a3dac54572d60ca 43
+src/constants.js
+  5a3dac54572d60ca 257-301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "335d51fae2de23ecbf55d0c9aee51251268c88d6",
+  "prompts": {
+    "5a3dac54572d60ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba2e3b75-08d5-4bb3-8c0b-3ee995f77aad",
+        "model": "gemini-3.8-flash-high"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 239,
+      "total_deletions": 12,
+      "accepted_lines": 232,
+      "overriden_lines": 0
+    }
+  }
+}
