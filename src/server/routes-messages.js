@@ -34,6 +34,7 @@ export function registerMessagesRoutes(app, ctx) {
                 tools,
                 tool_choice,
                 thinking,
+                output_config,
                 top_p,
                 top_k,
                 temperature
@@ -109,6 +110,7 @@ export function registerMessagesRoutes(app, ctx) {
                 tools,
                 tool_choice,
                 thinking,
+                output_config,
                 top_p,
                 top_k,
                 temperature
