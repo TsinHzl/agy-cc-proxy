@@ -1,0 +1,23 @@
+tests/test-effort.cjs
+  5a3dac54572d60ca 9,12-13,59-101,185-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "c2adc504b21b5129a2545da02f4ff93533f74c17",
+  "prompts": {
+    "5a3dac54572d60ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba2e3b75-08d5-4bb3-8c0b-3ee995f77aad",
+        "model": "gemini-3.8-flash-high"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 106,
+      "total_deletions": 23,
+      "accepted_lines": 83,
+      "overriden_lines": 0
+    }
+  }
+}
