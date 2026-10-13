@@ -6,7 +6,11 @@
  * - resolveEffortBudget: case handling, invalid tiers, prototype-key safety
  * - supportsEffort: model gating
  * - convertAnthropicToGoogle: end-to-end budget resolution + priority order
+ * - /v1/messages route layer passthrough (regression guard)
  */
+
+const fs = require('fs');
+const path = require('path');
 
 // Since we're in CommonJS and the module is ESM, we need to use dynamic import
 async function runTests() {
@@ -51,6 +55,49 @@ async function runTests() {
     }
 
     const budgetOf = (req) => req.generationConfig?.thinkingConfig?.thinking_budget;
+
+    // Read lazily so a missing/moved route file surfaces as failed assertions
+    // instead of aborting the whole suite.
+    const readRouteSource = () => fs.readFileSync(
+        path.join(__dirname, '..', 'src', 'server', 'routes-messages.js'), 'utf8');
+
+    // Slice from the /v1/messages registration so these assertions cannot
+    // silently drift onto another route's req.body block should one ever be
+    // added earlier in the file.
+    const messagesRouteSource = () => {
+        const src = readRouteSource();
+        const anchor = /app\.post\(\s*'\/v1\/messages'/.exec(src);
+        if (!anchor) {
+            throw new Error("could not locate app.post('/v1/messages') in routes-messages.js");
+        }
+        return src.slice(anchor.index);
+    };
+
+    // A mention inside a line comment must not satisfy a field assertion.
+    const stripLineComments = (src) => src.replace(/\/\/[^\n]*/g, '');
+
+    // Capture the body of a `const { ... } = <rhs>` block. When the flat
+    // capture overflows on a nested object literal the declaration still
+    // exists, so report that cause rather than claiming it is missing.
+    const captureDestructuring = (src, rhsPattern, label) => {
+        const block = new RegExp(`const \\{([^}]*)\\}\\s*=\\s*${rhsPattern};`).exec(src);
+        if (block) return block[1];
+        if (!/const \{/.test(src)) throw new Error(`${label}: destructuring block not found`);
+        throw new Error(`${label}: block could not be captured flat — it likely contains a `
+            + 'nested `}`; switch to a brace-balanced scan');
+    };
+
+    // Capture the body of a `const <name> = { ... };` literal, with the same
+    // missing-vs-overflow distinction.
+    const captureObjectLiteral = (src, name, label) => {
+        const block = new RegExp(`const ${name} = \\{([^}]*)\\};`).exec(src);
+        if (block) return block[1];
+        if (!new RegExp(`const ${name} = \\{`).test(src)) {
+            throw new Error(`${label}: object literal not found`);
+        }
+        throw new Error(`${label}: literal could not be captured flat — it likely contains a `
+            + 'nested `}`; switch to a brace-balanced scan');
+    };
 
     console.log('── Tier mapping ──');
     test('low → 4000', () => assertEqual(EFFORT_BUDGET_MAP.low, 4000));
@@ -133,6 +180,40 @@ async function runTests() {
         const req = convert('claude-opus-4-6', { output_config: { effort: 'max' }, max_tokens: 100000 });
         assertEqual(req.generationConfig.maxOutputTokens, 64000);
         assertEqual(budgetOf(req), 48000);
+    });
+
+    console.log('\n── Route layer passthrough ──');
+    // These source assertions are the actual guard that the route keeps
+    // forwarding output_config. The converter tests above call
+    // convertAnthropicToGoogle directly and so cannot catch a route that drops
+    // the field before it gets there.
+    test('route destructures output_config from req.body', () => {
+        const body = captureDestructuring(
+            messagesRouteSource(), 'req\\.body', 'req.body destructuring');
+        assertEqual(/\boutput_config\b/.test(stripLineComments(body)), true);
+    });
+    test('route forwards output_config into the request object', () => {
+        const body = captureObjectLiteral(messagesRouteSource(), 'request', 'request object');
+        assertEqual(/\boutput_config\b/.test(stripLineComments(body)), true);
+    });
+    test('converter tolerates a route-shaped object with explicit undefined keys', () => {
+        // The route builds its request with every optional field spelled out,
+        // so most arrive as own properties holding undefined. The convert()
+        // helper above spreads ...extra and never produces that shape, so this
+        // case is not covered elsewhere. Note this is a local copy: it does NOT
+        // follow the route's structure, so it cannot detect the route dropping
+        // a field — the source assertions above are what guard that.
+        const routeShaped = {
+            model: 'claude-sonnet-4-6',
+            messages: [{ role: 'user', content: 'hi' }],
+            max_tokens: 8000,
+            stream: true,
+            system: undefined, tools: undefined, tool_choice: undefined,
+            thinking: undefined,
+            output_config: { effort: 'max' },
+            top_p: undefined, top_k: undefined, temperature: undefined
+        };
+        assertEqual(budgetOf(convertAnthropicToGoogle(routeShaped)), 48000);
     });
 
     console.log(`\n${'═'.repeat(64)}`);
