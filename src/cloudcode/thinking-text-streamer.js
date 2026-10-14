@@ -123,6 +123,11 @@ export async function* transformThinkingAsTextEvents(events, options) {
     let pendingBlock = null;
     let responseThinkingBytes = 0;
     let responseLimitExceeded = false;
+    // Set when a rendered thinking block ends: the block never ends with a
+    // newline (that would render an extra empty quote line), so the first
+    // text delta of the following block gets one prepended — otherwise the
+    // answer text continues on the same line as the thinking text.
+    let pendingLeadingNewline = false;
 
     const textDeltaEvent = (index, text) => ({
         type: 'content_block_delta',
@@ -171,6 +176,18 @@ export async function* transformThinkingAsTextEvents(events, options) {
 
     try {
         for await (const event of events) {
+            // First text delta after a rendered thinking block: prepend the
+            // newline the thinking text deliberately does not end with, so the
+            // answer starts on its own line instead of continuing the thinking
+            // line.
+            if (pendingLeadingNewline &&
+                event.type === 'content_block_delta' &&
+                event.delta?.type === 'text_delta') {
+                pendingLeadingNewline = false;
+                yield { ...event, delta: { ...event.delta, text: `\n${event.delta.text}` } };
+                continue;
+            }
+
             if (pendingBlock) {
                 if (isMatchingThinkingDelta(event, pendingBlock.index)) {
                     const thinkingDelta = event.delta.thinking || '';
@@ -237,6 +254,9 @@ export async function* transformThinkingAsTextEvents(events, options) {
                                 ? `${Math.floor(mins / 60) > 0 ? `${Math.floor(mins / 60)}h` : ''}${mins % 60}m${secs}s`
                                 : `${secs}s`;
                             yield textDeltaEvent(pendingBlock.index, `\n${ANSI_DIM}${THINKING_TEXT_DURATION_PREFIX}${duration}${ANSI_RESET}`);
+                            // Signal the next block's first text delta to start on
+                            // a fresh line (this block ends without a newline).
+                            pendingLeadingNewline = true;
                             yield event;
                         }
                     } else if (pendingBlock.started) {
