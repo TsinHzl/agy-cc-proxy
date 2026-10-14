@@ -1,0 +1,23 @@
+src/cloudcode/thinking-text-streamer.js
+  5a3dac54572d60ca 126-130,179-190,257-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "45d3d9e5f0ec8cdbe76d632559ff23f9dec67db3",
+  "prompts": {
+    "5a3dac54572d60ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba2e3b75-08d5-4bb3-8c0b-3ee995f77aad",
+        "model": "gemini-3.8-flash-high"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 85,
+      "total_deletions": 65,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    }
+  }
+}
