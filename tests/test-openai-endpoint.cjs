@@ -121,7 +121,7 @@ async function main() {
     console.log('');
 
     const models = await getTestModels();
-    const { family, model } = models[0];
+    const { model } = models[0];
 
     let allPassed = true;
     const results = [];
@@ -310,6 +310,26 @@ async function main() {
                 console.log(`  WARN: cleanup delete returned ${del.statusCode} — remove key '${testKey.key.name}' manually in WebUI.`);
             }
         }
+    }
+
+    // ===== TEST 6: Invalid key -> 401 in OpenAI envelope =====
+    console.log('\nTEST 6: Invalid key 401 (OpenAI envelope)');
+    console.log('-'.repeat(40));
+    try {
+        const bad = await openaiRequest('/v1/chat/completions', {
+            model,
+            messages: [{ role: 'user', content: 'hi' }],
+            max_tokens: 5
+        }, { apiKey: 'sk-agy-definitely-not-a-real-key-000000000000000000000000' });
+        const ok = bad.statusCode === 401
+            && !!bad.json?.error
+            && bad.json.error.type === 'invalid_api_key'
+            && bad.json.error.code === 'invalid_api_key'
+            && typeof bad.json.error.message === 'string';
+        console.log(`  statusCode: ${bad.statusCode}, error.type: ${bad.json?.error?.type}, error.code: ${bad.json?.error?.code}`);
+        record('Invalid key 401 (OpenAI envelope)', ok);
+    } catch (err) {
+        record('Invalid key 401 (OpenAI envelope)', false, err.message);
     }
 
     // ===== Summary =====

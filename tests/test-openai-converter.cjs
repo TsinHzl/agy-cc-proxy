@@ -71,6 +71,57 @@ async function runTests() {
         if (!threw) throw new Error('expected 400 for empty messages');
     });
 
+    test('validate: rejects null / non-object message elements', () => {
+        let threw = false;
+        try { validateOpenAIRequest({ messages: [null] }); }
+        catch (e) { threw = e.statusCode === 400; }
+        if (!threw) throw new Error('expected 400 for null message element');
+        threw = false;
+        try { validateOpenAIRequest({ messages: [{ content: 'hi' }] }); }
+        catch (e) { threw = e.statusCode === 400; }
+        if (!threw) throw new Error('expected 400 for message without role');
+    });
+
+    test('validate: rejects response_format JSON mode, accepts text', () => {
+        let threw = false;
+        try {
+            validateOpenAIRequest({
+                messages: [{ role: 'user', content: 'hi' }],
+                response_format: { type: 'json_object' }
+            });
+        } catch (e) { threw = e.statusCode === 400; }
+        if (!threw) throw new Error('expected 400 for response_format json_object');
+        threw = false;
+        try {
+            validateOpenAIRequest({
+                messages: [{ role: 'user', content: 'hi' }],
+                response_format: { type: 'json_schema', json_schema: { name: 'x', schema: {} } }
+            });
+        } catch (e) { threw = e.statusCode === 400; }
+        if (!threw) throw new Error('expected 400 for response_format json_schema');
+        validateOpenAIRequest({
+            messages: [{ role: 'user', content: 'hi' }],
+            response_format: { type: 'text' }
+        });
+        validateOpenAIRequest({
+            messages: [{ role: 'user', content: 'hi' }],
+            response_format: 'text'
+        });
+    });
+
+    test('validate: rejects non-numeric max_tokens', () => {
+        let threw = false;
+        try { validateOpenAIRequest({ messages: [{ role: 'user', content: 'hi' }], max_tokens: '100' }); }
+        catch (e) { threw = e.statusCode === 400; }
+        if (!threw) throw new Error('expected 400 for string max_tokens');
+        threw = false;
+        try { validateOpenAIRequest({ messages: [{ role: 'user', content: 'hi' }], max_tokens: -5 }); }
+        catch (e) { threw = e.statusCode === 400; }
+        if (!threw) throw new Error('expected 400 for negative max_tokens');
+        validateOpenAIRequest({ messages: [{ role: 'user', content: 'hi' }], max_tokens: 100 });
+        validateOpenAIRequest({ messages: [{ role: 'user', content: 'hi' }], max_completion_tokens: 100 });
+    });
+
     // ------------------------------------------------------------------
     // extractSystem
     // ------------------------------------------------------------------
@@ -182,6 +233,15 @@ async function runTests() {
         assertEq(req.stream, false);
     });
 
+    test('convertOpenAIRequest: max_completion_tokens fallback', () => {
+        const req = convertOpenAIRequest({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: 'hi' }],
+            max_completion_tokens: 777
+        }, 'gemini-3-pro');
+        assertEq(req.max_tokens, 777);
+    });
+
     // ------------------------------------------------------------------
     // mapFinishReason / convertResponse
     // ------------------------------------------------------------------
@@ -243,6 +303,8 @@ async function runTests() {
         assertEq(out[2].choices[0].delta, { content: 'y' });
         const finishChunk = out[out.length - 2];
         assertEq(finishChunk.choices[0].finish_reason, 'stop');
+        // delta must stay an object in every chunk (OpenAI protocol invariant)
+        assertEq(finishChunk.choices[0].delta, {});
         assertEq(finishChunk.usage, { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 });
         assertEq(out[out.length - 1], '[DONE]');
         for (const c of out.slice(0, -1)) {

@@ -27,12 +27,29 @@ export function validateOpenAIRequest(body) {
     if (!Array.isArray(body.messages) || body.messages.length === 0) {
         throw badRequest('messages must be a non-empty array');
     }
+    if (!body.messages.every(m => m && typeof m === 'object' && typeof m.role === 'string')) {
+        throw badRequest('each message must be an object with a string role');
+    }
     if (body.n !== undefined && body.n !== null && body.n !== 1) {
         throw badRequest('n > 1 is not supported');
     }
     // logit_bias is a token-id -> bias object per the OpenAI spec (never an array)
     if (body.logprobs || (body.logit_bias && typeof body.logit_bias === 'object' && Object.keys(body.logit_bias).length)) {
         throw badRequest('logprobs/logit_bias are not supported');
+    }
+    // JSON mode clients parse the response as JSON — fail fast instead of
+    // silently returning plain text that breaks their parser. Some legacy
+    // SDKs/gateways send response_format as a bare string, handle both.
+    const responseType = typeof body.response_format === 'string'
+        ? body.response_format
+        : body.response_format?.type;
+    if (responseType === 'json_object' || responseType === 'json_schema') {
+        throw badRequest('response_format JSON mode is not supported');
+    }
+    const maxTokens = body.max_tokens ?? body.max_completion_tokens;
+    if (maxTokens !== undefined && maxTokens !== null
+        && (typeof maxTokens !== 'number' || !Number.isFinite(maxTokens) || maxTokens <= 0)) {
+        throw badRequest('max_tokens must be a positive number');
     }
 }
 
@@ -44,8 +61,8 @@ function badRequest(message) {
 }
 
 /**
- * Extract system prompt from OpenAI request (system role messages or the
- * top-level `system` field) into the Anthropic `system` string.
+ * Extract system prompt from OpenAI system/developer role messages into
+ * the Anthropic `system` string.
  * @param {Array} messages OpenAI messages
  * @returns {string|undefined}
  */
@@ -221,7 +238,7 @@ export function convertOpenAIRequest(body, resolvedModel) {
     const request = {
         model: resolvedModel,
         messages,
-        max_tokens: body.max_tokens || 4096,
+        max_tokens: body.max_tokens || body.max_completion_tokens || 4096,
         stream: body.stream === true,
         temperature: body.temperature ?? undefined,
         top_p: body.top_p ?? undefined
@@ -453,7 +470,7 @@ export function createChunkStream(requestedModel, id = `chatcmpl-${crypto.random
             stopped = true;
             const out = [];
             if (usage) {
-                const usageChunk = chunk('', {
+                const usageChunk = chunk({}, {
                     finish_reason: finishReason || 'stop'
                 });
                 usageChunk.usage = {
@@ -463,7 +480,7 @@ export function createChunkStream(requestedModel, id = `chatcmpl-${crypto.random
                 };
                 out.push(usageChunk);
             } else {
-                out.push(chunk('', { finish_reason: finishReason || 'stop' }));
+                out.push(chunk({}, { finish_reason: finishReason || 'stop' }));
             }
             out.push('[DONE]');
             return out;

@@ -27,8 +27,10 @@ import usageLog from '../modules/usage-log.js';
  * @param {string} message
  */
 function sendAuthError(req, res, status, type, message) {
-    // req.path excludes the '/v1' mount prefix, so use the full URL
-    if (req.originalUrl.split('?')[0] === '/v1/chat/completions') {
+    // req.path excludes the '/v1' mount prefix, so use the full URL.
+    // Express non-strict routing accepts trailing slashes — normalize before matching.
+    const pathname = req.originalUrl.split('?')[0].replace(/\/+$/, '');
+    if (pathname === '/v1/chat/completions') {
         return res.status(status).json({
             error: {
                 message,
