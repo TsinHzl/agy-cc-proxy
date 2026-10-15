@@ -1,0 +1,57 @@
+docs/testing.md
+  44ce31247a023c57 24-25
+src/openai/converter.js
+  44ce31247a023c57 1-472
+src/server/middleware.js
+  44ce31247a023c57 20-45,62,76,80,87,91
+README.md
+  44ce31247a023c57 42,369
+tests/test-403-integration.cjs
+  44ce31247a023c57 96,321,323-324,331,333,338-339
+package.json
+  44ce31247a023c57 44-45
+src/constants.js
+  44ce31247a023c57 354,379-381
+tests/run-all.cjs
+  44ce31247a023c57 27-29
+tests/test-openai-converter.cjs
+  44ce31247a023c57 1-322
+tests/helpers/http-client.cjs
+  44ce31247a023c57 14-29,45,134
+openspec/specs/openai-compat-and-api-keys/spec.md
+  44ce31247a023c57 1-60
+src/server.js
+  44ce31247a023c57 22,121
+tests/test-openai-endpoint.cjs
+  44ce31247a023c57 1-338
+docs/api-endpoints.md
+  44ce31247a023c57 7-9,11-32
+CLAUDE.md
+  44ce31247a023c57 58-59,61,82-83
+tests/test-empty-response-retry.cjs
+  44ce31247a023c57 45-48
+src/server/routes-openai.js
+  44ce31247a023c57 1-291
+tests/test-images.cjs
+  44ce31247a023c57 77-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "7b8ee61795dfae210d2f2a4ff82c1e498b19222c",
+  "prompts": {
+    "44ce31247a023c57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b40431c3-f28f-4c18-846b-52628a0597e7",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 1953,
+      "total_deletions": 247,
+      "accepted_lines": 1764,
+      "overriden_lines": 0
+    }
+  }
+}
