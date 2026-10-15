@@ -1,0 +1,42 @@
+src/openai/converter.js
+  44ce31247a023c57 30-32,40-53,64-65,241,473,483
+tests/test-openai-endpoint.cjs
+  44ce31247a023c57 124,315-334
+src/server/middleware.js
+  44ce31247a023c57 30-33
+tests/test-openai-converter.cjs
+  44ce31247a023c57 74-124,236-244,306-307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "29bc066274a19a07d719b815cdbee9eb6718128b",
+  "prompts": {
+    "44ce31247a023c57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b40431c3-f28f-4c18-846b-52628a0597e7",
+        "model": "glm_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 111,
+      "total_deletions": 10,
+      "accepted_lines": 109,
+      "overriden_lines": 0
+    },
+    "df0cd9ef0ab13b63": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bc7bf985-9ae5-40b6-882a-f1f8c2d02e5e",
+        "model": "glm-5.3"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 355,
+      "total_deletions": 0,
+      "accepted_lines": 355,
+      "overriden_lines": 0
+    }
+  }
+}
