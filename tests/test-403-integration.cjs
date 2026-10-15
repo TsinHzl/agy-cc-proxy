@@ -93,6 +93,7 @@ class MockAccountManager {
 // Import the actual detection/classification functions
 const {
     isValidationRequired,
+    isAccountDisabled,
     extractVerificationUrl,
     isPermanentAuthFailure,
 } = require('../src/cloudcode/rate-limit-state.js');
@@ -317,24 +318,25 @@ test('permanent auth failure is distinct from validation required', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('\n── Handler: Edge cases ────────────────────────────────────────');
 
-test('ACCOUNT_DISABLED triggers account rotation (same as VALIDATION_REQUIRED)', () => {
+test('ACCOUNT_DISABLED is detected by isAccountDisabled (permanent), not isValidationRequired', () => {
     const errorText = '{"error":{"code":403,"message":"ACCOUNT_DISABLED","status":"PERMISSION_DENIED"}}';
-    assert.strictEqual(isValidationRequired(errorText), true);
+    assert.strictEqual(isAccountDisabled(errorText), true);
+    assert.strictEqual(isValidationRequired(errorText), false);
 
     const mgr = new MockAccountManager([{ email: 'a@test.com' }, { email: 'b@test.com' }]);
     mgr.markInvalid('a@test.com', 'Account disabled');
     assert.strictEqual(mgr.getAvailableAccounts().length, 1);
 });
 
-test('USER_DISABLED triggers account rotation', () => {
+test('USER_DISABLED is detected by isAccountDisabled (permanent)', () => {
     const errorText = 'user_disabled: This account has been suspended';
-    assert.strictEqual(isValidationRequired(errorText), true);
+    assert.strictEqual(isAccountDisabled(errorText), true);
 });
 
 test('mixed case detection works', () => {
     assert.strictEqual(isValidationRequired('Validation_Required'), true);
-    assert.strictEqual(isValidationRequired('ACCOUNT_DISABLED'), true);
-    assert.strictEqual(isValidationRequired('User_Disabled'), true);
+    assert.strictEqual(isAccountDisabled('ACCOUNT_DISABLED'), true);
+    assert.strictEqual(isAccountDisabled('User_Disabled'), true);
 });
 
 test('extractVerificationUrl handles URL with trailing bracket', () => {

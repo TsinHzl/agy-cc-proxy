@@ -11,6 +11,23 @@ const BASE_URL = 'localhost';
 const PORT = 8080;
 
 /**
+ * Resolve the API key: TEST_API_KEY env override -> runtime config apiKey
+ * -> 'test' fallback (only works when no key is configured on the server).
+ */
+function resolveApiKey() {
+    if (process.env.TEST_API_KEY) return process.env.TEST_API_KEY;
+    try {
+        const cfg = JSON.parse(
+            require('fs').readFileSync(
+                require('path').join(require('os').homedir(), '.config/antigravity-proxy/config.json'), 'utf-8')
+        );
+        if (cfg.apiKey) return cfg.apiKey;
+    } catch (e) { }
+    return 'test';
+}
+const API_KEY = resolveApiKey();
+
+/**
  * Make a streaming SSE request to the API
  * @param {Object} body - Request body
  * @returns {Promise<{content: Array, events: Array, statusCode: number, raw: string}>}
@@ -25,7 +42,7 @@ function streamRequest(body) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': 'test',
+                'x-api-key': API_KEY,
                 'anthropic-version': '2023-06-01',
                 'anthropic-beta': 'interleaved-thinking-2025-05-14',
                 'Content-Length': Buffer.byteLength(data)
@@ -114,7 +131,7 @@ function makeRequest(body) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': 'test',
+                'x-api-key': API_KEY,
                 'anthropic-version': '2023-06-01',
                 'anthropic-beta': 'interleaved-thinking-2025-05-14',
                 'Content-Length': Buffer.byteLength(data)

@@ -21,4 +21,6 @@ npm run test:images        # Image processing
 npm run test:caching       # Prompt caching
 npm run test:strategies    # Account selection strategies
 npm run test:cache-control # Cache control field stripping
+npm run test:openai        # OpenAI compat endpoint (live server)
+npm run test:openai-converter # OpenAI converter unit tests (no server)
 ```

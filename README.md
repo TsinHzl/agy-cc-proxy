@@ -39,7 +39,7 @@ A proxy server that exposes an **Anthropic-compatible API** backed by **Antigrav
 └──────────────────┘     └─────────────────────┘     └────────────────────────────┘
 ```
 
-1. Receives requests in **Anthropic Messages API format**
+1. Receives requests in **Anthropic Messages API format** (plus an OpenAI Chat Completions compat endpoint at `/v1/chat/completions`)
 2. Uses OAuth tokens from added Google accounts (or Antigravity's local database)
 3. Transforms to **Google Generative AI format** with Cloud Code wrapping
 4. Sends to Antigravity's Cloud Code API
@@ -366,7 +366,7 @@ Without this, the WebUI's Claude CLI tab won't be able to read or write your Cla
 - [Advanced Configuration](docs/configuration.md)
 - [macOS Menu Bar App](docs/menubar-app.md)
 - [OpenClaw / ClawdBot Integration](docs/openclaw.md)
-- [API Endpoints](docs/api-endpoints.md)
+- [API Endpoints](docs/api-endpoints.md) (incl. OpenAI `/v1/chat/completions` compat)
 - [Testing](docs/testing.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Safety, Usage, and Risk Notices](docs/safety-notices.md)

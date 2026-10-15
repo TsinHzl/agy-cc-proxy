@@ -55,8 +55,10 @@ npm run test:sanitizer    # schema sanitizer (independent of server)
 npm run test:strategies   # strategy unit tests (independent of server)
 npm run test:cache-control# cache_control header removal validation
 npm run test:compact      # /compact request detection & handling
+npm run test:openai       # OpenAI compat endpoint (live server)
+npm run test:openai-converter # OpenAI converter unit tests (independent of server)
 ```
-`tests/run-all.cjs` orchestrates the full suite (17 suites incl. `test-403-account-rotation`, `test-403-integration`, `test-streaming-whitespace`, `test-version-detection`). `tests/stress-test-*.cjs` are standalone load scripts.
+`tests/run-all.cjs` orchestrates the full suite (19 suites incl. `test-403-account-rotation`, `test-403-integration`, `test-streaming-whitespace`, `test-version-detection`, `test-openai-endpoint`, `test-openai-converter`). `tests/stress-test-*.cjs` are standalone load scripts.
 
 ## Architecture & Code Organization
 
@@ -77,6 +79,8 @@ npm run test:compact      # /compact request detection & handling
   * `schema-sanitizer.js` (~673 lines) — sanitizes tool/JSON schemas to satisfy Gemini strict proto validation.
   * `thinking-utils.js` (~698 lines) — cross-model thinking block handling: `clampGeminiThinkingBudget`, `hasUnsignedThinkingBlocks`, `filterUnsignedThinkingBlocks`, `restoreThinkingSignatures`, `reorderAssistantContent`, `needsThinkingRecovery`, **`closeToolLoopForThinking`** (safely closes interrupted tool loops).
   * `signature-cache.js` — Gemini `thoughtSignature` cache (TTL `GEMINI_SIGNATURE_CACHE_TTL_MS`, 2h).
+* **`src/openai/`**: OpenAI Chat Completions compat layer. `converter.js` — pure request/response conversion (OpenAI chat messages/tools/tool_choice/image data URLs → internal Anthropic representation; Anthropic response / SSE events → `chat.completion` JSON / `chat.completion.chunk` sequence; `n>1`/`logprobs`/`logit_bias` → 400). Unit-tested standalone via `tests/test-openai-converter.cjs`.
+* **`src/server/routes-openai.js`**: `POST /v1/chat/completions` route — streams/buffers with the same first-event-pull strategy as `/v1/messages`, OpenAI error envelope (`sendOpenAIError`), usage recording guarded in try/catch after the response is sent.
 * **`src/webui/index.js`** (~1376 lines, 39 `app.<verb>` routes): Web dashboard backend — auth (scrypt-hashed password, `createAuthMiddleware`), account CRUD/refresh/toggle/export/import/reload, config get/set, password set, settings, Claude config + mode + presets (restore), server presets, model config, logs + log stream (SSE), strategy health, OAuth add flow (`/api/auth/url` + `/api/auth/complete` on localhost:51121). Mounts `public/` static assets.
 * **`src/auth/`**: `oauth.js` (Google OAuth 2.0 PKCE), `database.js` (SQLite access via `better-sqlite3`), `token-extractor.js` (extract tokens from Antigravity app DB, `forceRefresh`).
 * **`src/utils/`**: `logger.js`, `helpers.js` (`formatDuration`, `sleep`, `isNetworkError`, `throttledFetch`), `native-module-helper.js` (rebuilds `better-sqlite3` native binding on Node version mismatch), `claude-config.js` (resolves real user CLI config path via `CLAUDE_CONFIG_PATH`), `version-detector.js` (reads Antigravity `product.json` → `X-Client-Version` + User-Agent), `server-presets.js`, `proxy.js`.

@@ -19,6 +19,7 @@ import { registerCoreMiddleware } from './server/middleware.js';
 import { registerMiscRoutes } from './server/routes-misc.js';
 import { registerHealthRoutes } from './server/routes-health.js';
 import { registerMessagesRoutes } from './server/routes-messages.js';
+import { registerOpenAIRoutes } from './server/routes-openai.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(__filename);
@@ -117,6 +118,7 @@ const ctx = { accountManager, ensureInitialized, fallbackEnabled: FALLBACK_ENABL
 registerMiscRoutes(app, ctx);
 registerHealthRoutes(app, ctx);
 registerMessagesRoutes(app, ctx);
+registerOpenAIRoutes(app, ctx);
 
 /**
  * Catch-all for unsupported endpoints

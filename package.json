@@ -41,6 +41,8 @@
     "test:compact": "node tests/test-compact-request.cjs",
     "test:request-builder": "node tests/test-request-builder.cjs",
     "test:effort": "node tests/test-effort.cjs",
+    "test:openai": "node tests/test-openai-endpoint.cjs",
+    "test:openai-converter": "node tests/test-openai-converter.cjs",
     "diagnose:403-prompt": "node tests/diagnose-403-system-prompt.cjs"
   },
   "keywords": [

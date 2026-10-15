@@ -42,7 +42,10 @@ async function testEmptyResponseRetry() {
         const response = await streamRequest({
             model: TEST_MODELS.gemini,
             messages: [{ role: 'user', content: 'Say hi in 3 words' }],
-            max_tokens: 20,
+            // Gemini thinking models can spend the whole budget on thought and
+            // emit zero visible text with a tiny max_tokens — use a value large
+            // enough that the answer itself survives (see also test-images.cjs).
+            max_tokens: 200,
             stream: true
         });
 

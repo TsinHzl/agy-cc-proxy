@@ -17,6 +17,33 @@ import usageStats from '../modules/usage-stats.js';
 import usageLog from '../modules/usage-log.js';
 
 /**
+ * Send an auth/quota error in the format expected by the client.
+ * OpenAI-compat endpoints (/v1/chat/completions) receive the OpenAI error
+ * envelope; every other path keeps the Anthropic envelope byte-for-byte.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {number} status
+ * @param {string} type Anthropic-style error type
+ * @param {string} message
+ */
+function sendAuthError(req, res, status, type, message) {
+    // req.path excludes the '/v1' mount prefix, so use the full URL
+    if (req.originalUrl.split('?')[0] === '/v1/chat/completions') {
+        return res.status(status).json({
+            error: {
+                message,
+                type: type === 'rate_limit_error' ? 'rate_limit_exceeded' : 'invalid_api_key',
+                code: type === 'rate_limit_error' ? null : 'invalid_api_key'
+            }
+        });
+    }
+    return res.status(status).json({
+        type: 'error',
+        error: { type, message }
+    });
+}
+
+/**
  * API key auth middleware (shared by /v1 routes and POST /refresh-token).
  */
 export function apiKeyAuth(req, res, next) {
@@ -32,13 +59,7 @@ export function apiKeyAuth(req, res, next) {
 
     if (!providedKey) {
         logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
-        return res.status(401).json({
-            type: 'error',
-            error: {
-                type: 'authentication_error',
-                message: 'Invalid or missing API key'
-            }
-        });
+        return sendAuthError(req, res, 401, 'authentication_error', 'Invalid or missing API key');
     }
 
     // Primary key (config.apiKey) is checked first (id: null, zero regression),
@@ -52,46 +73,22 @@ export function apiKeyAuth(req, res, next) {
     const keyRecord = findKeyBySecret(providedKey);
     if (!keyRecord) {
         logger.warn(`[API] Unauthorized request from ${req.ip || req.socket?.remoteAddress}, invalid or missing API key`);
-        return res.status(401).json({
-            type: 'error',
-            error: {
-                type: 'authentication_error',
-                message: 'Invalid or missing API key'
-            }
-        });
+        return sendAuthError(req, res, 401, 'authentication_error', 'Invalid or missing API key');
     }
 
     if (!keyRecord.enabled) {
-        return res.status(401).json({
-            type: 'error',
-            error: {
-                type: 'authentication_error',
-                message: 'API key has been disabled'
-            }
-        });
+        return sendAuthError(req, res, 401, 'authentication_error', 'API key has been disabled');
     }
 
     // Lazy activation: first use starts the validity window; this request passes
     checkAndActivate(keyRecord);
 
     if (isExpired(keyRecord)) {
-        return res.status(401).json({
-            type: 'error',
-            error: {
-                type: 'authentication_error',
-                message: 'API key has expired'
-            }
-        });
+        return sendAuthError(req, res, 401, 'authentication_error', 'API key has expired');
     }
 
     if (checkQuota(keyRecord)) {
-        return res.status(429).json({
-            type: 'error',
-            error: {
-                type: 'rate_limit_error',
-                message: 'API key spending limit exceeded'
-            }
-        });
+        return sendAuthError(req, res, 429, 'rate_limit_error', 'API key spending limit exceeded');
     }
 
     req._apiKeyId = keyRecord.id;
