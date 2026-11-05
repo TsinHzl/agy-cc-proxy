@@ -1,0 +1,87 @@
+src/webui/routes/models.js
+  98c82d0fbf2e74b7 6,43-86
+src/server/routes-openai.js
+  98c82d0fbf2e74b7 12-19,95-97,101,103,120-122,142-143,146-151,201,249-257,266
+src/errors.js
+  98c82d0fbf2e74b7 106-119,190-202,210,214-215
+src/account-manager/index.js
+  98c82d0fbf2e74b7 308,310-311
+src/config.js
+  98c82d0fbf2e74b7 105-106
+public/js/translations/tr.js
+  98c82d0fbf2e74b7 82-97
+public/js/translations/pt.js
+  98c82d0fbf2e74b7 82-97
+public/js/components/models.js
+  98c82d0fbf2e74b7 301-435,441,444
+src/cloudcode/auto-model-handler.js
+  98c82d0fbf2e74b7 1-175
+src/account-manager/rate-limits.js
+  98c82d0fbf2e74b7 12-14,86,106-110,124-125,128,132-137,143,146-150,155-156
+docs/configuration.md
+  98c82d0fbf2e74b7 93,96-121
+docs/testing.md
+  98c82d0fbf2e74b7 26-27,29-50
+CLAUDE.md
+  98c82d0fbf2e74b7 60,70
+public/js/translations/id.js
+  98c82d0fbf2e74b7 101-116
+src/cloudcode/index.js
+  98c82d0fbf2e74b7 15-17,23-25,31-37
+src/server/routes-messages.js
+  98c82d0fbf2e74b7 7-14,66-69,76,78,95-97,158-160,164-173,224,273-283,290
+src/cloudcode/model-api.js
+  98c82d0fbf2e74b7 15-16,18,21,41-59,68-71,74,88-89,95
+src/cloudcode/auto-model.js
+  98c82d0fbf2e74b7 1-249
+docs/api-endpoints.md
+  98c82d0fbf2e74b7 10-11,29-48
+src/webui/routes/server-presets.js
+  98c82d0fbf2e74b7 40-42,79-81
+package.json
+  98c82d0fbf2e74b7 46
+docs/models.md
+  98c82d0fbf2e74b7 20-38
+openspec/specs/auto-model-routing/spec.md
+  98c82d0fbf2e74b7 1-278
+src/webui/routes/config.js
+  98c82d0fbf2e74b7 10,55-70
+src/cloudcode/message-handler.js
+  98c82d0fbf2e74b7 22,25,29,56,63-65,94-106,115,272-282,482-494,501
+tests/test-auto-model.cjs
+  98c82d0fbf2e74b7 1-985
+public/views/models.html
+  98c82d0fbf2e74b7 139-234
+config.example.json
+  98c82d0fbf2e74b7 36-48
+src/cloudcode/streaming-handler.js
+  98c82d0fbf2e74b7 21,24,33,67-69,97-110,298-308,451-461,592-605
+README.md
+  98c82d0fbf2e74b7 364
+public/js/translations/en.js
+  98c82d0fbf2e74b7 85-100
+public/js/translations/zh.js
+  98c82d0fbf2e74b7 85-100
+src/constants.js
+  98c82d0fbf2e74b7 195-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "e6a742b182dc5c2740d627138bb41cf0146fcc0f",
+  "prompts": {
+    "98c82d0fbf2e74b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94a1f75c-92f0-4ae6-b44e-f7b15eea2942",
+        "model": "deepseek-v4.1-flash-1017"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 4120,
+      "total_deletions": 817,
+      "accepted_lines": 3342,
+      "overriden_lines": 0
+    }
+  }
+}
