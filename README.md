@@ -361,6 +361,7 @@ Without this, the WebUI's Claude CLI tab won't be able to read or write your Cla
 ## Documentation
 
 - [Available Models](docs/models.md)
+- [Auto Model Routing](docs/configuration.md#auto-model-routing)
 - [Multi-Account Load Balancing](docs/load-balancing.md)
 - [Web Management Console](docs/web-console.md)
 - [Advanced Configuration](docs/configuration.md)

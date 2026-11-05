@@ -7,6 +7,7 @@
 import { getPublicConfig, saveConfig, config, hashPassword, verifyPassword } from '../../config.js';
 import { DEFAULT_PORT } from '../../constants.js';
 import { logger } from '../../utils/logger.js';
+import { validateAutoModelConfig } from '../../cloudcode/auto-model.js';
 import { sessions } from '../session.js';
 import { validateConfigFields } from '../validate-config.js';
 
@@ -50,6 +51,22 @@ export function registerConfigRoutes(app, ctx) {
 
             // Validate tunable config fields via shared helper
             const updates = validateConfigFields(req.body);
+
+            // autoModel is validated strictly instead of being silently dropped by the
+            // shared whitelist helper: a rejected chain must not be partially written.
+            if (Object.hasOwn(req.body, 'autoModel')) {
+                const result = validateAutoModelConfig(req.body.autoModel, config.modelMapping);
+                if (!result.ok) {
+                    return res.status(400).json({
+                        type: 'error',
+                        error: {
+                            type: 'invalid_request_error',
+                            message: result.error
+                        }
+                    });
+                }
+                updates.autoModel = result.value;
+            }
 
             // Handle fields not covered by the shared helper
             if (typeof devMode === 'boolean') {

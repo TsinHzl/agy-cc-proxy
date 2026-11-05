@@ -4,7 +4,15 @@
  * streaming (first-event buffering) and non-streaming branches.
  */
 
-import { sendMessage, sendMessageStream, isValidModel, resolveModel } from '../cloudcode/index.js';
+import {
+    sendMessage,
+    sendMessageStream,
+    isValidModel,
+    resolveModel,
+    isAutoModel,
+    sendMessageAuto,
+    sendMessageStreamAuto
+} from '../cloudcode/index.js';
 import { config } from '../config.js';
 import { MODEL_MAP } from '../constants.js';
 import { recordUsage, getAllowedAccounts } from '../api-keys/manager.js';
@@ -55,14 +63,19 @@ export function registerMessagesRoutes(app, ctx) {
                 requestedModel = targetModel;
             }
 
+            // Auto routing is resolved AFTER MODEL_MAP + modelMapping, so a user mapping
+            // (e.g. "best" -> "auto") still reaches the chain wrapper.
+            const useAutoModel = isAutoModel(requestedModel);
+
             const modelId = requestedModel;
 
             // Validate and resolve model ID before processing.
             // resolveModel auto-maps unknown Claude/Gemini model names (e.g. standard Anthropic
             // client defaults like claude-opus-4-5) to the closest available Google Cloud Code model,
             // preventing INVALID_ARGUMENT errors for remote clients that haven't configured model env vars.
+            // `auto` is a virtual alias served by the chain wrapper, not a Cloud Code model.
             const { account: validationAccount } = accountManager.selectAccount();
-            if (validationAccount) {
+            if (validationAccount && !useAutoModel) {
                 const token = await accountManager.getTokenForAccount(validationAccount);
                 const projectId = validationAccount.subscription?.projectId || null;
                 const { resolved, autoMapped } = await resolveModel(modelId, token, projectId);
@@ -79,7 +92,9 @@ export function registerMessagesRoutes(app, ctx) {
 
             // Optimistic Retry: If ALL accounts are rate-limited for this model, reset them to force a fresh check.
             // If we have some available accounts, we try them first.
-            if (accountManager.isAllRateLimited(modelId)) {
+            // Auto resolves per-chain-model inside the wrapper; a global reset here would
+            // also defeat the single-flight probe registry.
+            if (!useAutoModel && accountManager.isAllRateLimited(modelId)) {
                 logger.warn(`[Server] All accounts rate-limited for ${modelId}. Resetting state for optimistic retry.`);
                 accountManager.resetAllRateLimits();
             }
@@ -140,13 +155,22 @@ export function registerMessagesRoutes(app, ctx) {
                 let usageOutputTokens = 0;
                 let usageCacheReadTokens = 0;
                 let usageTimeToFirstToken = null;
+                // Actual model that produced the response (differs from `auto` after a switch).
+                let resolvedModel = modelId;
+                const accountFilter = { allowedEmails: getAllowedAccounts(req._apiKeyId) };
 
                 try {
                     // Initialize the generator
-                    const generator = sendMessageStream(request, accountManager, fallbackEnabled, { allowedEmails: getAllowedAccounts(req._apiKeyId) }, {
-                        thinkingAsText: config.thinkingAsText === true,
-                        isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))
-                    });
+                    const generator = useAutoModel
+                        ? sendMessageStreamAuto(request, accountManager, accountFilter, {
+                            thinkingAsText: config.thinkingAsText === true,
+                            isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent')),
+                            isCancelled: () => res.writableEnded || req.destroyed
+                        }, { onModelResolved: (m) => { resolvedModel = m; } })
+                        : sendMessageStream(request, accountManager, fallbackEnabled, accountFilter, {
+                            thinkingAsText: config.thinkingAsText === true,
+                            isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))
+                        });
 
                     // BUFFERING STRATEGY:
                     // Pull the first event *before* sending headers.
@@ -197,7 +221,7 @@ export function registerMessagesRoutes(app, ctx) {
                     const totalDuration = (Date.now() - streamStartTime) / 1000;
                     usageLog.record({
                         timestamp: new Date(streamStartTime).toISOString(),
-                        model: modelId,
+                        model: resolvedModel,
                         apiKey: validationAccount?.email || '-',
                         clientIp: req._clientIp || req.ip || '-',
                         keyId: req._apiKeyId || null,
@@ -246,16 +270,24 @@ export function registerMessagesRoutes(app, ctx) {
             } else {
                 // Handle non-streaming response
                 const nonStreamStartTime = Date.now();
-                const response = await sendMessage(request, accountManager, fallbackEnabled, { allowedEmails: getAllowedAccounts(req._apiKeyId) }, {
-                    emitUnsignedThinking: config.thinkingAsText === true && isClaudeCodeUserAgent(req.get('user-agent'))
-                });
+                const nonStreamAccountFilter = { allowedEmails: getAllowedAccounts(req._apiKeyId) };
+                const emitUnsignedThinking = config.thinkingAsText === true && isClaudeCodeUserAgent(req.get('user-agent'));
+                // Actual model that produced the response (differs from `auto` after a switch).
+                let resolvedModel = modelId;
+                const response = useAutoModel
+                    ? await sendMessageAuto(request, accountManager, nonStreamAccountFilter, { emitUnsignedThinking }, {
+                        onModelResolved: (m) => { resolvedModel = m; }
+                    })
+                    : await sendMessage(request, accountManager, fallbackEnabled, nonStreamAccountFilter, {
+                        emitUnsignedThinking
+                    });
                 res.json(response);
 
                 // Record usage for non-streaming request
                 const u = response?.usage || {};
                 usageLog.record({
                     timestamp: new Date(nonStreamStartTime).toISOString(),
-                    model: modelId,
+                    model: resolvedModel,
                     apiKey: validationAccount?.email || '-',
                     clientIp: req._clientIp || req.ip || '-',
                     keyId: req._apiKeyId || null,

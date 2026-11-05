@@ -33,6 +33,19 @@
   "thinkingAsText": false,
   "_thinkingAsText_comment": "Render valid upstream thinking as dim text only for Claude Code streaming requests.",
 
+  "autoModel": {
+    "enabled": false,
+    "models": []
+  },
+  "_autoModel_comment": "Priority chain served by the `auto` model alias. Lower priority number runs first; on quota exhaustion (QUOTA_EXHAUSTED) only, the next entry is tried. Max 10 entries. Configure in WebUI -> Models or via GET/POST /api/models/auto.",
+  "_autoModel_example": {
+    "enabled": true,
+    "models": [
+      { "model": "claude-opus-4-6-thinking", "priority": 1 },
+      { "model": "gemini-pro-agent", "priority": 2 }
+    ]
+  },
+
   "requestTimeoutMs": 300000,
 
   "maxAccounts": 10,

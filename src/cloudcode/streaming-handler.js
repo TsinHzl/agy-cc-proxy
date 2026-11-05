@@ -18,10 +18,10 @@ import {
     MAX_CAPACITY_RETRIES,
     BACKOFF_BY_ERROR_TYPE
 } from '../constants.js';
-import { isRateLimitError, isAuthError, isEmptyResponseError, isAccountForbiddenError, AccountForbiddenError } from '../errors.js';
+import { isRateLimitError, isAuthError, isEmptyResponseError, isAccountForbiddenError, AccountForbiddenError, QuotaExhaustedError } from '../errors.js';
 import { formatDuration, sleep, isNetworkError, throttledFetch } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
-import { parseResetTime } from './rate-limit-parser.js';
+import { parseResetTime, parseRateLimitReason } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
 import { streamSSEResponse } from './sse-streamer.js';
 import {
@@ -30,6 +30,7 @@ import {
 } from './thinking-text-streamer.js';
 import { isCompactRequest } from '../format/request-converter.js';
 import { getFallbackModel } from '../fallback-config.js';
+import { countActiveQuotaExhausted, shouldSignalQuotaExhaustion } from './auto-model.js';
 import {
     getRateLimitBackoff,
     clearRateLimitState,
@@ -63,6 +64,9 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
     const allowedEmails = accountFilter?.allowedEmails ?? null;
     const selectionOptions = allowedEmails ? { allowedEmails } : {};
 
+    // Auto-model routing: opt-in quota signal (default off — non-auto callers unchanged).
+    const quotaSignal = streamOptions?.quotaSignal === true;
+
     // Retry loop with account failover
     // Ensure we try at least as many times as there are accounts to cycle through everyone
     const maxAttempts = Math.max(MAX_RETRIES, accountManager.getAccountCount() + 1);
@@ -89,6 +93,20 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
             if (accountManager.isAllRateLimited(model, allowedEmails)) {
                 const minWaitMs = accountManager.getMinWaitTimeMs(model, allowedEmails);
                 const resetTime = new Date(Date.now() + minWaitMs).toISOString();
+
+                // Auto-model routing: signal quota exhaustion explicitly instead of
+                // sleeping. Placed BEFORE the maxWait check so both the short and the
+                // long wait windows surface as QuotaExhaustedError.
+                if (shouldSignalQuotaExhaustion({
+                    quotaSignal,
+                    quotaExhaustedCount: countActiveQuotaExhausted(
+                        accountManager.getAvailableAccounts(null, allowedEmails), model),
+                    availableCount: 0
+                })) {
+                    throw new QuotaExhaustedError(
+                        `RESOURCE_EXHAUSTED: Rate limited on ${model}. Quota will reset after ${formatDuration(minWaitMs)}. Next available: ${resetTime}`
+                    );
+                }
 
                 // If wait time is too long (> 2 minutes), try fallback first, then throw error
                 if (minWaitMs > MAX_WAIT_BEFORE_ERROR_MS) {
@@ -277,7 +295,17 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                                 const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
                                 logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);
-                                accountManager.markRateLimited(account.email, cooldownMs, model);
+                                // Only quota-classified responses write a `reason`; every other
+                                // call site keeps the previous 3-argument form unchanged.
+                                const rateLimitReason = parseRateLimitReason(errorText, response.status);
+                                const isQuotaOnly =
+                                    rateLimitReason === 'QUOTA_EXHAUSTED' && !isModelCapacityExhausted(errorText);
+                                accountManager.markRateLimited(
+                                    account.email,
+                                    cooldownMs,
+                                    model,
+                                    isQuotaOnly ? rateLimitReason : null
+                                );
                                 // Try the next endpoint (daily → prod) before rotating accounts —
                                 // the real CLI works while daily 429s, so endpoint-level limits
                                 // must be exhausted via fallback, not account rotation.
@@ -420,7 +448,17 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                                 // Rate limit error - mark account and throw to trigger account switch
                                 if (currentResponse.status === 429) {
                                     const resetMs = parseResetTime(currentResponse, retryErrorText);
-                                    accountManager.markRateLimited(account.email, resetMs, model);
+                                    // Same quota classification as the main 429 path: the retry
+                                    // wrapper prefix hides the reason from any text match.
+                                    const retryReason = parseRateLimitReason(retryErrorText, currentResponse.status);
+                                    const retryIsQuotaOnly =
+                                        retryReason === 'QUOTA_EXHAUSTED' && !isModelCapacityExhausted(retryErrorText);
+                                    accountManager.markRateLimited(
+                                        account.email,
+                                        resetMs,
+                                        model,
+                                        retryIsQuotaOnly ? retryReason : null
+                                    );
                                     throw new Error(`429 RESOURCE_EXHAUSTED during retry: ${retryErrorText}`);
                                 }
 
@@ -549,6 +587,20 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
             throw error;
         }
+    }
+
+    // Auto-model routing: terminal state — no account can serve this model.
+    // Checked before the generic failure so the caller can switch models.
+    if (shouldSignalQuotaExhaustion({
+        quotaSignal,
+        quotaExhaustedCount: countActiveQuotaExhausted(
+            accountManager.getAvailableAccounts(null, allowedEmails), model),
+        availableCount: accountManager.getAvailableAccounts(model, allowedEmails).length
+    })) {
+        const minWaitMs = accountManager.getMinWaitTimeMs(model, allowedEmails);
+        throw new QuotaExhaustedError(
+            `RESOURCE_EXHAUSTED: Rate limited on ${model}. Quota will reset after ${formatDuration(minWaitMs)}.`
+        );
     }
 
     // All retries exhausted - try fallback model if enabled

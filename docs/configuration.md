@@ -90,5 +90,32 @@ The proxy supports `http_proxy`, `HTTP_PROXY`, `https_proxy`, and `HTTPS_PROXY` 
 - **Max Accounts**: Set `maxAccounts` (1-100) to limit the number of Google accounts. Default: 10.
 - **Quota Threshold**: Set `globalQuotaThreshold` (0-0.99) to switch accounts before quota drops below a minimum level. Supports per-account and per-model overrides.
 - **Endpoint Fallback**: Automatic 403/404 endpoint fallback for API compatibility.
+- **Auto Model Routing**: Define a prioritized model chain served by the `auto` alias (`autoModel` in config, or WebUI → Models).
 
 Refer to `config.example.json` for a complete list of fields and documentation.
+
+## Auto Model Routing
+
+`auto` is a virtual model alias — not a Cloud Code model. Requests for `auto` walk an
+ordered priority chain and switch to the next entry **only when the current model's
+quota is exhausted** (upstream `QUOTA_EXHAUSTED`). Ordinary rate limits, capacity
+backoff and other errors abort the chain instead of silently consuming a fallback.
+
+```json
+{
+  "autoModel": {
+    "enabled": true,
+    "models": [
+      { "model": "claude-opus-4-6-thinking", "priority": 1 },
+      { "model": "gemini-pro-agent", "priority": 2 }
+    ]
+  }
+}
+```
+
+- `priority`: positive integer; **lower runs first**, ties keep configuration order.
+- Max 10 entries. Duplicates (after alias/`modelMapping` resolution) are rejected on write.
+- `model` may be an alias from `MODEL_MAP` or a `modelMapping` key; an entry resolving back to `auto` is rejected.
+- With `enabled: false` or an empty chain, `/v1/messages` and `/v1/chat/completions` return `400 invalid_request_error` pointing at WebUI → Models.
+- `auto` is **not** included in server presets (the chain is machine-local) and is not a valid `modelMapping` target for preset import.
+- Streaming: a switch is only possible before the first SSE event; after that, failures surface as SSE error events.

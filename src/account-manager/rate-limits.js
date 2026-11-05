@@ -9,6 +9,9 @@ import { DEFAULT_COOLDOWN_MS } from '../constants.js';
 import { formatDuration } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 
+/** Keys that would mutate a plain object's prototype if used as a model id. */
+const UNSAFE_MODEL_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Check if all accounts are rate-limited for a specific model
  *
@@ -80,6 +83,7 @@ export function clearExpiredLimits(accounts) {
                 if (limit.isRateLimited && limit.resetTime <= now) {
                     limit.isRateLimited = false;
                     limit.resetTime = null;
+                    limit.reason = null;
                     cleared++;
                     logger.success(`[AccountManager] Rate limit expired for: ${account.email} (model: ${modelId})`);
                 }
@@ -99,7 +103,11 @@ export function resetAllRateLimits(accounts) {
     for (const account of accounts) {
         if (account.modelRateLimits) {
             for (const key of Object.keys(account.modelRateLimits)) {
-                account.modelRateLimits[key] = { isRateLimited: false, resetTime: null };
+                account.modelRateLimits[key] = {
+                    isRateLimited: false,
+                    resetTime: null,
+                    reason: null
+                };
             }
         }
     }
@@ -113,24 +121,39 @@ export function resetAllRateLimits(accounts) {
  * @param {string} email - Email of the account to mark
  * @param {number|null} resetMs - Time in ms until rate limit resets (from API)
  * @param {string} modelId - Model ID to mark rate limit for
+ * @param {string|null|undefined} [reason] - Classification from parseRateLimitReason().
+ *   Omit to keep the previous classification (sticky); pass `null` to clear it.
  * @returns {boolean} True if account was found and marked
  */
-export function markRateLimited(accounts, email, resetMs = null, modelId) {
+export function markRateLimited(accounts, email, resetMs = null, modelId, reason = undefined) {
     const account = accounts.find(a => a.email === email);
     if (!account) return false;
+
+    // Model ids reach this path from user config (auto chain) as well as from
+    // Cloud Code constants; a prototype key would rewrite the object's prototype.
+    if (typeof modelId !== 'string' || !modelId || UNSAFE_MODEL_KEYS.has(modelId)) {
+        return false;
+    }
 
     // Store the ACTUAL reset time from the API
     // This is used to decide whether to wait (short) or switch accounts (long)
     const actualResetMs = (resetMs && resetMs > 0) ? resetMs : DEFAULT_COOLDOWN_MS;
 
     if (!account.modelRateLimits) {
-        account.modelRateLimits = {};
+        account.modelRateLimits = Object.create(null);
     }
+
+    // Sticky reason: call sites that know nothing about the classification keep
+    // whatever a previous quota-classified response recorded, while an explicit
+    // `null` clears it (a non-quota 429 can overwrite the same model's limit).
+    const previousReason = account.modelRateLimits[modelId]?.reason ?? null;
+    const nextReason = reason === undefined ? previousReason : (reason || null);
 
     account.modelRateLimits[modelId] = {
         isRateLimited: true,
         resetTime: Date.now() + actualResetMs,  // Actual reset time for decisions
-        actualResetMs: actualResetMs             // Original duration from API
+        actualResetMs: actualResetMs,            // Original duration from API
+        reason: nextReason                       // Error classification (null = unknown)
     };
 
     // Track consecutive failures for progressive backoff (matches opencode-antigravity-auth)

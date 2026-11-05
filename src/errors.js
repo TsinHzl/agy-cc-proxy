@@ -103,6 +103,21 @@ export class EmptyResponseError extends AntigravityError {
 }
 
 /**
+ * Quota exhausted error - thrown by handlers when every account is out of quota
+ * for a model. Explicit type (not text matching) so auto-model routing can tell
+ * real quota exhaustion apart from ordinary rate limiting or capacity backoff.
+ */
+export class QuotaExhaustedError extends AntigravityError {
+    /**
+     * @param {string} message - Error message (reuses the "Rate limited on <model>." shape)
+     */
+    constructor(message) {
+        super(message, 'QUOTA_EXHAUSTED', true, {});
+        this.name = 'QuotaExhaustedError';
+    }
+}
+
+/**
  * Account forbidden error (403 VALIDATION_REQUIRED / PERMISSION_DENIED)
  * These are account-level errors where the account needs validation or has been
  * disabled. Trying different endpoints won't help - need to rotate to another account.
@@ -172,6 +187,19 @@ export function isEmptyResponseError(error) {
         error?.name === 'EmptyResponseError';
 }
 
+/**
+ * Check if an error signals quota exhaustion for a model
+ * Mirrors isEmptyResponseError: type-first, name fallback for cross-module boundaries.
+ * Deliberately does NOT match error text — the handler's long-wait throw uses
+ * `RESOURCE_EXHAUSTED: Rate limited on ...` for plain rate limits and capacity too.
+ * @param {Error} error - Error to check
+ * @returns {boolean}
+ */
+export function isQuotaExhaustedError(error) {
+    return error instanceof QuotaExhaustedError ||
+        error?.name === 'QuotaExhaustedError';
+}
+
 export default {
     AntigravityError,
     RateLimitError,
@@ -179,8 +207,10 @@ export default {
     AccountForbiddenError,
     NativeModuleError,
     EmptyResponseError,
+    QuotaExhaustedError,
     isRateLimitError,
     isAuthError,
     isAccountForbiddenError,
-    isEmptyResponseError
+    isEmptyResponseError,
+    isQuotaExhaustedError
 };

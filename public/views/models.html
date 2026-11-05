@@ -136,6 +136,102 @@
         </button>
     </div>
 
+    <!-- Auto Model Routing 面板 -->
+    <section class="mb-4 overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
+        <div class="flex flex-wrap items-center gap-2 border-b border-hairline bg-surface-2 px-[13px] py-[9px]">
+            <span class="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-3"
+                  x-text="$store.global.t('autoModelTitle')">AUTO MODEL ROUTING</span>
+            <!-- 当前解析后的执行链（只读预览） -->
+            <span class="truncate font-mono text-[11px] text-ink-3" x-show="autoChain.length > 0"
+                  x-text="autoChain.join(' → ')"></span>
+            <label class="ml-auto inline-flex cursor-pointer items-center gap-2 text-[12px] text-ink-2">
+                <input type="checkbox" class="checkbox checkbox-xs checkbox-primary" x-model="autoModel.enabled"
+                       :disabled="!autoLoaded || autoLoading || autoSaving"
+                       @change="markAutoDirty()">
+                <span x-text="$store.global.t('autoModelEnable')">Enabled</span>
+            </label>
+            <button type="button"
+                    class="inline-flex h-[26px] items-center gap-1 rounded-[6px] border border-hairline bg-surface px-2 text-[11px] font-medium text-ink-2 transition-colors hover:bg-surface-3 hover:text-ink"
+                    @click="autoExpanded = !autoExpanded"
+                    :aria-expanded="autoExpanded ? 'true' : 'false'">
+                <span x-text="autoExpanded ? $store.global.t('autoModelCollapse') : $store.global.t('autoModelExpand')">Configure</span>
+                <svg class="h-3 w-3 transition-transform" :class="autoExpanded ? 'rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+        </div>
+
+        <div x-show="autoExpanded" x-collapse class="px-[13px] py-3">
+            <p class="mb-2 text-[11.5px] leading-relaxed text-ink-3"
+               x-text="$store.global.t('autoModelDesc')"></p>
+
+            <template x-if="autoModel.models.length === 0">
+                <p class="mb-2 text-[11.5px] text-ink-3" x-text="$store.global.t('autoModelEmpty')"></p>
+            </template>
+
+            <div class="mb-2 flex flex-col gap-1.5">
+                <template x-for="(entry, idx) in autoModel.models" :key="'auto-' + idx">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-6 flex-shrink-0 text-right font-mono text-[11px] tabular-nums text-ink-3"
+                              :title="$store.global.t('autoModelPriority')" x-text="idx + 1"></span>
+                        <input type="text" list="auto-model-options"
+                               class="input-search-sm min-w-0 flex-1 text-ink"
+                               x-model="entry.model"
+                               :disabled="!autoLoaded || autoLoading || autoSaving"
+                               @input="markAutoDirty()"
+                               :placeholder="$store.global.t('autoModelModelPlaceholder')">
+                        <button type="button" @click="moveAutoModelRow(idx, -1)" :disabled="!autoLoaded || autoLoading || autoSaving || idx === 0"
+                                class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                                :title="$store.global.t('autoModelMoveUp')" :aria-label="$store.global.t('autoModelMoveUp')">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                            </svg>
+                        </button>
+                        <button type="button" @click="moveAutoModelRow(idx, 1)" :disabled="!autoLoaded || autoLoading || autoSaving || idx === autoModel.models.length - 1"
+                                class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                                :title="$store.global.t('autoModelMoveDown')" :aria-label="$store.global.t('autoModelMoveDown')">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <button type="button" @click="removeAutoModelRow(idx)" :disabled="!autoLoaded || autoLoading || autoSaving"
+                                class="grid size-[26px] flex-none place-items-center rounded-[6px] text-ink-3 transition-colors hover:bg-danger-soft hover:text-danger"
+                                :title="$store.global.t('autoModelRemove')" :aria-label="$store.global.t('autoModelRemove')">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </template>
+            </div>
+            <datalist id="auto-model-options">
+                <template x-for="m in $store.data.models" :key="'opt-' + m">
+                    <option :value="m"></option>
+                </template>
+            </datalist>
+
+            <p x-show="autoError" x-text="autoError" class="mb-2 text-[11.5px] text-danger"></p>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="btn-action-ghost btn-sm gap-1" @click="addAutoModelRow()"
+                        :disabled="!autoLoaded || autoLoading || autoSaving || autoModel.models.length >= 10">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span x-text="$store.global.t('autoModelAdd')">Add model</span>
+                </button>
+                <button type="button" class="btn-action-ghost btn-sm ml-auto" @click="fetchAutoModel({ force: true })"
+                        :disabled="autoLoading || autoSaving"
+                        x-text="$store.global.t('autoModelReset')">Reset</button>
+                <button type="button" class="btn-action-primary btn-sm"
+                        @click="saveAutoModel()"
+                        :disabled="!autoLoaded || autoLoading || autoSaving"
+                        x-text="autoSaving ? $store.global.t('saving') : $store.global.t('autoModelSave')">Save</button>
+            </div>
+        </div>
+    </section>
+
     <!-- Main Table（kiro2cc table-kit PANEL 规格） -->
     <section class="flex min-h-0 flex-col overflow-hidden rounded-[11px] border border-hairline bg-surface shadow-panel">
         <div class="min-h-0 overflow-x-auto">

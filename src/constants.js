@@ -192,6 +192,11 @@ export const CAPACITY_JITTER_MAX_MS = 10000; // ±5s jitter range
 // Thinking model constants
 export const MIN_SIGNATURE_LENGTH = 50; // Minimum valid thinking signature length
 
+// Auto model routing
+export const AUTO_MODEL_NAME = 'auto';
+// Max entries accepted in the auto priority chain (runtime truncates, save rejects)
+export const AUTO_MODEL_MAX_CHAIN = 10;
+
 // Account selection strategies
 export const SELECTION_STRATEGIES = ['sticky', 'round-robin', 'hybrid'];
 export const DEFAULT_SELECTION_STRATEGY = 'hybrid';

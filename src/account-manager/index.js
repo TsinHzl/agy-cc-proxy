@@ -305,9 +305,10 @@ export class AccountManager {
      * @param {string} email - Email of the account to mark
      * @param {number|null} resetMs - Time in ms until rate limit resets (optional)
      * @param {string} [modelId] - Optional model ID to mark specific limit
+     * @param {string|null} [reason] - Optional classification from parseRateLimitReason()
      */
-    markRateLimited(email, resetMs = null, modelId = null) {
-        markLimited(this.#accounts, email, resetMs, modelId);
+    markRateLimited(email, resetMs = null, modelId = null, reason = null) {
+        markLimited(this.#accounts, email, resetMs, modelId, reason);
         this.saveToDisk();
     }
 

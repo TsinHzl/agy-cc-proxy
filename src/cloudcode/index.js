@@ -12,16 +12,29 @@
 // Re-export public API
 export { sendMessage } from './message-handler.js';
 export { sendMessageStream } from './streaming-handler.js';
+export { sendMessageAuto, sendMessageStreamAuto } from './auto-model-handler.js';
+export { isAutoModel, normalizeAutoChain, validateAutoModelConfig, shouldSignalQuotaExhaustion, resolveChainModel } from './auto-model.js';
+export { QuotaExhaustedError, isQuotaExhaustedError } from '../errors.js';
 export { listModels, fetchAvailableModels, getModelQuotas, getDetailedAccountQuotas, getSubscriptionTier, isValidModel, resolveModel, fetchUserQuotaSummary } from './model-api.js';
 
 // Default export for backwards compatibility
 import { sendMessage } from './message-handler.js';
 import { sendMessageStream } from './streaming-handler.js';
+import { sendMessageAuto, sendMessageStreamAuto } from './auto-model-handler.js';
+import { isAutoModel, normalizeAutoChain, validateAutoModelConfig, shouldSignalQuotaExhaustion } from './auto-model.js';
+import { QuotaExhaustedError } from '../errors.js';
 import { listModels, fetchAvailableModels, getModelQuotas, getDetailedAccountQuotas, getSubscriptionTier, isValidModel, resolveModel, fetchUserQuotaSummary } from './model-api.js';
 
 export default {
     sendMessage,
     sendMessageStream,
+    sendMessageAuto,
+    sendMessageStreamAuto,
+    isAutoModel,
+    normalizeAutoChain,
+    validateAutoModelConfig,
+    shouldSignalQuotaExhaustion,
+    QuotaExhaustedError,
     listModels,
     fetchAvailableModels,
     getModelQuotas,

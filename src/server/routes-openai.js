@@ -9,7 +9,15 @@
  * already set and named-key quota checks have been applied upstream.
  */
 
-import { sendMessage, sendMessageStream, isValidModel, resolveModel } from '../cloudcode/index.js';
+import {
+    sendMessage,
+    sendMessageStream,
+    isValidModel,
+    resolveModel,
+    isAutoModel,
+    sendMessageAuto,
+    sendMessageStreamAuto
+} from '../cloudcode/index.js';
 import { config } from '../config.js';
 import { MODEL_MAP } from '../constants.js';
 import { recordUsage, getAllowedAccounts } from '../api-keys/manager.js';
@@ -84,11 +92,15 @@ export function registerOpenAIRoutes(app, ctx) {
                 logger.info(`[OpenAI] Mapping model ${requestedModel} -> ${targetModel}`);
                 requestedModel = targetModel;
             }
+            // Auto routing is resolved AFTER MODEL_MAP + modelMapping (same rule as /v1/messages).
+            const useAutoModel = isAutoModel(requestedModel);
+
             const modelId = requestedModel;
             anthropicRequest.model = modelId;
 
+            // `auto` is a virtual alias served by the chain wrapper, not a Cloud Code model.
             const { account: validationAccount } = accountManager.selectAccount();
-            if (validationAccount) {
+            if (validationAccount && !useAutoModel) {
                 const token = await accountManager.getTokenForAccount(validationAccount);
                 const projectId = validationAccount.subscription?.projectId || null;
                 const { resolved, autoMapped } = await resolveModel(modelId, token, projectId);
@@ -105,7 +117,9 @@ export function registerOpenAIRoutes(app, ctx) {
                 }
             }
 
-            if (accountManager.isAllRateLimited(modelId)) {
+            // Auto resolves per-chain-model inside the wrapper; a global reset here would also
+            // defeat the single-flight probe registry.
+            if (!useAutoModel && accountManager.isAllRateLimited(modelId)) {
                 logger.warn(`[OpenAI] All accounts rate-limited for ${modelId}. Resetting state for optimistic retry.`);
                 accountManager.resetAllRateLimits();
             }
@@ -125,9 +139,16 @@ export function registerOpenAIRoutes(app, ctx) {
                 let usageInputTokens = 0;
                 let usageOutputTokens = 0;
                 let usageCacheReadTokens = 0;
+                // Actual model that produced the response (differs from `auto` after a switch).
+                let resolvedModel = modelId;
 
                 try {
-                    const generator = sendMessageStream(anthropicRequest, accountManager, fallbackEnabled, accountFilter, pipelineOptions);
+                    const generator = useAutoModel
+                        ? sendMessageStreamAuto(anthropicRequest, accountManager, accountFilter, {
+                            ...pipelineOptions,
+                            isCancelled: () => res.writableEnded || req.destroyed
+                        }, { onModelResolved: (m) => { resolvedModel = m; } })
+                        : sendMessageStream(anthropicRequest, accountManager, fallbackEnabled, accountFilter, pipelineOptions);
                     const firstResult = await generator.next();
 
                     const cs = createChunkStream(openAIModel);
@@ -177,7 +198,7 @@ export function registerOpenAIRoutes(app, ctx) {
                 try {
                     usageLog.record({
                         timestamp: new Date(streamStartTime).toISOString(),
-                        model: modelId,
+                        model: resolvedModel,
                         // validationAccount is only the model-validation pick;
                         // the actual request account is chosen inside the handler.
                         apiKey: validationAccount?.email || '-',
@@ -225,9 +246,15 @@ export function registerOpenAIRoutes(app, ctx) {
             } else {
                 // NON-STREAMING
                 const nonStreamStartTime = Date.now();
-                const response = await sendMessage(anthropicRequest, accountManager, fallbackEnabled, accountFilter, {
-                    emitUnsignedThinking: false
-                });
+                // Actual model that produced the response (differs from `auto` after a switch).
+                let resolvedModel = modelId;
+                const response = useAutoModel
+                    ? await sendMessageAuto(anthropicRequest, accountManager, accountFilter, { emitUnsignedThinking: false }, {
+                        onModelResolved: (m) => { resolvedModel = m; }
+                    })
+                    : await sendMessage(anthropicRequest, accountManager, fallbackEnabled, accountFilter, {
+                        emitUnsignedThinking: false
+                    });
                 const openAIResponse = convertResponse(response, openAIModel);
                 res.json(openAIResponse);
 
@@ -236,7 +263,7 @@ export function registerOpenAIRoutes(app, ctx) {
                 try {
                     usageLog.record({
                         timestamp: new Date(nonStreamStartTime).toISOString(),
-                        model: modelId,
+                        model: resolvedModel,
                         // validationAccount is only the model-validation pick;
                         // the actual request account is chosen inside the handler.
                         apiKey: validationAccount?.email || '-',

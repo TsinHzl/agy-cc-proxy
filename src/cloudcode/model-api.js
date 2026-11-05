@@ -12,10 +12,13 @@ import {
     QUOTA_SUMMARY_ENDPOINTS,
     CLIENT_METADATA,
     getModelFamily,
-    MODEL_VALIDATION_CACHE_TTL_MS
+    MODEL_VALIDATION_CACHE_TTL_MS,
+    AUTO_MODEL_NAME
 } from '../constants.js';
+import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { throttledFetch } from '../utils/helpers.js';
+import { normalizeAutoChain } from './auto-model.js';
 
 // Model validation cache
 const modelCache = {
@@ -35,6 +38,26 @@ function isSupportedModel(modelId) {
 }
 
 /**
+ * Build the synthetic `auto` list entry.
+ *
+ * `auto` is a local routing alias, not a Cloud Code model: it is derived from
+ * config on every call and is never written into modelCache.validModels.
+ *
+ * @returns {Object|null} Model entry, or null when auto is disabled / chain empty
+ */
+function buildAutoModelEntry() {
+    const chain = normalizeAutoChain(config.autoModel, config.modelMapping);
+    if (chain.length === 0) return null;
+    return {
+        id: AUTO_MODEL_NAME,
+        object: 'model',
+        created: Math.floor(Date.now() / 1000),
+        owned_by: 'antigravity-proxy',
+        description: `Auto routing: ${chain.join(' → ')}`
+    };
+}
+
+/**
  * List available models in Anthropic API format
  * Fetches models dynamically from the Cloud Code API
  *
@@ -42,9 +65,13 @@ function isSupportedModel(modelId) {
  * @returns {Promise<{object: string, data: Array<{id: string, object: string, created: number, owned_by: string, description: string}>}>} List of available models
  */
 export async function listModels(token) {
+    // Constructed before the upstream call so `auto` still appears when the
+    // upstream list is empty (early return below).
+    const autoEntry = buildAutoModelEntry();
+
     const data = await fetchAvailableModels(token);
     if (!data || !data.models) {
-        return { object: 'list', data: [] };
+        return { object: 'list', data: autoEntry ? [autoEntry] : [] };
     }
 
     const modelList = Object.entries(data.models)
@@ -58,12 +85,14 @@ export async function listModels(token) {
         }));
 
     // Warm the model validation cache
+    // `auto` is deliberately excluded: it is not a Cloud Code model and isValidModel
+    // must never report it as one.
     modelCache.validModels = new Set(modelList.map(m => m.id));
     modelCache.lastFetched = Date.now();
 
     return {
         object: 'list',
-        data: modelList
+        data: autoEntry ? [autoEntry, ...modelList] : modelList
     };
 }
 

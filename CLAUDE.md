@@ -57,6 +57,7 @@ npm run test:cache-control# cache_control header removal validation
 npm run test:compact      # /compact request detection & handling
 npm run test:openai       # OpenAI compat endpoint (live server)
 npm run test:openai-converter # OpenAI converter unit tests (independent of server)
+npm run test:auto         # auto model routing (standalone; --unit-only skips the server)
 ```
 `tests/run-all.cjs` orchestrates the full suite (19 suites incl. `test-403-account-rotation`, `test-403-integration`, `test-streaming-whitespace`, `test-version-detection`, `test-openai-endpoint`, `test-openai-converter`). `tests/stress-test-*.cjs` are standalone load scripts.
 
@@ -66,6 +67,7 @@ npm run test:openai-converter # OpenAI converter unit tests (independent of serv
 * **`src/server.js`** (~1056 lines): Express entry. API routing (`/v1/messages`, `/v1/messages/count_tokens`, `/v1/models`, `/health`, `/account-limits`, `/refresh-token`, `/test/clear-signature-cache`), API-key + WebUI auth middleware, access logging, error classification (`parseError` → errorType/statusCode/retry-after), streaming buffering strategy (pull first event before flushing headers so upstream 4xx/5xx becomes a JSON error instead of a broken SSE stream), usage logging.
 * **`src/index.js`**: Process bootstrap — loads config, starts Express listener on `DEFAULT_PORT`.
 * **`src/cloudcode/`**: Antigravity API wrapper. Thin `index.js` re-exports public API (`sendMessage`, `sendMessageStream`, `listModels`, `fetchAvailableModels`, `getModelQuotas`, `getSubscriptionTier`, `isValidModel`, `resolveModel`).
+  * `auto-model.js` / `auto-model-handler.js` — `auto` alias priority-chain routing: resolves `config.autoModel` into an ordered model chain and switches on `QuotaExhaustedError` only. Configured via WebUI → Models or `GET/POST /api/models/auto`.
   * `message-handler.js` / `streaming-handler.js` — non-streaming / streaming request execution with multi-account failover, retry, endpoint fallback (`daily` → `prod`).
   * `request-builder.js` — builds wrapped `v1internal` payload (injects `ANTIGRAVITY_SYSTEM_INSTRUCTION` with `[ignore]` tags, `requestType: 'agent'`, `requestId`, `sessionId`, `project`). **Sets `anthropic-beta: interleaved-thinking-2025-05-14` header only for Claude thinking models.**
   * `session-manager.js` — derives stable `sessionId` from first user message for cache continuity.

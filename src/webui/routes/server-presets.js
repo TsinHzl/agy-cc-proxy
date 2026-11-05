@@ -37,6 +37,9 @@ export function registerServerPresetRoutes(app, ctx) {
             }
 
             const validatedConfig = validateConfigFields(presetConfig);
+            // autoModel is machine-local routing state, not a shareable preset value.
+            // The shared whitelist already excludes it — this delete is defensive redundancy.
+            delete validatedConfig.autoModel;
             if (Object.keys(validatedConfig).length === 0) {
                 return res.status(400).json({ status: 'error', error: 'No valid config fields provided' });
             }
@@ -73,6 +76,9 @@ export function registerServerPresetRoutes(app, ctx) {
             // Validate and include config updates if provided
             if (configInput && typeof configInput === 'object') {
                 const validatedConfig = validateConfigFields(configInput);
+                // Same exclusion as POST (defensive redundancy — the whitelist already
+                // drops autoModel): applying a preset must never overwrite it.
+                delete validatedConfig.autoModel;
                 if (Object.keys(validatedConfig).length > 0) {
                     updates.config = validatedConfig;
                 }

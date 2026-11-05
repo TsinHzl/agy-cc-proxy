@@ -298,13 +298,150 @@ window.Components.models = () => ({
         return (posInCluster * spread - totalWidth / 2) + 'px';
     },
 
+    // Auto model routing state
+    autoModel: { enabled: false, models: [] },
+    autoChain: [],
+    autoExpanded: false,
+    autoLoading: false,
+    autoSaving: false,
+    autoLoaded: false,
+    autoDirty: false,
+    autoRequestSeq: 0,
+    autoError: '',
+
+    /**
+     * Load the auto chain from the server. Automatic calls (tab re-entry) never
+     * clobber unsaved edits; the explicit Reset button passes `force`.
+     */
+    async fetchAutoModel({ force = false } = {}) {
+        // A forced reload must still win over an in-flight request; only
+        // automatic calls are dropped while another load is running.
+        if (this.autoLoading && !force) return;
+        if (!force && this.autoDirty) return;
+        const seq = ++this.autoRequestSeq;
+        this.autoLoading = true;
+        this.autoError = '';
+        try {
+            const { response } = await window.utils.request('/api/models/auto');
+            if (seq !== this.autoRequestSeq) return;   // a newer request already won
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if (seq !== this.autoRequestSeq) return;
+            // Edits made while this request was in flight must not be clobbered.
+            if (!force && this.autoDirty) return;
+            this.applyAutoModel(data.autoModel);
+            this.autoChain = data.chain || [];
+            this.autoLoaded = true;
+        } catch (e) {
+            if (seq === this.autoRequestSeq) this.autoError = e.message;
+        } finally {
+            // Always release the flag: a newer request may own it, but the flag is
+            // per-operation state and must never stay latched.
+            this.autoLoading = false;
+        }
+    },
+
+    /**
+     * Copy config into local state, ordered by priority so list order always
+     * mirrors execution order.
+     */
+    applyAutoModel(autoModel) {
+        const models = Array.isArray(autoModel?.models) ? autoModel.models : [];
+        this.autoModel = {
+            enabled: autoModel?.enabled === true,
+            models: models
+                .map(e => ({ model: String(e?.model ?? ''), priority: Number(e?.priority) || 0 }))
+                .sort((a, b) => a.priority - b.priority)
+        };
+        this.autoDirty = false;
+    },
+
+    /**
+     * Mark local state as edited. Also invalidates any in-flight GET so a
+     * response that started before this edit cannot overwrite it.
+     */
+    markAutoDirty() {
+        this.autoDirty = true;
+        this.autoRequestSeq++;
+    },
+
+    addAutoModelRow() {
+        if (this.autoModel.models.length >= 10) return;
+        this.autoModel.models.push({ model: '', priority: this.autoModel.models.length + 1 });
+        this.markAutoDirty();
+    },
+
+    removeAutoModelRow(index) {
+        this.autoModel.models.splice(index, 1);
+        this.markAutoDirty();
+    },
+
+    moveAutoModelRow(index, direction) {
+        const target = index + direction;
+        const rows = this.autoModel.models;
+        if (target < 0 || target >= rows.length) return;
+        const [row] = rows.splice(index, 1);
+        rows.splice(target, 0, row);
+        this.markAutoDirty();
+    },
+
+    /**
+     * UI order IS priority order: index + 1 is sent for each entry.
+     * Server-side validation rejects empty names / duplicates with an
+     * index-scoped message, surfaced in autoError without touching config.json.
+     */
+    async saveAutoModel() {
+        if (this.autoSaving) return;
+        if (!this.autoLoaded) {
+            // Silently returning here would look like a successful save.
+            this.autoError = Alpine.store('global').t('loadFailed');
+            return;
+        }
+        const seq = ++this.autoRequestSeq;
+        this.autoSaving = true;
+        this.autoError = '';
+        try {
+            const payload = {
+                enabled: this.autoModel.enabled === true,
+                models: this.autoModel.models.map((e, idx) => ({
+                    model: String(e.model || '').trim(),
+                    priority: idx + 1
+                }))
+            };
+            const { response } = await window.utils.request('/api/models/auto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.status !== 'ok') {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            }
+            // Always apply a successful save: this response is authoritative even
+            // if another request (e.g. a forced reload) started in the meantime.
+            this.applyAutoModel(data.autoModel);
+            this.autoChain = data.chain || [];
+            Alpine.store('global').showToast(Alpine.store('global').t('autoModelSaved'), 'success');
+        } catch (e) {
+            // A concurrent forced reload may have raised autoRequestSeq; the save
+            // error is still the more useful message for the user.
+            this.autoError = e.message;
+        } finally {
+            // Keep the sequence monotonic so a stale GET cannot win afterwards.
+            this.autoRequestSeq = Math.max(this.autoRequestSeq, seq);
+            this.autoSaving = false;
+        }
+    },
+
     init() {
         // Ensure data is fetched when this tab becomes active (skip initial trigger)
         this.$watch('$store.global.activeTab', (val, oldVal) => {
             if (val === 'models' && oldVal !== undefined) {
                 Alpine.store('data').fetchData();
+                this.fetchAutoModel();
             }
         });
+        this.fetchAutoModel();
     },
 
     /**
