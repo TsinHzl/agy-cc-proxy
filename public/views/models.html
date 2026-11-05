@@ -171,13 +171,14 @@
             </template>
 
             <div class="mb-2 flex flex-col gap-1.5">
-                <template x-for="(entry, idx) in autoModel.models" :key="'auto-' + idx">
+                <template x-for="(entry, idx) in autoModel.models" :key="entry._id">
                     <div class="flex items-center gap-1.5">
                         <span class="w-6 flex-shrink-0 text-right font-mono text-[11px] tabular-nums text-ink-3"
                               :title="$store.global.t('autoModelPriority')" x-text="idx + 1"></span>
                         <input type="text" list="auto-model-options"
                                class="input-search-sm min-w-0 flex-1 text-ink"
                                x-model="entry.model"
+                               :aria-label="`${$store.global.t('autoModelPriority')} ${idx + 1}`"
                                :disabled="!autoLoaded || autoLoading || autoSaving"
                                @input="markAutoDirty()"
                                :placeholder="$store.global.t('autoModelModelPlaceholder')">

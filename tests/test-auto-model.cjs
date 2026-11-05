@@ -359,12 +359,23 @@ async function runSourcePhase() {
 
     await test('all-limited quota throw precedes MAX_WAIT check and skips sleep', () => {
         for (const [label, src] of [['streaming', streaming], ['message', message]]) {
-            const quotaIdx = src.indexOf('if (shouldSignalQuotaExhaustion({');
+            const quotaIdx = src.indexOf('if (quotaSignal && shouldSignalQuotaExhaustion({');
             const maxWaitIdx = src.indexOf('if (minWaitMs > MAX_WAIT_BEFORE_ERROR_MS)');
             assert.ok(quotaIdx > 0 && maxWaitIdx > 0, `${label} both present`);
             assert.ok(quotaIdx < maxWaitIdx, `${label} ordering`);
             const block = src.slice(quotaIdx, src.indexOf('throw new QuotaExhaustedError(', quotaIdx));
             assert.ok(!block.includes('await sleep('), `${label} no sleep`);
+        }
+    });
+
+    await test('quota account scans are short-circuited for non-auto requests', () => {
+        for (const [label, src, expected] of [['streaming', stripComments(streaming), 2],
+                                              ['message', stripComments(message), 2]]) {
+            const guarded = (src.match(/if \(quotaSignal && shouldSignalQuotaExhaustion\(\{/g) || []).length;
+            assertEq(guarded, expected, `${label} guarded signal sites`);
+            // No unguarded call should remain: every site pays the scan cost otherwise.
+            const total = (src.match(/shouldSignalQuotaExhaustion\(\{/g) || []).length;
+            assertEq(total, expected, `${label} total signal sites`);
         }
     });
 

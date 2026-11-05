@@ -307,6 +307,7 @@ window.Components.models = () => ({
     autoLoaded: false,
     autoDirty: false,
     autoRequestSeq: 0,
+    autoRowSeq: 0,
     autoError: '',
 
     /**
@@ -350,7 +351,8 @@ window.Components.models = () => ({
         this.autoModel = {
             enabled: autoModel?.enabled === true,
             models: models
-                .map(e => ({ model: String(e?.model ?? ''), priority: Number(e?.priority) || 0 }))
+                // `_id` is a stable DOM key only — saveAutoModel sends model/priority alone.
+                .map(e => ({ _id: this.nextAutoRowId(), model: String(e?.model ?? ''), priority: Number(e?.priority) || 0 }))
                 .sort((a, b) => a.priority - b.priority)
         };
         this.autoDirty = false;
@@ -365,9 +367,18 @@ window.Components.models = () => ({
         this.autoRequestSeq++;
     },
 
+    /** Stable row identity so reordering keeps DOM nodes bound to their data. */
+    nextAutoRowId() {
+        return `auto-row-${++this.autoRowSeq}`;
+    },
+
     addAutoModelRow() {
         if (this.autoModel.models.length >= 10) return;
-        this.autoModel.models.push({ model: '', priority: this.autoModel.models.length + 1 });
+        this.autoModel.models.push({
+            _id: this.nextAutoRowId(),
+            model: '',
+            priority: this.autoModel.models.length + 1
+        });
         this.markAutoDirty();
     },
 
@@ -397,7 +408,6 @@ window.Components.models = () => ({
             this.autoError = Alpine.store('global').t('loadFailed');
             return;
         }
-        const seq = ++this.autoRequestSeq;
         this.autoSaving = true;
         this.autoError = '';
         try {
@@ -427,8 +437,8 @@ window.Components.models = () => ({
             // error is still the more useful message for the user.
             this.autoError = e.message;
         } finally {
-            // Keep the sequence monotonic so a stale GET cannot win afterwards.
-            this.autoRequestSeq = Math.max(this.autoRequestSeq, seq);
+            // autoRequestSeq is monotonic (every writer increments it), so no
+            // clamp is needed here to keep a stale GET from winning afterwards.
             this.autoSaving = false;
         }
     },

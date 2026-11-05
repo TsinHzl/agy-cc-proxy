@@ -93,7 +93,8 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
 
                 // Auto-model routing: signal quota exhaustion instead of sleeping.
                 // Before the maxWait check so both wait windows use the explicit type.
-                if (shouldSignalQuotaExhaustion({
+                // The guard short-circuits the account scans for non-auto requests.
+                if (quotaSignal && shouldSignalQuotaExhaustion({
                     quotaSignal,
                     quotaExhaustedCount: countActiveQuotaExhausted(
                         accountManager.getAvailableAccounts(null, allowedEmails), model),
@@ -480,7 +481,7 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
     }
 
     // Auto-model routing: terminal state — no account can serve this model.
-    if (shouldSignalQuotaExhaustion({
+    if (quotaSignal && shouldSignalQuotaExhaustion({
         quotaSignal,
         quotaExhaustedCount: countActiveQuotaExhausted(
             accountManager.getAvailableAccounts(null, allowedEmails), model),

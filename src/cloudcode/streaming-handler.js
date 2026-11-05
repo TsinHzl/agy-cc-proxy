@@ -96,8 +96,9 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
                 // Auto-model routing: signal quota exhaustion explicitly instead of
                 // sleeping. Placed BEFORE the maxWait check so both the short and the
-                // long wait windows surface as QuotaExhaustedError.
-                if (shouldSignalQuotaExhaustion({
+                // long wait windows surface as QuotaExhaustedError. The guard short-
+                // circuits the account scans for non-auto requests.
+                if (quotaSignal && shouldSignalQuotaExhaustion({
                     quotaSignal,
                     quotaExhaustedCount: countActiveQuotaExhausted(
                         accountManager.getAvailableAccounts(null, allowedEmails), model),
@@ -591,7 +592,8 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
 
     // Auto-model routing: terminal state — no account can serve this model.
     // Checked before the generic failure so the caller can switch models.
-    if (shouldSignalQuotaExhaustion({
+    // The guard short-circuits the account scans for non-auto requests.
+    if (quotaSignal && shouldSignalQuotaExhaustion({
         quotaSignal,
         quotaExhaustedCount: countActiveQuotaExhausted(
             accountManager.getAvailableAccounts(null, allowedEmails), model),
