@@ -1,0 +1,46 @@
+src/cloudcode/message-handler.js
+  98c82d0fbf2e74b7 96-97,484
+src/account-manager/index.js
+  98c82d0fbf2e74b7 310
+src/cloudcode/streaming-handler.js
+  98c82d0fbf2e74b7 99-101,595-596
+public/views/models.html
+  98c82d0fbf2e74b7 174,181
+tests/test-auto-model.cjs
+  98c82d0fbf2e74b7 362,371-378
+public/js/components/models.js
+  98c82d0fbf2e74b7 310,354-355,370-374,377-381,440-441
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "dd75b63a0005d2d2f662650f8ce34877efe5deef",
+  "prompts": {
+    "08a8799e9e0d4b81": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fe345a75-556d-45ed-b21f-44c91691ec4c",
+        "model": "deepseek-v4.1-flash-1017"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 351,
+      "total_deletions": 0,
+      "accepted_lines": 351,
+      "overriden_lines": 0
+    },
+    "98c82d0fbf2e74b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94a1f75c-92f0-4ae6-b44e-f7b15eea2942",
+        "model": "deepseek-v4.1-flash-1017"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 14,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    }
+  }
+}
