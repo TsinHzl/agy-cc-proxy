@@ -1,0 +1,35 @@
+tests/test-quota-reset-cap.cjs
+  47391a697c69916a 1-180
+src/account-manager/rate-limits.js
+  47391a697c69916a 9,107-117,152,164-172
+src/cloudcode/streaming-handler.js
+  47391a697c69916a 24,295-298
+src/cloudcode/message-handler.js
+  47391a697c69916a 25,269-272
+package.json
+  47391a697c69916a 40
+src/server/parse-error.js
+  47391a697c69916a 33-35
+src/cloudcode/rate-limit-parser.js
+  47391a697c69916a 22-24,89,100,194-211,221-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "0a653d987f2e933e04aa4f9bcba4225ff1db6536",
+  "prompts": {
+    "47391a697c69916a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d5db707-a32f-4081-9ae0-e406b302c5fd",
+        "model": "glm-5.3"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 242,
+      "total_deletions": 10,
+      "accepted_lines": 242,
+      "overriden_lines": 0
+    }
+  }
+}
