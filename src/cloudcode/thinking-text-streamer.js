@@ -18,6 +18,16 @@ const THINKING_TEXT_DURATION_PREFIX = '💭 Thought for ';
 const THINKING_TEXT_DURATION_LINE_RE = new RegExp(
     `\\n${escapeRegExp(ANSI_DIM)}${escapeRegExp(THINKING_TEXT_DURATION_PREFIX)}(?:\\d+h)?(?:\\d+m)?\\d+s${escapeRegExp(ANSI_RESET)}`
 );
+// Duration summary appended as the final dim line when a thinking block stops,
+// e.g. `💭 Thought for 12s` or `💭 Thought for 1m16s` (whole seconds with a 1s
+// floor; <60s shows `Xs`, ≥60s shows `XmYs`; matching cc-proxy thinking-text.js).
+export function formatDurationLine(seconds) {
+    const total = Math.max(1, Math.round(seconds));
+    const label = total < 60
+        ? `${total}s`
+        : `${Math.floor(total / 60)}m${total % 60}s`;
+    return `${ANSI_DIM}${THINKING_TEXT_DURATION_PREFIX}${label}${ANSI_RESET}`;
+}
 // Each rendered line is `\n...RESET` — matching up to RESET (rather than to
 // end-of-line) keeps trailing text on the same line (e.g. the final answer)
 // from being swallowed when the block no longer ends with a newline.
@@ -128,6 +138,15 @@ export async function* transformThinkingAsTextEvents(events, options) {
     // text delta of the following block gets one prepended — otherwise the
     // answer text continues on the same line as the thinking text.
     let pendingLeadingNewline = false;
+    // Duration clock: default Date.now; tests inject options.timeSource (an
+    // epoch-ms getter). Anchor: options.startedAtMs (request arrival, injected
+    // by the route layer) — falls back to the first typed SSE event for manual
+    // writes that omit it (defensive; the routes always inject it).
+    const now = typeof options?.timeSource === 'function' ? options.timeSource : Date.now;
+    let responseStartedAtMs =
+        typeof options?.startedAtMs === 'number' && Number.isFinite(options.startedAtMs)
+            ? options.startedAtMs
+            : null;
 
     const textDeltaEvent = (index, text) => ({
         type: 'content_block_delta',
@@ -176,6 +195,11 @@ export async function* transformThinkingAsTextEvents(events, options) {
 
     try {
         for await (const event of events) {
+            // No request-level anchor (manual write omitted startedAtMs)? Fall
+            // back to the first typed SSE event moment.
+            if (responseStartedAtMs === null && event?.type) {
+                responseStartedAtMs = now();
+            }
             // First text delta after a rendered thinking block: prepend the
             // newline the thinking text deliberately does not end with, so the
             // answer starts on its own line instead of continuing the thinking
@@ -245,18 +269,38 @@ export async function* transformThinkingAsTextEvents(events, options) {
                             }
                             if (tail) yield textDeltaEvent(pendingBlock.index, tail);
                             // Duration tail (kiro style): "💭 Thought for Ns",
-                            // rounded to whole seconds with a 1s floor.
-                            const totalSecs = Math.max(1, Math.round((Date.now() - pendingBlock.startedAt) / 1000));
-                            // Humanized duration: 59s → "59s", 75s → "1m15s", 3690s → "1h1m30s".
-                            const mins = Math.floor(totalSecs / 60);
-                            const secs = totalSecs % 60;
-                            const duration = mins > 0
-                                ? `${Math.floor(mins / 60) > 0 ? `${Math.floor(mins / 60)}h` : ''}${mins % 60}m${secs}s`
-                                : `${secs}s`;
-                            yield textDeltaEvent(pendingBlock.index, `\n${ANSI_DIM}${THINKING_TEXT_DURATION_PREFIX}${duration}${ANSI_RESET}`);
+                            // rounded to whole seconds with a 1s floor. Request-level
+                            // anchor (responseStartedAtMs) so buffered-gateway bursts
+                            // reflect the true thinking time.
+                            const elapsedSecs = responseStartedAtMs === null
+                                ? 1
+                                : (now() - responseStartedAtMs) / 1000;
+                            yield textDeltaEvent(pendingBlock.index, `\n${formatDurationLine(elapsedSecs)}`);
                             // Signal the next block's first text delta to start on
                             // a fresh line (this block ends without a newline).
                             pendingLeadingNewline = true;
+                            // Overwrite the same index with a native collapsible
+                            // thinking block so Claude Code replaces its streaming
+                            // text-preview slot in place (default-collapsed "Thought
+                            // for Xs" title, Ctrl+O to expand). Reuses the buffered
+                            // text — no extra memory — but re-sends it on the wire.
+                            yield {
+                                type: 'content_block_start',
+                                index: pendingBlock.index,
+                                content_block: { type: 'thinking', thinking: '', signature: '' }
+                            };
+                            yield {
+                                type: 'content_block_delta',
+                                index: pendingBlock.index,
+                                delta: { type: 'thinking_delta', thinking: pendingBlock.thinking }
+                            };
+                            if (pendingBlock.signature) {
+                                yield {
+                                    type: 'content_block_delta',
+                                    index: pendingBlock.index,
+                                    delta: { type: 'signature_delta', signature: pendingBlock.signature }
+                                };
+                            }
                             yield event;
                         }
                     } else if (pendingBlock.started) {
@@ -280,8 +324,6 @@ export async function* transformThinkingAsTextEvents(events, options) {
                     started: false,
                     signature: '',
                     bytes: 0,
-                    // Wall-clock start used for the "Thought for Ns" tail.
-                    startedAt: Date.now(),
                     discarded: responseLimitExceeded
                 };
                 if (responseLimitExceeded) {

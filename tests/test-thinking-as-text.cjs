@@ -50,6 +50,8 @@ const script = `
     const transformedThinking = await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: true, isClaudeCode: true });
     const DIM = String.fromCharCode(27) + '[2m';
     const RESET = String.fromCharCode(27) + '[0m';
+    // Stream thinking text first (dim preview), then overwrite the same index
+    // with a native collapsible thinking block (default-collapsed in CC).
     assert.deepEqual(transformedThinking, [
         { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } },
         {
@@ -62,9 +64,19 @@ const script = `
         },
         { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n' + DIM + 'line one' + RESET } },
         { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n' + DIM + 'line two' + RESET } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '\\n' + DIM + '💭 Thought for 1s' + RESET } },
+        { type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '', signature: '' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'thinking_delta', thinking: 'line one\\n\\nline two' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'signature_delta', signature: validSignature } },
         { type: 'content_block_stop', index: 1 }
     ]);
-    assert.equal(transformedThinking.some((event) => event.delta?.type === 'thinking_delta' || event.delta?.type === 'signature_delta'), false);
+    // The native collapsible thinking block carries the buffered text + signature.
+    const collapseStart = transformedThinking.find((e) => e.type === 'content_block_start' && e.content_block?.type === 'thinking');
+    assert.deepEqual(collapseStart.content_block, { type: 'thinking', thinking: '', signature: '' });
+    const thinkingDelta = transformedThinking.find((e) => e.delta?.type === 'thinking_delta');
+    assert.equal(thinkingDelta.delta.thinking, 'line one\\r\\n\\r\\nline two');
+    const sigDelta = transformedThinking.find((e) => e.delta?.type === 'signature_delta');
+    assert.equal(sigDelta.delta.signature, validSignature);
 
     // Whitespace-only thinking: blank lines are skipped entirely — nothing is
     // emitted (no block start, no header); old-format (trailing newline)
@@ -107,6 +119,26 @@ const script = `
     assert.deepEqual(await collectEvents(asAsyncEvents(unsignedEvents), { thinkingAsText: true, isClaudeCode: true }), transformedThinking);
     assert.deepEqual(await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: false, isClaudeCode: true }), thinkingEvents);
     assert.deepEqual(await collectEvents(asAsyncEvents(thinkingEvents), { thinkingAsText: true, isClaudeCode: false }), thinkingEvents);
+
+    // Request-level duration anchor + injectable timeSource: the "Thought for
+    // Xs" uses (timeSource() - startedAtMs), overriding any in-block wall clock
+    // (buffered-gateway bursts). 14s apart → "Thought for 14s".
+    let tick = 0;
+    const anchored = await collectEvents(asAsyncEvents([
+        { type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } },
+        { type: 'content_block_delta', index: 1, delta: { type: 'thinking_delta', thinking: 'burst' } },
+        { type: 'content_block_stop', index: 1 }
+    ]), {
+        thinkingAsText: true,
+        isClaudeCode: true,
+        startedAtMs: 1000,
+        timeSource: () => [1100, 15000][tick++]
+    });
+    const anchoredText = anchored.map((event) => event.delta?.text || '').join('');
+    assert.ok(anchoredText.includes(DIM + '💭 Thought for 14s' + RESET), 'expected 14s anchor, got: ' + anchoredText);
+    // The collapse block still overwrites the same index carrying the text.
+    assert.ok(anchored.some((event) => event.type === 'content_block_start' && event.content_block?.type === 'thinking'));
+    assert.ok(anchored.some((event) => event.delta?.type === 'thinking_delta' && event.delta.thinking === 'burst'));
 
     const logStart = logger.getHistory().length;
     const oversizedBlock = [
@@ -188,6 +220,8 @@ const script = `
     assert.equal(claudeCodeUserAgent.test('claude-code 2.1.0'), true);
     assert.ok(messagesRouteSource.includes('thinkingAsText: config.thinkingAsText === true'));
     assert.ok(messagesRouteSource.includes("isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))"));
+    // Request-level thinking-duration anchor is forwarded from the route.
+    assert.ok(messagesRouteSource.includes('startedAtMs: streamStartTime'));
     const streamingHandlerSource = fs.readFileSync(${JSON.stringify(streamingHandlerPath)}, 'utf8');
     assert.ok(streamingHandlerSource.includes('emitUnsignedThinking: renderThinkingAsText'));
 

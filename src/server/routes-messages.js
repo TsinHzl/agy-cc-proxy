@@ -165,11 +165,16 @@ export function registerMessagesRoutes(app, ctx) {
                         ? sendMessageStreamAuto(request, accountManager, accountFilter, {
                             thinkingAsText: config.thinkingAsText === true,
                             isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent')),
+                            // Request-level thinking-duration anchor (reuses the
+                            // usage streamStartTime) so buffered-gateway bursts
+                            // reflect the true thinking time.
+                            startedAtMs: streamStartTime,
                             isCancelled: () => res.writableEnded || req.destroyed
                         }, { onModelResolved: (m) => { resolvedModel = m; } })
                         : sendMessageStream(request, accountManager, fallbackEnabled, accountFilter, {
                             thinkingAsText: config.thinkingAsText === true,
-                            isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))
+                            isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent')),
+                            startedAtMs: streamStartTime
                         });
 
                     // BUFFERING STRATEGY:

@@ -125,10 +125,6 @@ export function registerOpenAIRoutes(app, ctx) {
             }
 
             const accountFilter = { allowedEmails: getAllowedAccounts(req._apiKeyId) };
-            const pipelineOptions = {
-                thinkingAsText: config.thinkingAsText === true,
-                isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent'))
-            };
 
             logger.info(`[OpenAI] Request for model: ${anthropicRequest.model}, stream: ${!!anthropicRequest.stream}`);
 
@@ -141,6 +137,14 @@ export function registerOpenAIRoutes(app, ctx) {
                 let usageCacheReadTokens = 0;
                 // Actual model that produced the response (differs from `auto` after a switch).
                 let resolvedModel = modelId;
+
+                // Reuses the usage streamStartTime as the request-level
+                // thinking-duration anchor (buffered-gateway accuracy).
+                const pipelineOptions = {
+                    thinkingAsText: config.thinkingAsText === true,
+                    isClaudeCode: isClaudeCodeUserAgent(req.get('user-agent')),
+                    startedAtMs: streamStartTime
+                };
 
                 try {
                     const generator = useAutoModel
