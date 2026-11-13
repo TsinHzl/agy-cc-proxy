@@ -1,0 +1,33 @@
+tests/test-thinking-as-text.cjs
+  3e191db7b1b33879 53-54,67-70,73-79,123-142,223-224
+openspec/specs/collapsible-thinking-block/spec.md
+  3e191db7b1b33879 1-63
+src/server/routes-openai.js
+  3e191db7b1b33879 141-147
+src/cloudcode/thinking-text-streamer.js
+  3e191db7b1b33879 21-30,141-149,198-202,272-278,282-303
+openspec/changes/archive/2026-11-14-collapsible-thinking-block/tasks.md
+  3e191db7b1b33879 1-23
+src/server/routes-messages.js
+  3e191db7b1b33879 168-171,176-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "fad9d204586651762dfc0f13fde94bebd80b5e2c",
+  "prompts": {
+    "3e191db7b1b33879": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d11c19ac-345e-4aa8-9412-d873b3766b4b",
+        "model": "deepseek_for_coding"
+      },
+      "human_author": "TsinHzl <tsinhzl@icloud.com>",
+      "messages": [],
+      "total_additions": 448,
+      "total_deletions": 42,
+      "accepted_lines": 423,
+      "overriden_lines": 0
+    }
+  }
+}
