@@ -21,7 +21,7 @@ import {
 import { isRateLimitError, isAuthError, isEmptyResponseError, isAccountForbiddenError, AccountForbiddenError, QuotaExhaustedError } from '../errors.js';
 import { formatDuration, sleep, isNetworkError, throttledFetch } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
-import { parseResetTime, parseRateLimitReason } from './rate-limit-parser.js';
+import { parseResetTime, parseRateLimitReason, MAX_RESET_CAP_MS } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
 import { streamSSEResponse } from './sse-streamer.js';
 import {
@@ -292,7 +292,10 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                                 // Single-flight: only one probe request per model may re-hit the upstream
                                 // with a short cooldown; everyone else shares the full smart backoff window.
                                 // Prevents N concurrent requests from amplifying a no-reset 429 into a storm.
-                                const isProbe = tryClaimModelProbe(model, DEFAULT_COOLDOWN_MS);
+                                // Trusted long windows (quotaResetDelay/TimeStamp beyond the 5m cap) are
+                                // authoritative daily-quota resets — re-probing in 10s is guaranteed waste.
+                                const isTrustedLongWindow = resetMs !== null && resetMs > MAX_RESET_CAP_MS;
+                                const isProbe = !isTrustedLongWindow && tryClaimModelProbe(model, DEFAULT_COOLDOWN_MS);
                                 const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
                                 logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);

@@ -6,6 +6,7 @@
  */
 
 import { DEFAULT_COOLDOWN_MS } from '../constants.js';
+import { MAX_RESET_CAP_MS } from '../cloudcode/rate-limit-parser.js';
 import { formatDuration } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 
@@ -103,6 +104,17 @@ export function resetAllRateLimits(accounts) {
     for (const account of accounts) {
         if (account.modelRateLimits) {
             for (const key of Object.keys(account.modelRateLimits)) {
+                const limit = account.modelRateLimits[key];
+                // Authoritative daily-quota windows survive optimistic retry: clearing
+                // them would re-hit a known-exhausted upstream on every new request.
+                // Only untrusted windows (≤ 5m cap) are reset for a fresh probe.
+                if (
+                    limit?.reason === 'QUOTA_EXHAUSTED' &&
+                    limit.resetTime &&
+                    limit.resetTime - Date.now() > MAX_RESET_CAP_MS
+                ) {
+                    continue;
+                }
                 account.modelRateLimits[key] = {
                     isRateLimited: false,
                     resetTime: null,
@@ -137,7 +149,7 @@ export function markRateLimited(accounts, email, resetMs = null, modelId, reason
 
     // Store the ACTUAL reset time from the API
     // This is used to decide whether to wait (short) or switch accounts (long)
-    const actualResetMs = (resetMs && resetMs > 0) ? resetMs : DEFAULT_COOLDOWN_MS;
+    let actualResetMs = (resetMs && resetMs > 0) ? resetMs : DEFAULT_COOLDOWN_MS;
 
     if (!account.modelRateLimits) {
         account.modelRateLimits = Object.create(null);
@@ -148,6 +160,15 @@ export function markRateLimited(accounts, email, resetMs = null, modelId, reason
     // `null` clears it (a non-quota 429 can overwrite the same model's limit).
     const previousReason = account.modelRateLimits[modelId]?.reason ?? null;
     const nextReason = reason === undefined ? previousReason : (reason || null);
+
+    // A shorter follow-up 429 (next endpoint's no-reset smart backoff, or the probe
+    // path's short cooldown) must not shrink a previously recorded authoritative
+    // QUOTA_EXHAUSTED window — the daily quota stays gone until its reset time.
+    const previous = account.modelRateLimits[modelId];
+    const previousRemainingMs = previous?.resetTime ? previous.resetTime - Date.now() : 0;
+    if (previousRemainingMs > actualResetMs && previous?.reason === 'QUOTA_EXHAUSTED') {
+        actualResetMs = previousRemainingMs;
+    }
 
     account.modelRateLimits[modelId] = {
         isRateLimited: true,

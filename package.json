@@ -37,6 +37,7 @@
     "test:emptyretry": "node tests/test-empty-response-retry.cjs",
     "test:sanitizer": "node tests/test-schema-sanitizer.cjs",
     "test:strategies": "node tests/test-strategies.cjs",
+    "test:quota-cap": "node tests/test-quota-reset-cap.cjs",
     "test:cache-control": "node tests/test-cache-control.cjs",
     "test:compact": "node tests/test-compact-request.cjs",
     "test:request-builder": "node tests/test-request-builder.cjs",

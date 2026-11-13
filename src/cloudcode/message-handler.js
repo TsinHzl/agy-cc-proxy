@@ -22,7 +22,7 @@ import { convertGoogleToAnthropic } from '../format/index.js';
 import { isRateLimitError, isAuthError, isAccountForbiddenError, AccountForbiddenError, QuotaExhaustedError } from '../errors.js';
 import { formatDuration, sleep, isNetworkError, throttledFetch } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
-import { parseResetTime, parseRateLimitReason } from './rate-limit-parser.js';
+import { parseResetTime, parseRateLimitReason, MAX_RESET_CAP_MS } from './rate-limit-parser.js';
 import { buildCloudCodeRequest, buildHeaders } from './request-builder.js';
 import { parseThinkingSSEResponse } from './sse-parser.js';
 import { getFallbackModel } from '../fallback-config.js';
@@ -266,7 +266,10 @@ export async function sendMessage(anthropicRequest, accountManager, fallbackEnab
                             } else if (smartBackoffMs > DEFAULT_COOLDOWN_MS) {
                                 // Long-term quota exhaustion (> 10s) - wait SWITCH_ACCOUNT_DELAY_MS then switch
                                 // Single-flight probe (see streaming-handler.js) - same amplification guard
-                                const isProbe = tryClaimModelProbe(model, DEFAULT_COOLDOWN_MS);
+                                // Trusted long windows (quotaResetDelay/TimeStamp beyond the 5m cap) are
+                                // authoritative daily-quota resets — re-probing in 10s is guaranteed waste.
+                                const isTrustedLongWindow = resetMs !== null && resetMs > MAX_RESET_CAP_MS;
+                                const isProbe = !isTrustedLongWindow && tryClaimModelProbe(model, DEFAULT_COOLDOWN_MS);
                                 const cooldownMs = isProbe ? DEFAULT_COOLDOWN_MS : smartBackoffMs;
                                 logger.info(`[CloudCode] Quota exhausted for ${account.email} (${formatDuration(smartBackoffMs)}), ${isProbe ? 'elected as probe' : 'following backoff'}, cooldown ${formatDuration(cooldownMs)}, switching account after ${formatDuration(SWITCH_ACCOUNT_DELAY_MS)} delay...`);
                                 await sleep(SWITCH_ACCOUNT_DELAY_MS);

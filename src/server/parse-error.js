@@ -30,7 +30,9 @@ export function parseError(error) {
         // Try to extract model from our error format "Rate limited on <model>" or JSON format.
         // Note: email / account / project identifiers are intentionally NOT included —
         // those leak internal pool state to the client.
-        const modelMatch = error.message.match(/Rate limited on ([^.]+)\./) || error.message.match(/"model":\s*"([^"]+)"/);
+        // Model ids contain dots (e.g. gemini-3.8-flash-tiered) — match lazily up to
+        // the sentence-ending dot (followed by whitespace or end), not the first dot.
+        const modelMatch = error.message.match(/Rate limited on (.+?)\.(?:\s|$)/) || error.message.match(/"model":\s*"([^"]+)"/);
         const model = modelMatch ? modelMatch[1] : 'the model';
 
         if (resetMatch) {

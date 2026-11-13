@@ -19,6 +19,9 @@ import { logger } from '../utils/logger.js';
  */
 export function parseResetTime(responseOrError, errorText = '') {
     let resetMs = null;
+    // Set when the value comes from Google's authoritative quota fields
+    // (quotaResetDelay / quotaResetTimeStamp) — exempt from the 5m distrust cap below.
+    let trustedQuotaReset = false;
 
     // If it's a Response object, check headers first
     if (responseOrError && typeof responseOrError.headers?.get === 'function') {
@@ -83,6 +86,7 @@ export function parseResetTime(responseOrError, errorText = '') {
             const value = parseFloat(quotaDelayMatch[1]);
             const unit = quotaDelayMatch[2].toLowerCase();
             resetMs = unit === 's' ? Math.ceil(value * 1000) : Math.ceil(value);
+            trustedQuotaReset = true;
             logger.debug(`[CloudCode] Parsed quotaResetDelay from body: ${resetMs}ms`);
         }
 
@@ -93,6 +97,7 @@ export function parseResetTime(responseOrError, errorText = '') {
                 const resetTime = new Date(quotaTimestampMatch[1]).getTime();
                 if (!isNaN(resetTime)) {
                     resetMs = resetTime - Date.now();
+                    trustedQuotaReset = true;
                     // Even if expired or 0, we found a timestamp, so rely on it.
                     // But if it's negative, it means "now", so treat as small wait.
                     logger.debug(`[CloudCode] Parsed quotaResetTimeStamp: ${quotaTimestampMatch[1]} (Delta: ${resetMs}ms)`);
@@ -186,10 +191,24 @@ export function parseResetTime(responseOrError, errorText = '') {
         // (server.js resetAllRateLimits) will re-probe the upstream on the next
         // request instead of trusting a multi-hour penalty window.
         else if (resetMs > MAX_RESET_CAP_MS) {
-            logger.warn(
-                `[CloudCode] Reset time ${formatDuration(resetMs)} exceeds cap, clamping to ${formatDuration(MAX_RESET_CAP_MS)}`
-            );
-            resetMs = MAX_RESET_CAP_MS;
+            if (trustedQuotaReset) {
+                // quotaResetDelay / quotaResetTimeStamp are Google's authoritative
+                // daily-quota reset signals (an absolute timestamp cross-confirmed
+                // across responses). Clamping them to 5m lies to the client
+                // ("Quota will reset after 5m0s" when the real window is hours) and
+                // fuels a 5-minute retry loop. Only apply a 24h sanity cap.
+                if (resetMs > TRUSTED_RESET_SANITY_CAP_MS) {
+                    logger.warn(
+                        `[CloudCode] Trusted quota reset ${formatDuration(resetMs)} exceeds sanity cap, clamping to ${formatDuration(TRUSTED_RESET_SANITY_CAP_MS)}`
+                    );
+                    resetMs = TRUSTED_RESET_SANITY_CAP_MS;
+                }
+            } else {
+                logger.warn(
+                    `[CloudCode] Reset time ${formatDuration(resetMs)} exceeds cap, clamping to ${formatDuration(MAX_RESET_CAP_MS)}`
+                );
+                resetMs = MAX_RESET_CAP_MS;
+            }
         }
     }
 
@@ -198,6 +217,9 @@ export function parseResetTime(responseOrError, errorText = '') {
 
 /** Upper bound for upstream-reported reset times (5 minutes). */
 export const MAX_RESET_CAP_MS = 5 * 60 * 1000;
+
+/** Sanity cap for trusted quota resets (quotaResetDelay / quotaResetTimeStamp). */
+const TRUSTED_RESET_SANITY_CAP_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Parse the rate limit reason from error text
