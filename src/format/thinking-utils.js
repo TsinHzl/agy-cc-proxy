@@ -4,7 +4,7 @@
  */
 
 import { MIN_SIGNATURE_LENGTH } from '../constants.js';
-import { getCachedSignatureFamily } from './signature-cache.js';
+import { getCachedSignature, getCachedSignatureFamily } from './signature-cache.js';
 import { logger } from '../utils/logger.js';
 
 // ============================================================================
@@ -447,6 +447,11 @@ function messageHasValidThinking(message) {
     const content = message.content || message.parts || [];
     if (!Array.isArray(content)) return false;
     return content.some(block => {
+        if (block && (block.type === 'tool_use' || block.functionCall)) {
+            if (block.thoughtSignature && block.thoughtSignature.length >= MIN_SIGNATURE_LENGTH) return true;
+            if (block.id && getCachedSignature(block.id)) return true;
+            return false;
+        }
         if (!isThinkingPart(block)) return false;
         // Check for valid signature (Anthropic style)
         if (block.signature && block.signature.length >= MIN_SIGNATURE_LENGTH) return true;
@@ -651,6 +656,14 @@ function stripInvalidThinkingBlocks(messages, targetFamily = null) {
  * @returns {Array<Object>} Modified messages with synthetic messages injected
  */
 export function closeToolLoopForThinking(messages, targetFamily = null) {
+    // Opt-in escape hatch (Gemini only): skip synthetic [Continue] injection
+    // when ANTIGRAVITY_DISABLE_THINKING_RECOVERY=1 is set.
+    if (
+        process.env.ANTIGRAVITY_DISABLE_THINKING_RECOVERY === '1' &&
+        targetFamily === 'gemini'
+    ) {
+        return messages;
+    }
     const state = analyzeConversationState(messages);
 
     // Handle neither tool loop nor interrupted tool

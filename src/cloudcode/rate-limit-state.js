@@ -135,6 +135,22 @@ export function isPermanentAuthFailure(errorText) {
         lower.includes('credentials are invalid');
 }
 
+/** Escalating cooldown tiers for 403 VALIDATION_REQUIRED (10s -> 1m -> 5m -> 30m). */
+export const VALIDATION_BACKOFF_TIERS_MS = [10_000, 60_000, 300_000, 1_800_000];
+
+/**
+ * Compute an escalating cooldown for 403 VALIDATION_REQUIRED so a single
+ * transient check rotates fast (10s), while repeated flags back off instead of
+ * hammering the account into a permanent ban.
+ *
+ * @param {number} [consecutiveFailures=0] - Prior consecutive failure count for the account
+ * @returns {number} Cooldown duration in milliseconds
+ */
+export function getValidationCooldownMs(consecutiveFailures = 0) {
+    const idx = Math.max(0, Math.min(Number(consecutiveFailures) || 0, VALIDATION_BACKOFF_TIERS_MS.length - 1));
+    return VALIDATION_BACKOFF_TIERS_MS[idx];
+}
+
 /**
  * Detect if 403 error is due to VALIDATION_REQUIRED.
  * This is a transient security check from Google (e.g., bot detection, IP flags)

@@ -117,7 +117,7 @@ async function runTests() {
         );
     });
 
-    test('forwards only the client system instruction', () => {
+    test('moves caller system prompt out of systemInstruction into the first user turn', () => {
         const payload = buildCloudCodeRequest(
             {
                 ...baseRequest,
@@ -128,9 +128,93 @@ async function runTests() {
             'test@example.com'
         );
 
-        assertEqual(payload.request.systemInstruction.role, 'user');
-        assertEqual(payload.request.systemInstruction.parts.length, 1);
-        assertEqual(payload.request.systemInstruction.parts[0].text, 'Retain this instruction.');
+        assertFalse('systemInstruction' in payload.request, 'caller system prompt must not stay in systemInstruction');
+        assertEqual(payload.request.contents[0].role, 'user');
+        assertEqual(payload.request.contents[0].parts.length, 2);
+        assertEqual(
+            payload.request.contents[0].parts[0].text,
+            '<system-instructions>\nRetain this instruction.\n</system-instructions>'
+        );
+        assertEqual(payload.request.contents[0].parts[1].text, 'test request');
+    });
+
+    test('scrubs third-party client identities while preserving headers, filenames, and bare Claude', () => {
+        const payload = buildCloudCodeRequest(
+            {
+                ...baseRequest,
+                model: 'gemini-2.5-pro',
+                system: [
+                    { type: 'text', text: "You are Claude Code, Anthropic's official CLI for Claude." },
+                    { type: 'text', text: 'Ask Hermes from Nous Research. See CLAUDE.md, x-anthropic-beta, AnthropicRequest.' }
+                ]
+            },
+            'test-project',
+            'test@example.com'
+        );
+
+        const text = payload.request.contents[0].parts[0].text;
+        assertFalse(text.includes('Claude Code'), 'Claude Code should be scrubbed');
+        assertFalse(text.includes('Anthropic\'s'), 'Anthropic should be scrubbed');
+        assertFalse(/\bHermes\b/.test(text), 'Hermes should be scrubbed');
+        assertFalse(text.includes('Nous Research'), 'Nous Research should be scrubbed');
+        assertTrue(text.includes('Claude.'), 'bare Claude must be preserved');
+        assertTrue(text.includes('CLAUDE.md'), 'CLAUDE.md must be preserved');
+        assertTrue(text.includes('x-anthropic-beta'), 'lowercase header must be preserved');
+        assertTrue(text.includes('AnthropicRequest'), 'camelCase identifier must be preserved');
+    });
+
+    test('system prompt consisting only of billing header adds no <system-instructions> part', () => {
+        const payload = buildCloudCodeRequest(
+            {
+                ...baseRequest,
+                model: 'gemini-2.5-pro',
+                system: 'x-anthropic-billing-header: cc_version=2.1.325; cc_entrypoint=sdk-cli;'
+            },
+            'test-project',
+            'test@example.com'
+        );
+
+        assertFalse('systemInstruction' in payload.request);
+        assertEqual(payload.request.contents[0].parts.length, 1);
+        assertEqual(payload.request.contents[0].parts[0].text, 'test request');
+    });
+
+    test('leading model turn gets a prepended user turn for system prompt', () => {
+        const payload = buildCloudCodeRequest(
+            {
+                model: 'gemini-2.5-pro',
+                system: 'Be brief.',
+                messages: [
+                    { role: 'assistant', content: 'Hello.' },
+                    { role: 'user', content: 'hi' }
+                ]
+            },
+            'test-project',
+            'test@example.com'
+        );
+
+        assertEqual(payload.request.contents[0].role, 'user');
+        assertTrue(payload.request.contents[0].parts[0].text.startsWith('<system-instructions>'));
+        assertEqual(payload.request.contents[1].role, 'model');
+    });
+
+    test('functionResponse-first user turn is not mixed with system part', () => {
+        const payload = buildCloudCodeRequest(
+            {
+                model: 'gemini-2.5-pro',
+                system: 'Be brief.',
+                messages: [{
+                    role: 'user',
+                    content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok' }]
+                }]
+            },
+            'test-project',
+            'test@example.com'
+        );
+
+        assertEqual(payload.request.contents[0].parts.length, 1);
+        assertTrue(payload.request.contents[0].parts[0].text.startsWith('<system-instructions>'));
+        assertTrue(Boolean(payload.request.contents[1].parts[0].functionResponse));
     });
 
     console.log('\n── Billing Header Sanitization Contract ────────────────────────');

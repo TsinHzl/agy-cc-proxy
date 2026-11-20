@@ -28,6 +28,8 @@ async function runTests() {
         isValidationRequired,
         isAccountDisabled,
         extractVerificationUrl,
+        getValidationCooldownMs,
+        VALIDATION_BACKOFF_TIERS_MS,
         isPermanentAuthFailure,
         isModelCapacityExhausted
     } = await import('../src/cloudcode/rate-limit-state.js');
@@ -419,6 +421,20 @@ async function runTests() {
         const shouldClear = accounts[0].isInvalid && accounts[0].verifyUrl;
         assertFalse(shouldClear, 'Auth errors should NOT be auto-cleared on refresh');
         assertTrue(accounts[0].isInvalid, 'isInvalid should remain true');
+    });
+
+    // =========================================================================
+    // Test Group 9: getValidationCooldownMs() escalating backoff
+    // =========================================================================
+    console.log('\n── getValidationCooldownMs() Escalating Cooldown ─────────────');
+
+    test('escalates cooldown across consecutive VALIDATION_REQUIRED failures and clamps at max tier', () => {
+        assertEqual(getValidationCooldownMs(0), VALIDATION_BACKOFF_TIERS_MS[0]);
+        assertEqual(getValidationCooldownMs(1), VALIDATION_BACKOFF_TIERS_MS[1]);
+        assertEqual(getValidationCooldownMs(2), VALIDATION_BACKOFF_TIERS_MS[2]);
+        assertEqual(getValidationCooldownMs(3), VALIDATION_BACKOFF_TIERS_MS[3]);
+        assertEqual(getValidationCooldownMs(99), VALIDATION_BACKOFF_TIERS_MS[VALIDATION_BACKOFF_TIERS_MS.length - 1]);
+        assertEqual(getValidationCooldownMs(-1), VALIDATION_BACKOFF_TIERS_MS[0]);
     });
 
     // =========================================================================

@@ -39,6 +39,8 @@ import {
     isPermanentAuthFailure,
     isModelCapacityExhausted,
     isValidationRequired,
+    extractVerificationUrl,
+    getValidationCooldownMs,
     isAccountDisabled,
     isAccountBanned,
     calculateSmartBackoff
@@ -358,12 +360,17 @@ export async function* sendMessageStream(anthropicRequest, accountManager, fallb
                         }
 
                         // 403 VALIDATION_REQUIRED is a transient Google security check (bot detection,
-                        // IP flags, etc.) that self-resolves. Treat as a 5-minute cooldown so the
-                        // account recovers automatically without user intervention.
+                        // IP flags, etc.) that self-resolves. Apply escalating cooldown so a
+                        // single blip rotates fast while repeated flags do not hammer the account.
                         if (response.status === 403 && isValidationRequired(errorText)) {
-                            const VALIDATION_COOLDOWN_MS = 10 * 1000; // 10 seconds — transient Google security check, clears quickly
-                            logger.warn(`[CloudCode] 403 VALIDATION_REQUIRED for ${account.email}, applying ${formatDuration(VALIDATION_COOLDOWN_MS)} cooldown and rotating account...`);
-                            accountManager.markRateLimited(account.email, VALIDATION_COOLDOWN_MS, model);
+                            const consecutiveFailures = accountManager.getConsecutiveFailures?.(account.email) || 0;
+                            const cooldownMs = getValidationCooldownMs(consecutiveFailures);
+                            const verifyUrl = extractVerificationUrl(errorText);
+                            logger.warn(
+                                `[CloudCode] 403 VALIDATION_REQUIRED for ${account.email}, applying ${formatDuration(cooldownMs)} cooldown and rotating account...` +
+                                (verifyUrl ? ` Verification URL: ${verifyUrl}` : '')
+                            );
+                            accountManager.markRateLimited(account.email, cooldownMs, model);
                             throw new AccountForbiddenError(errorText, account.email);
                         }
 
